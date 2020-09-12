@@ -1572,7 +1572,7 @@ public class YamlConfig implements ConfigSerializable {
 			Valid.checkNotNull(def, "Inbuilt config " + getFileName() + " lacks " + (def == null ? "key" : def.getClass().getSimpleName()) + " at \"" + path + "\". Is it outdated?");
 
 		if (logUpdate)
-			Common.log("&7Update " + getFileName() + " at &b\'&f" + path + "&b\' &7-> " + (def == null ? "&ckey removed" : "&b\'&f" + def + "&b\'") + "&r");
+			Common.log("&7Update " + getFileName() + " at &b'&f" + path + "&b' &7-> " + (def == null ? "&ckey removed" : "&b'&f" + def + "&b'") + "&r");
 
 		save = true;
 	}

@@ -47,6 +47,7 @@
 			<groupId>org.jetbrains</groupId>
 			<artifactId>annotations</artifactId>
 			<version>19.0.0</version>
+			<scope>provided</scope>
 		</dependency>
 
 		<!-- The Spigot API and PaperSpigot server -->
@@ -54,6 +55,7 @@
 			<groupId>org.spigotmc</groupId>
 			<artifactId>spigot-api</artifactId>
 			<version>1.16.2-R0.1-SNAPSHOT</version>
+			<scope>provided</scope>
 		</dependency>
 		
 		<!-- MineAcademy guaranteed availability repos for plugins -->
@@ -61,101 +63,121 @@
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>AuthMe</artifactId>
 			<version>5.6.0-SNAPSHOT-2418</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>CitizensAPI</artifactId>
 			<version>2.0.27-b691</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>CMI-API</artifactId>
 			<version>7.6.2.0</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>DiscordSRV</artifactId>
 			<version>1.19.1</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>EssentialsX</artifactId>
 			<version>2.18.0.10</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>Factions</artifactId>
 			<version>3.3.0</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>FactionsUUID</artifactId>
 			<version>1.6.9.5-U0.5.17-b237</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>Jobs</artifactId>
 			<version>4.16.0</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>LWC</artifactId>
 			<version>2.2.6</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>MassiveCore</artifactId>
 			<version>3.3.0</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>mcMMO</artifactId>
 			<version>2.1.138</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>Multiverse-Core</artifactId>
 			<version>4.1.1-SNAPSHOT-787</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>NuVotifier</artifactId>
 			<version>2.7.1</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>PlaceholderAPI</artifactId>
 			<version>2.10.9</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>ProtocolLib</artifactId>
 			<version>4.6.0-SNAPSHOT-b473</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>Residence</artifactId>
 			<version>4.9.1.6</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>Towny</artifactId>
 			<version>0.96.2.0</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>Vault</artifactId>
 			<version>1.7.3</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>WorldEdit</artifactId>
 			<version>7.2.0-SNAPSHOT-5202</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>WorldGuard</artifactId>
 			<version>7.0.4-SNAPSHOT-2061</version>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 	<build>
@@ -173,6 +195,18 @@
 					<source>${java.version}</source>
 					<target>${java.version}</target>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>3.2.1</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

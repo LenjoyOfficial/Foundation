@@ -20,9 +20,11 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.MemorySection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -33,6 +35,7 @@ import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.ReflectionUtil.MissingEnumException;
 import org.mineacademy.fo.SerializeUtil;
+import org.mineacademy.fo.TimeUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictList;
@@ -221,8 +224,13 @@ public class YamlConfig implements ConfigSerializable {
 
 			if (instance == null) {
 
-				if (!file.exists())
+				if (!file.exists()) {
 					FileUtil.extract(localePath, line -> replaceVariables(line, FileUtil.getFileName(localePath)));
+
+					// Reformat afterwards with comments engine
+					if (saveComments())
+						save = true;
+				}
 
 				final YamlConfiguration config = FileUtil.loadConfigurationStrict(file);
 				final YamlConfiguration defaultsConfig = Remain.loadConfiguration(is);
@@ -290,6 +298,10 @@ public class YamlConfig implements ConfigSerializable {
 				final File file;
 				final YamlConfiguration config;
 				YamlConfiguration defaultsConfig = null;
+
+				// Reformat afterwards with comments engine
+				if (!new File(SimplePlugin.getInstance().getDataFolder(), to).exists() && saveComments())
+					save = true;
 
 				// We will have the default file to return to
 				if (from != null) {
@@ -495,6 +507,8 @@ public class YamlConfig implements ConfigSerializable {
 	public final void reload() {
 		try {
 			instance.reload();
+
+			save = true;
 
 			onLoadFinish();
 			saveIfNecessary0();
@@ -960,10 +974,10 @@ public class YamlConfig implements ConfigSerializable {
 	 * @param def
 	 * @return
 	 */
-	protected final SimpleTime getTime(final String path, final String def) {
+	protected final <T extends SimpleTime> T getTime(final String path, final String def) {
 		forceSingleDefaults(path);
 
-		return isSet(path) ? getTime(path) : SimpleTime.from(def);
+		return isSet(path) ? getTime(path) : (T) SimpleTime.from(def);
 	}
 
 	/**
@@ -972,11 +986,11 @@ public class YamlConfig implements ConfigSerializable {
 	 * @param path
 	 * @return
 	 */
-	protected final SimpleTime getTime(final String path) {
+	protected final <T extends SimpleTime> T getTime(final String path) {
 		final Object obj = getObject(path);
 		Valid.checkNotNull(obj, "No time specified at the path '" + path + "' in " + getFileName());
 
-		return SimpleTime.from(obj.toString());
+		return (T) SimpleTime.from(obj.toString());
 	}
 
 	/**
@@ -1691,11 +1705,27 @@ public class YamlConfig implements ConfigSerializable {
 	// ------------------------------------------------------------------------------------
 
 	/**
-	 * @deprecated use {@link SimpleTime} instead
+	 * @deprecated This class has been moved into {@link SimpleTime}.
+	 * 			   To migrate, simply rename TimeHelper into SimpleTime everywhere.
 	 */
 	@Deprecated
-	public static final class TimeHelper {
-		// Dead class
+	public static final class TimeHelper extends SimpleTime {
+
+		protected TimeHelper(String time) {
+			super(time);
+		}
+
+		/**
+		 * Generate new time. Valid examples: 15 ticks 1 second 25 minutes 3 hours etc.
+		 *
+		 * @deprecated use {@link SimpleTime#from(String)} that has now replaced this constructor
+		 * @param time
+		 * @return
+		 */
+		@Deprecated
+		public static TimeHelper from(final String time) {
+			return new TimeHelper(time);
+		}
 	}
 
 	/**
@@ -1976,22 +2006,45 @@ class ConfigInstance {
 
 		} catch (final NullPointerException ex) {
 			if (ex.getMessage() != null && ex.getMessage().contains("Nodes must be provided")) {
-				final Map<String, Object> dump = config.getValues(false);
+				dumpNodes(ex);
 
-				FileUtil.write("error_yaml.log", Common.configLine(), "Got null nodes error when saving " + file, "Please report this to plugin developers!", Common.configLine(), "Raw dump:", dump.toString());
-
-				Common.log("Got 'Nodes must be provided error', scanning for null key-value pairs:");
-
-				for (final Map.Entry<String, Object> entry : dump.entrySet())
-					Common.log(entry.getKey() + ": " + entry.getValue());
-
-				Common.log("Enumeration ended. Please send this log to: " + SimplePlugin.getInstance().getDescription().getAuthors() + " on SpigotMC!");
-				Common.error(ex, "Failed to save " + file + ", please see error_yaml.log in your plugin folder and report this to plugin developers!");
 			} else
 				throw ex;
 
 		} catch (final IOException | InvalidConfigurationException e) {
 			Common.error(e, "Failed to save " + file.getName());
+		}
+	}
+
+	private void dumpNodes(Throwable t) {
+		final List<String> lines = new ArrayList<>();
+
+		Common.error(t,
+				"Got 'Nodes must be provided error'",
+				"Please upload error_yaml.log to uploadfiles.io and send it to the developers of " + SimplePlugin.getNamed(),
+				"Sync? " + Bukkit.isPrimaryThread());
+
+		lines.add(Common.consoleLine());
+		lines.add(TimeUtil.getFormattedDate() + " - Dumping " + getFile() + " nodes - look for null values in here");
+
+		dump0(lines, config, 1);
+
+		Common.runAsync(() -> {
+			FileUtil.write("error_yaml.log", lines);
+		});
+	}
+
+	private void dump0(List<String> lines, Object memorySection, int deep) {
+		final Map<String, Object> map = ReflectionUtil.getFieldContent(memorySection, "map");
+
+		for (final Map.Entry<String, Object> entry : map.entrySet()) {
+			final String key = entry.getKey();
+			final Object value = entry.getValue();
+
+			if (value instanceof MemorySection)
+				dump0(lines, value, deep + 1);
+			else
+				lines.add(Common.duplicate("\t", deep) + " " + (key == null ? "-> DETECTED NULL: NULL" : key) + ": " + (value == null ? "null <- DETECTED NULL" : value));
 		}
 	}
 

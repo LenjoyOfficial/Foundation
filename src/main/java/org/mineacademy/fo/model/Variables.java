@@ -25,21 +25,19 @@ import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.settings.SimpleSettings;
 
 /**
- * A simple engine that replaces lots of variables in a message.
- * <p>
- * Utilizes {@link FileReader}
+ * A simple engine that replaces variables in a message.
  */
 public final class Variables {
 
 	/**
 	 * The pattern to find simple {} placeholders
 	 */
-	static final Pattern BRACKET_PLACEHOLDER_PATTERN = Pattern.compile("[{]([^{}]+)[}]");
+	static final Pattern BRACKET_PLACEHOLDER_PATTERN = Pattern.compile("[({|%)]([^{}]+)[(}|%)]");
 
 	/**
 	 * The patter to find simple {} placeholders starting with {rel_ (used for PlaceholderAPI)
 	 */
-	static final Pattern BRACKET_REL_PLACEHOLDER_PATTERN = Pattern.compile("[{](rel_)([^}]+)[}]");
+	static final Pattern BRACKET_REL_PLACEHOLDER_PATTERN = Pattern.compile("[({|%)](rel_)([^}]+)[(}|%)]");
 
 	/**
 	 * Player - [Original Message - Translated Message]
@@ -106,6 +104,13 @@ public final class Variables {
 	// ------------------------------------------------------------------------------------------------------------
 	// Replacing
 	// ------------------------------------------------------------------------------------------------------------
+
+	/**
+	 * @deprecated, use {@link #replace(String, CommandSender)} as it will work the same
+	 */
+	public static String replace(boolean replaceCustom, String message, CommandSender sender) {
+		return replace(message, sender);
+	}
 
 	/**
 	 * Replaces variables in the message using the message sender as an object to replace

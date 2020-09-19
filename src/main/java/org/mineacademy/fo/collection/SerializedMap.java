@@ -91,7 +91,7 @@ public final class SerializedMap extends StrictCollection {
 	 *
 	 * @param associativeArray
 	 */
-	public void putArray(final Object... associativeArray) {
+	public SerializedMap putArray(final Object... associativeArray) {
 		boolean string = true;
 		String lastKey = null;
 
@@ -106,6 +106,19 @@ public final class SerializedMap extends StrictCollection {
 
 			string = !string;
 		}
+
+		return this;
+	}
+
+	/**
+	 * Puts the key-value pair into the map if the value is true
+	 *
+	 * @param key
+	 * @param value
+	 */
+	public void putIfTrue(final String key, @Nullable final boolean value) {
+		if (value)
+			put(key, value);
 	}
 
 	/**
@@ -451,7 +464,7 @@ public final class SerializedMap extends StrictCollection {
 	 * @param def
 	 * @return
 	 */
-	public <K, V> Tuple<K, V> getTuple(String key, final Tuple<K, V> def) {
+	public <K, V> Tuple<K, V> getTuple(final String key, final Tuple<K, V> def) {
 		return get(key, Tuple.class, def);
 	}
 
@@ -752,6 +765,29 @@ public final class SerializedMap extends StrictCollection {
 	 */
 	public String toJson() {
 		return gson.toJson(serialize());
+	}
+
+	/**
+	 * Convert the key pairs into formatted string such as {
+	 * 	"key" = "value"
+	 *  "another" = "value2"
+	 *  ...
+	 * }
+	 *
+	 * @return
+	 */
+	public String toStringFormatted() {
+		final Map<?, ?> map = (Map<?, ?>) serialize();
+		final List<String> lines = new ArrayList<>();
+
+		lines.add("{");
+
+		for (final Map.Entry<?, ?> entry : map.entrySet())
+			lines.add("\t'" + entry.getKey() + "' = '" + entry.getValue() + "'");
+
+		lines.add("}");
+
+		return String.join("\n", lines);
 	}
 
 	@Override

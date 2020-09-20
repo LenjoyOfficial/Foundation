@@ -9,6 +9,7 @@ import java.util.List;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.MathUtil;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.RandomUtil;
@@ -16,6 +17,8 @@ import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.StrictList;
 import org.mineacademy.fo.exception.FoException;
+import org.mineacademy.fo.model.ChatPages;
+import org.mineacademy.fo.model.Replacer;
 import org.mineacademy.fo.model.SimpleComponent;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.settings.SimpleLocalization;
@@ -23,6 +26,7 @@ import org.mineacademy.fo.settings.SimpleLocalization;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * A command group contains a set of different subcommands
@@ -40,7 +44,15 @@ public abstract class SimpleCommandGroup {
 	/**
 	 * The registered main command, if any
 	 */
-	protected SimpleCommand mainCommand;
+	private SimpleCommand mainCommand;
+
+	/**
+	 * How many commands shall we display per page by default?
+	 *
+	 * Defaults to 12
+	 */
+	@Setter(value = AccessLevel.PROTECTED)
+	private int commandsPerPage = 12;
 
 	// ----------------------------------------------------------------------
 	// Main functions
@@ -122,7 +134,7 @@ public abstract class SimpleCommandGroup {
 	 */
 	protected final void registerSubcommand(final SimpleSubCommand command) {
 		Valid.checkNotNull(mainCommand, "Cannot add subcommands when main command is missing! Call register()");
-		Valid.checkBoolean(!subcommands.contains(command), "Subcommand /" + mainCommand.getLabel() + " " + command.getSublabel() + " already registered!");
+		Valid.checkBoolean(!subcommands.contains(command), "Subcommand /" + mainCommand.getLabel() + " " + command.getSublabel() + " already registered when trying to add " + command.getClass());
 
 		subcommands.add(command);
 	}
@@ -266,6 +278,14 @@ public abstract class SimpleCommandGroup {
 	}
 
 	/**
+	 * Return the subcommand description when listing all commands using the "help" or "?" subcommand
+	 * @return
+	 */
+	protected String getSubcommandDescription() {
+		return " &f/{label} {sublabel} {usage+}{dash+}{description}";
+	}
+
+	/**
 	 * Return the default color in the {@link #getHelpHeader()},
 	 * GOLD + BOLD colors by default
 	 *
@@ -364,40 +384,44 @@ public abstract class SimpleCommandGroup {
 					final String usage = colorizeUsage(subcommand.getUsage());
 					final String desc = Common.getOrEmpty(subcommand.getDescription());
 
-					final SimpleComponent line = SimpleComponent.of(" &f/" + getLabel() + " " + subcommand.getSublabel() + " " + (usage.isEmpty() ? "" : usage + " "));
+					final SimpleComponent line = SimpleComponent.of(Replacer.replaceArray(getSubcommandDescription(),
+							"label", getLabel(),
+							"sublabel", subcommand.getSublabel(),
+							"usage", usage,
+							"description", !desc.isEmpty() && MinecraftVersion.olderThan(V.v1_8) ? desc : "",
+							"dash", !desc.isEmpty() && MinecraftVersion.olderThan(V.v1_8) ? "&e-" : ""));
 
-					if (!desc.isEmpty())
-						if (MinecraftVersion.atLeast(V.v1_8)) {
-							final String command = Common.stripColors(line.getPlainMessage()).substring(1);
-							final List<String> hover = new ArrayList<>();
+					if (!desc.isEmpty() && MinecraftVersion.atLeast(V.v1_8)) {
+						final String command = Common.stripColors(line.getPlainMessage()).substring(1);
+						final List<String> hover = new ArrayList<>();
 
-							hover.add("&7Description: &f" + desc);
-							hover.add("&7Permission: &f" + subcommand.getPermission());
+						hover.add("&7Description: &f" + desc);
+						hover.add("&7Permission: &f" + subcommand.getPermission());
 
-							if (subcommand.getMultilineUsageMessage() != null && subcommand.getMultilineUsageMessage().length > 0) {
-								hover.add("&7Usage: ");
+						if (subcommand.getMultilineUsageMessage() != null && subcommand.getMultilineUsageMessage().length > 0) {
+							hover.add("&7Usage: ");
 
-								for (final String usageLine : subcommand.getMultilineUsageMessage())
-									hover.add("&f" + replacePlaceholders(colorizeUsage(usageLine.replace("{sublabel}", subcommand.getSublabel()))));
+							for (final String usageLine : subcommand.getMultilineUsageMessage())
+								hover.add("&f" + replacePlaceholders(colorizeUsage(usageLine.replace("{sublabel}", subcommand.getSublabel()))));
 
-							} else
-								hover.add("&7Usage: &f" + (usage.isEmpty() ? command : usage));
-
-							line.onHover(hover);
-							line.onClickSuggestCmd("/" + getLabel() + " " + subcommand.getSublabel());
 						} else
-							line.append("&e- " + desc);
+							hover.add("&7Usage: &f" + (usage.isEmpty() ? command : usage));
+
+						line.onHover(hover);
+						line.onClickSuggestCmd("/" + getLabel() + " " + subcommand.getSublabel());
+					}
 
 					lines.add(line);
 				}
 
 			if (!lines.isEmpty()) {
-				if (getHelpHeader() != null)
-					for (final String header : getHelpHeader())
-						tellNoPrefix(header);
+				final ChatPages pages = new ChatPages(MathUtil.range(0, lines.size(), commandsPerPage));
 
-				for (final SimpleComponent line : lines)
-					line.send(sender);
+				if (getHelpHeader() != null)
+					pages.setHeader(getHelpHeader());
+
+				pages.setPages(lines);
+				pages.showTo(sender);
 
 			} else
 				tellError(SimpleLocalization.Commands.HEADER_NO_SUBCOMMANDS);

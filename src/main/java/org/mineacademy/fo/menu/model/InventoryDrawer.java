@@ -1,10 +1,13 @@
 package org.mineacademy.fo.menu.model;
 
+import lombok.NonNull;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.remain.CompMaterial;
 
 import lombok.Getter;
@@ -35,16 +38,40 @@ public final class InventoryDrawer {
 	private final ItemStack[] content;
 
 	/**
+	 * The inventory with which this instance works with, used after calling {@link #of(Inventory)}
+	 */
+	private Inventory inventory;
+
+	/**
+	 * Close player's open inventory when displaying this inventory?
+	 */
+	private final boolean closeInventoryOnDisplay;
+
+	/**
 	 * Create a new inventory drawer, see {@link #of(int, String)}
-	 *
 	 * @param size  the size
 	 * @param title the title
+	 * @param closeInventoryOnDisplay
 	 */
-	private InventoryDrawer(int size, String title) {
+	private InventoryDrawer(int size, String title, boolean closeInventoryOnDisplay) {
 		this.size = size;
 		this.title = title;
+		this.closeInventoryOnDisplay = closeInventoryOnDisplay;
 
 		this.content = new ItemStack[size];
+	}
+
+	/**
+	 * Create a new inventory drawer from an existing inventory
+	 *
+	 * @param inventory
+	 */
+	private InventoryDrawer(@NonNull Inventory inventory) {
+		this.inventory = inventory;
+		this.size = inventory.getSize();
+		this.closeInventoryOnDisplay = false;
+		
+		this.content = new ItemStack[inventory.getSize()];
 	}
 
 	/**
@@ -124,21 +151,41 @@ public final class InventoryDrawer {
 	}
 
 	/**
-	 * Display the inventory to the player, closing older inventory if already opened
+	 * Display the inventory to the player, closing already opened inventory if set in this drawer
 	 *
 	 * @param player the player
 	 */
 	public void display(Player player) {
-		// Automatically append the black color in the menu, can be overriden by colors
-		final Inventory inv = Bukkit.createInventory(player, size, Common.colorize("&0" + title));
 
-		inv.setContents(content);
-
-		// Before opening make sure we close his old inventory if exist
-		if (player.getOpenInventory() != null)
+		// Close player's open inventory if the variable is true
+		if (closeInventoryOnDisplay)
 			player.closeInventory();
 
-		player.openInventory(inv);
+		// create new inventory if instance is created with of(int, String)
+		final boolean createNewInventory = inventory == null;
+
+		if (createNewInventory) {
+			// Automatically append the black color in the menu, can be overridden by colors
+			inventory = Bukkit.createInventory(player, size, Common.colorize("&0" + title));
+		}
+
+		inventory.setContents(content);
+
+		if (createNewInventory)
+			player.openInventory(inventory);
+		else
+			player.updateInventory();
+	}
+
+	/**
+	 * Make a new inventory drawer, closing the player's open inventory on displaying
+	 *
+	 * @param size  the size
+	 * @param title the title, colors will be replaced
+	 * @return the inventory drawer
+	 */
+	public static InventoryDrawer of(int size, String title) {
+		return of(size, title, true);
 	}
 
 	/**
@@ -146,9 +193,22 @@ public final class InventoryDrawer {
 	 *
 	 * @param size  the size
 	 * @param title the title, colors will be replaced
+	 * @param closeInventoryOnDisplay if true, the cursor will be moved to the center on displaying, else it will stay where it was
 	 * @return the inventory drawer
 	 */
-	public static InventoryDrawer of(int size, String title) {
-		return new InventoryDrawer(size, title);
+	public static InventoryDrawer of(int size, String title, boolean closeInventoryOnDisplay) {
+		return new InventoryDrawer(size, title, closeInventoryOnDisplay);
+	}
+
+	/**
+	 * Make a new inventory drawer for the player's open inventory
+	 *
+	 * @param player the player whose open inventory should be used
+	 * @return the inventory drawer
+	 */
+	public static InventoryDrawer of(Player player) {
+		Valid.checkBoolean(player.getOpenInventory().getType() != InventoryType.CRAFTING, "New InventoryDrawer from non-existing inventory!");
+		
+		return new InventoryDrawer(player.getOpenInventory().getTopInventory());
 	}
 }

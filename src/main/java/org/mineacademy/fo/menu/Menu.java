@@ -78,7 +78,7 @@ public abstract class Menu {
 	 * The default duration of the new animated title before
 	 * it is reverted back to the old one
 	 * <p>
-	 * Used in {@link #updateInventoryTitle(Menu, Player, String, String)}
+	 * Used in {@link #animateTitle(String)}
 	 */
 	@Setter
 	private static int titleAnimationDurationTicks = 20;
@@ -335,7 +335,7 @@ public abstract class Menu {
 	 * You must override this in certain cases
 	 *
 	 * @return the new instance, of null
-	 * @throws if new instance could not be made, for example when the menu is
+	 * @throws FoException if new instance could not be made, for example when the menu is
 	 *            taking constructor params
 	 */
 	public Menu newInstance() {
@@ -359,13 +359,23 @@ public abstract class Menu {
 	// --------------------------------------------------------------------------------
 	// Rendering the menu
 	// --------------------------------------------------------------------------------
-
+	
 	/**
-	 * Display this menu to the player
+	 * Display this menu to the player, automatically closing their already open inventory.
 	 *
 	 * @param player the player
 	 */
 	public final void displayTo(final Player player) {
+		displayTo(player, true);
+	}
+	
+	/**
+	 * Display this menu to the player.
+	 *
+	 * @param player the player
+	 * @param closeOpenInventory if true, the player's cursor will be moved to the center on displaying, else it will stay where it was.
+	 */
+	public final void displayTo(final Player player, boolean closeOpenInventory) {
 		Valid.checkNotNull(size, "Size not set in " + this + " (call setSize in your constructor)");
 		Valid.checkNotNull(title, "Title not set in " + this + " (call setTitle in your constructor)");
 
@@ -373,7 +383,7 @@ public abstract class Menu {
 		registerButtonsIfHasnt();
 
 		// Draw the menu
-		final InventoryDrawer drawer = InventoryDrawer.of(size, title);
+		final InventoryDrawer drawer = InventoryDrawer.of(size, title, closeOpenInventory);
 
 		// Compile bottom bar
 		compileBottomBar0().forEach((slot, item) -> drawer.setItem(slot, item));
@@ -476,17 +486,22 @@ public abstract class Menu {
 	 */
 	protected final void redraw() {
 		final Inventory inv = getViewer().getOpenInventory().getTopInventory();
+		final InventoryDrawer drawer = InventoryDrawer.of(getViewer());
+		
 		Valid.checkBoolean(inv.getType() == InventoryType.CHEST, getViewer().getName() + "'s inventory closed in the meanwhile (now == " + inv.getType() + ").");
 
 		for (int i = 0; i < size; i++) {
 			final ItemStack item = getItemAt(i);
 
 			Valid.checkBoolean(i < inv.getSize(), "Item (" + (item != null ? item.getType() : "null") + ") position (" + i + ") > inv size (" + inv.getSize() + ")");
-			inv.setItem(i, item);
+			drawer.setItem(i, item);
 		}
 
-		compileBottomBar0().forEach((slot, item) -> inv.setItem(slot, item));
-		getViewer().updateInventory();
+		compileBottomBar0().forEach((slot, item) -> drawer.setItem(slot, item));
+		
+		onDisplay(drawer);
+		
+		drawer.display(getViewer());
 	}
 
 	/**
@@ -723,8 +738,6 @@ public abstract class Menu {
 	 * <p>
 	 * Only takes change when used in constructor or before calling
 	 * {@link #displayTo(Player)} and cannot be updated in {@link #restartMenu()}
-	 *
-	 * @param visible
 	 */
 	protected final void setSlotNumbersVisible() {
 		this.slotNumbersVisible = true;

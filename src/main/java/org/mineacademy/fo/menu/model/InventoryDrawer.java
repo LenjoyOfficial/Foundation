@@ -158,7 +158,7 @@ public final class InventoryDrawer {
 	 */
 	public void display(final Player player) {
 
-		// Close player's open inventory if the variable is true
+		// Close player's open inventory if creating new inventory
 		if (closeInventoryOnDisplay)
 			player.closeInventory();
 
@@ -191,7 +191,7 @@ public final class InventoryDrawer {
 	public Inventory build(InventoryHolder holder) {
 
 		// Automatically append the black color in the menu, can be overriden by colors
-		final Inventory inv = Common.getOrDefault(inventory, Bukkit.createInventory(holder, size, Common.colorize("&0" + (this.title.length() > 30 ? this.title.substring(0, 30) : this.title))));
+		final Inventory inv = Common.getOrDefault(inventory, Bukkit.createInventory(holder, size, this.title != null ? Common.colorize("&0" + (this.title.length() > 30 ? this.title.substring(0, 30) : this.title)) : ""));
 
 		inv.setContents(this.content);
 

@@ -49,7 +49,7 @@ public class ColoredRanges implements ConfigSerializable {
 	 */
 	public boolean hasColor(final Number value) {
 		for (final RangedValue range : ranges.keySet())
-			if (range.isWithin(value))
+			if (range.isInRangeLong(value.longValue()))
 				return true;
 
 		return false;
@@ -69,7 +69,7 @@ public class ColoredRanges implements ConfigSerializable {
 		ChatColor color = defaultColor;
 
 		for (final Map.Entry<RangedValue, ChatColor> range : ranges.entrySet())
-			if (range.getKey().isWithin(value)) {
+			if (range.getKey().isInRangeLong(value.longValue())) {
 				color = range.getValue();
 
 				break;

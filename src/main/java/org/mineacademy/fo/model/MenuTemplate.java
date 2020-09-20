@@ -1,19 +1,21 @@
 package org.mineacademy.fo.model;
 
-import lombok.Getter;
-import lombok.NonNull;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictMap;
 import org.mineacademy.fo.menu.model.InventoryDrawer;
 import org.mineacademy.fo.menu.model.ItemCreator;
-import org.mineacademy.fo.model.Tuple;
+import org.mineacademy.fo.settings.YamlConfig;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import lombok.Getter;
+import lombok.NonNull;
 
 /**
  * A special class for customizing different slots for items in a menu through a configuration
@@ -21,19 +23,33 @@ import java.util.Map;
  * Extend this class and write public methods that call {@link #fillInventory(InventoryDrawer, char, List)}
  * and {@link #addConstantItem(InventoryDrawer, char)}
  */
-public class MenuTemplate {
+public class MenuTemplate extends YamlConfig {
+
 	private final StrictMap<Character, Tuple<List<Integer>, ItemStack>> slots = new StrictMap<>();
 
 	@Getter
-	private final int inventorySize;
+	private int inventorySize;
 
 	/**
 	 * Creates a new template from a serialized map
 	 *
-	 * @param map
+	 * @param
 	 */
-	protected MenuTemplate(final SerializedMap map) {
-		final List<String> layout = map.getStringList("Layout");
+	protected MenuTemplate(final String file, String path) {
+		setPathPrefix(path);
+
+		FileUtil.extract(file);
+		loadConfiguration(NO_DEFAULT, file);
+	}
+
+	/**
+	 * @see YamlConfig#onLoad()
+	 */
+	@Override
+	protected final void onLoad() {
+		slots.clear();
+
+		final List<String> layout = getStringList("Layout");
 		final StrictMap<Character, SerializedMap> types = new StrictMap<>();
 
 		int slot = 0;
@@ -41,9 +57,9 @@ public class MenuTemplate {
 		for (final String row : layout)
 			for (final char item : row.toCharArray()) {
 				if (item != ' ') {
-					final SerializedMap itemMap = types.getOrPut(item, map.getMap(item + ""));
+					final SerializedMap itemMap = types.getOrPut(item, getMap(item + ""));
 
-					if (!slots.contains(item)) {
+					if (!slots.containsKey(item)) {
 						final ItemStack display = itemMap.containsKey("Display") ? ItemCreator.of(itemMap.getMap("Display")).make() : null;
 
 						slots.put(item, new Tuple<>(Common.toList(slot++), display));
@@ -57,6 +73,19 @@ public class MenuTemplate {
 			}
 
 		this.inventorySize = layout.size() * 9;
+
+		try {
+			onLoadTemplate();
+
+		} catch (Throwable t) {
+			 Common.error(t, "Error while loading template " + this.getClass());
+		}
+	}
+
+	/**
+	 * Called when loading or reloading this template, use it to load your values here
+	 */
+	protected void onLoadTemplate() {
 	}
 
 	/**
@@ -119,7 +148,7 @@ public class MenuTemplate {
 	 * @param items
 	 */
 	protected final void fillInventory(@NonNull final InventoryDrawer drawer, final char type, @NonNull final List<ItemStack> items) {
-		Valid.checkBoolean(slots.contains(type), "Slots " + slots + " don't contain " + type);
+		Valid.checkBoolean(slots.containsKey(type), "Slots " + slots + " don't contain " + type);
 
 		final List<Integer> slots = this.slots.get(type).getKey();
 

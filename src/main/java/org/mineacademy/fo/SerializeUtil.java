@@ -42,7 +42,6 @@ import org.mineacademy.fo.jsonsimple.JSONArray;
 import org.mineacademy.fo.jsonsimple.JSONObject;
 import org.mineacademy.fo.jsonsimple.JSONParseException;
 import org.mineacademy.fo.jsonsimple.JSONParser;
-import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.model.BoxedMessage;
 import org.mineacademy.fo.model.ConfigSerializable;
 import org.mineacademy.fo.model.IsInList;
@@ -62,9 +61,6 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.HoverEvent;
 
 /**
  * Utility class for serializing objects to writeable YAML data and back.
@@ -129,7 +125,13 @@ public final class SerializeUtil {
 			if (serializers.containsKey(object.getClass()))
 				return serializers.get(object.getClass()).apply(object);
 
-			if (object instanceof ConfigurationSerializable) {
+			if (object instanceof PotionEffect)
+				return serializePotionEffect((PotionEffect) object);
+
+			else if (object instanceof Location)
+				return serializeLoc((Location) object);
+
+			else if (object instanceof ConfigurationSerializable) {
 
 				if (mode == Mode.JSON) {
 					if (object instanceof ItemStack)
@@ -161,9 +163,6 @@ public final class SerializeUtil {
 			else if (object instanceof CompMaterial)
 				return object.toString();
 
-			else if (object instanceof Location)
-				return serializeLoc((Location) object);
-
 			else if (object instanceof BoxedMessage) {
 				final String message = ((BoxedMessage) object).getMessage();
 
@@ -175,26 +174,17 @@ public final class SerializeUtil {
 			else if (object instanceof Enum<?>)
 				return object.toString();
 
+			else if (object instanceof Entity)
+				return Remain.getName((Entity) object);
+
 			else if (object instanceof CommandSender)
 				return ((CommandSender) object).getName();
 
 			else if (object instanceof World)
 				return ((World) object).getName();
 
-			else if (object instanceof Entity)
-				return Remain.getName((Entity) object);
-
 			else if (object instanceof PotionEffectType)
 				return ((PotionEffectType) object).getName();
-
-		else if (obj instanceof PotionEffectType)
-			return ((PotionEffectType) obj).getName();
-
-		else if (obj instanceof PotionEffect)
-			return serializePotionEffect((PotionEffect) obj);
-
-		else if (obj instanceof ItemCreator)
-			return ((ItemCreator) obj).make();
 
 			else if (object instanceof SimpleSound)
 				return ((SimpleSound) object).toString();
@@ -432,9 +422,6 @@ public final class SerializeUtil {
 			else if (classOf == SerializedMap.class)
 				object = mode == Mode.JSON ? SerializedMap.fromJson(object.toString()) : SerializedMap.of(object);
 
-			else if (classOf == BoxedMessage.class)
-				object = new BoxedMessage(object.toString());
-
 			else if (classOf == Location.class)
 				object = deserializeLocation(object);
 
@@ -494,6 +481,19 @@ public final class SerializeUtil {
 				final String value = serialized.getString("Value");
 
 				object = new ClickEvent(action, value);
+			}
+
+			else if (classOf == BoxedMessage.class) {
+				final String text = object.toString();
+
+				if (text.startsWith("<framed>")) {
+					final String[] split = text.substring(7).split("::");
+					final ChatColor color = ChatColor.getByChar(split[0].charAt(1));
+
+					object = new BoxedMessage(color, split[1]);
+
+				} else
+					object = new BoxedMessage(text);
 			}
 
 			else if (Enchantment.class.isAssignableFrom(classOf)) {

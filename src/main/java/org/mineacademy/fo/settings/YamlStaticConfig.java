@@ -9,26 +9,23 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictList;
-import org.mineacademy.fo.constants.FoConstants;
 import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.model.BoxedMessage;
 import org.mineacademy.fo.model.ColoredRanges;
-import org.mineacademy.fo.model.Replacer;
+import org.mineacademy.fo.model.IsInList;
 import org.mineacademy.fo.model.SimpleProgressBar;
 import org.mineacademy.fo.model.SimpleSound;
 import org.mineacademy.fo.model.SimpleTime;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.Remain;
-import org.mineacademy.fo.settings.YamlConfig.CasusHelper;
-import org.mineacademy.fo.settings.YamlConfig.TitleHelper;
+import org.mineacademy.fo.settings.FileConfig.AccusativeHelper;
+import org.mineacademy.fo.settings.FileConfig.TitleHelper;
 import org.mineacademy.fo.settings.model.SimpleDisplay;
 import org.mineacademy.fo.settings.model.SimpleProgressDisplay;
 
@@ -353,7 +350,7 @@ public abstract class YamlStaticConfig {
 	}
 
 	protected static final AccusativeHelper getCasus(final String path) {
-		return TEMPORARY_INSTANCE.getCasus(path);
+		return TEMPORARY_INSTANCE.getAccusativePeriod(path);
 	}
 
 	protected static final TitleHelper getTitle(final String path) {

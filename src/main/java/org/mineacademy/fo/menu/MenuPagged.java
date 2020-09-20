@@ -1,12 +1,10 @@
 package org.mineacademy.fo.menu;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import javax.annotation.Nullable;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -118,7 +116,7 @@ public abstract class MenuPagged<T> extends Menu {
 	 * @param items  the pages the pages
 	 */
 	protected MenuPagged(final Menu parent, @NonNull final T... items) {
-		this(null, parent, Arrays.asList(items), false);
+		this(parent, Arrays.asList(items));
 	}
 
 	/**
@@ -128,17 +126,17 @@ public abstract class MenuPagged<T> extends Menu {
 	 * @param items  the pages the pages
 	 */
 	protected MenuPagged(final Menu parent, final Iterable<T> items) {
-		this(null, parent, items, false);
+		this(parent, items, false);
 	}
 
 	/**
 	 * Create a new paged menu with automatic page size
 	 *
 	 * @param parent the parent menu
-	 * @param pages  the pages the pages
+	 * @param items  the pages the pages
 	 */
-	protected MenuPagged(final Menu parent, final List<Integer> slots, final Iterable<T> pages) {
-		this(parent, slots, pages, false);
+	protected MenuPagged(final Menu parent, final List<Integer> slots, final Iterable<T> items) {
+		this(parent, slots, items, false);
 	}
 
 	/**
@@ -149,7 +147,7 @@ public abstract class MenuPagged<T> extends Menu {
 	 * @param returnMakesNewInstance
 	 */
 	protected MenuPagged(final Menu parent, final Iterable<T> items, final boolean returnMakesNewInstance) {
-		this(null, parent, items, returnMakesNewInstance);
+		this(parent, null, items, returnMakesNewInstance);
 	}
 
 	/**
@@ -157,11 +155,11 @@ public abstract class MenuPagged<T> extends Menu {
 	 *
 	 * @param parent the parent menu
 	 * @param slots  the slots where the items will be
-	 * @param pages  the pages
+	 * @param items  the pages
 	 * @param returnMakesNewInstance
 	 */
-	protected MenuPagged(final Menu parent, final List<Integer> slots, final Iterable<T> pages, final boolean returnMakesNewInstance) {
-		this(null, parent, slots, pages, returnMakesNewInstance);
+	protected MenuPagged(final Menu parent, final List<Integer> slots, final Iterable<T> items, final boolean returnMakesNewInstance) {
+		this(null, parent, slots, items, returnMakesNewInstance);
 	}
 
 	/**
@@ -219,7 +217,7 @@ public abstract class MenuPagged<T> extends Menu {
 	 * @param returnMakesNewInstance
 	 */
 	protected MenuPagged(final int pageSize, final Menu parent, final Iterable<T> items, final boolean returnMakesNewInstance) {
-		this((Integer) pageSize, parent, items, returnMakesNewInstance);
+		this((Integer) pageSize, parent, null, items, returnMakesNewInstance);
 	}
 
 	/**

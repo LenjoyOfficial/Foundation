@@ -1,12 +1,11 @@
 package org.mineacademy.fo.menu;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import javax.annotation.Nullable;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -535,10 +534,10 @@ public abstract class Menu {
 		// Call before calling getItemAt
 		this.onRestart();
 
-		this.compileItems().forEach((slot, item) -> inventory.setItem(slot, item));
-		onDisplay(drawer);
+		this.compileItems().forEach((slot, item) -> drawer.setItem(slot, item));
+		this.onDisplay(drawer);
 
-		this.getViewer().updateInventory();
+		drawer.display(this.getViewer());
 
 		if (animatedTitle != null)
 			this.animateTitle(animatedTitle);

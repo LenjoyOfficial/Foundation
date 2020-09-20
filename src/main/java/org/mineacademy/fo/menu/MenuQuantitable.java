@@ -89,9 +89,12 @@ public interface MenuQuantitable {
 	default Button getQuantityButton(Menu menu) {
 		return new Button() {
 
+
 			@Override
 			public final void onClickedInMenu(Player player, Menu clickedMenu, ClickType clickType) {
-				final MenuQuantity nextQuantity = clickType == ClickType.LEFT ? MenuQuantitable.this.getQuantity().previous(MenuQuantitable.this.allowDecimalQuantities()) : MenuQuantitable.this.getQuantity().next(MenuQuantitable.this.allowDecimalQuantities());
+				final boolean allowDecimals = MenuQuantitable.this.allowDecimalQuantities();
+
+				final MenuQuantity nextQuantity = clickType == ClickType.LEFT ? MenuQuantitable.this.getQuantity().previous(allowDecimals) : MenuQuantitable.this.getQuantity().next(allowDecimals);
 				Valid.checkNotNull(nextQuantity, "Next quantity cannot be null. Current: " + MenuQuantitable.this.getQuantity() + " Click: " + clickType);
 
 				MenuQuantitable.this.setQuantity(nextQuantity);
@@ -101,13 +104,14 @@ public interface MenuQuantitable {
 
 			@Override
 			public ItemStack getItem() {
-				return ItemCreator
-						.of(
+				final boolean allowDecimals = MenuQuantitable.this.allowDecimalQuantities();
+
+				return ItemCreator.of(
 								CompMaterial.STRING,
-								"Edit Quantity: &7" + MenuQuantitable.this.getCurrentQuantityPercent(),
+								"Edit Quantity: &7" + (int) getQuantity().getAmountDouble(),
 								"",
-								"&7Left click to increase to &b" + getQuantity().next().getAmount() + "&7!",
-								"&7Right click to decrease to &b" + getQuantity().previous().getAmount() + "&7!")
+								"&7Left click to increase to &b" + getQuantity().next(allowDecimals).getAmountDouble() + "&7!",
+								"&7Right click to decrease to &b" + getQuantity().previous(allowDecimals).getAmountDouble() + "&7!")
 						.make();
 			}
 		};

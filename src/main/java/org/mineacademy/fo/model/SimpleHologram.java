@@ -17,6 +17,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.remain.CompMaterial;
@@ -38,7 +39,8 @@ public abstract class SimpleHologram {
 		final Class<?> nmsLivingEntity = ReflectionUtil.getNMSClass("EntityLiving", "net.minecraft.world.entity.EntityLiving");
 
 		SPAWN_ENTITY_LIVING_PACKET = ReflectionUtil.getConstructor(
-				ReflectionUtil.getNMSClass("PacketPlayOutSpawnEntityLiving", "net.minecraft.network.protocol.game.PacketPlayOutSpawnEntityLiving"),
+				ReflectionUtil.getNMSClass("PacketPlayOutSpawnEntityLiving",
+						"net.minecraft.network.protocol.game.PacketPlayOutSpawnEntity" + (MinecraftVersion.atLeast(MinecraftVersion.V.v1_19) ? "" : "Living")),
 				nmsLivingEntity);
 
 		DESTROY_ENTITIES_PACKET = ReflectionUtil.getConstructor(
@@ -58,11 +60,6 @@ public abstract class SimpleHologram {
 	 */
 	@Getter
 	private static volatile Set<SimpleHologram> registeredItems = new HashSet<>();
-
-	/**
-	 * The task for ticking the registered holograms
-	 */
-	private static BukkitTask tickTask;
 
 	/**
 	 * The ticking task responsible for calling {@link #onTick()}
@@ -396,7 +393,9 @@ public abstract class SimpleHologram {
 	 * @param location
 	 */
 	public final void teleport(Location location) {
-		Valid.checkBoolean(this.pendingTeleport == null, this + " is already pending teleport to " + this.pendingTeleport);
+		if (this.pendingTeleport != null)
+			return;
+
 		this.checkSpawned("teleport");
 
 		this.lastTeleportLocation.setX(location.getX());

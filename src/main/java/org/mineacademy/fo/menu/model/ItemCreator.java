@@ -11,7 +11,7 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 
 import net.md_5.bungee.api.chat.BaseComponent;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
@@ -38,10 +38,10 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
 import org.mineacademy.fo.Common;
-import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.ReflectionUtil;
+import org.mineacademy.fo.SerializeUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.exception.FoException;
@@ -1408,7 +1408,7 @@ public final class ItemCreator implements ConfigSerializable {
 					PotionType type = ReflectionUtil.lookupEnumSilent(PotionType.class, rawType);
 
 					if (type == null)
-						type = PotionType.getByEffect(ItemUtil.findPotion(rawType));
+						type = PotionType.getByEffect(SerializeUtil.deserialize(PotionEffectType.class, rawType));
 
 					builder.potionData(new SimplePotionData(type, material == CompMaterial.SPLASH_POTION, extended, upgraded));
 
@@ -1427,7 +1427,7 @@ public final class ItemCreator implements ConfigSerializable {
 				final int amplifier = effect.getInteger("Amplifier");
 
 				try {
-					final PotionEffectType potion = ItemUtil.findPotion(effectType);
+					final PotionEffectType potion = SerializeUtil.deserialize(PotionEffectType.class, effectType);
 
 					builder.potionEffects(new PotionEffect(potion, durationTicks, amplifier));
 
@@ -1445,7 +1445,7 @@ public final class ItemCreator implements ConfigSerializable {
 				final int level = storedEnchantments.getInteger(enchantType);
 
 				try {
-					final Enchantment enchantment = ItemUtil.findEnchantment(enchantType);
+					final Enchantment enchantment = SerializeUtil.deserialize(Enchantment.class, enchantType);
 
 					builder.enchant(enchantment, level);
 
@@ -1557,7 +1557,7 @@ public final class ItemCreator implements ConfigSerializable {
 
 		for (final String enchantType : enchants.keySet())
 			try {
-				final Enchantment enchant = ItemUtil.findEnchantment(enchantType);
+				final Enchantment enchant = SerializeUtil.deserialize(Enchantment.class, enchantType);
 				final int level = enchants.getInteger(enchantType);
 
 				builder.enchant(enchant, level);

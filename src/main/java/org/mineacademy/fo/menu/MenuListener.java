@@ -1,6 +1,6 @@
 package org.mineacademy.fo.menu;
 
-import org.bukkit.Material;
+import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event.Result;
 import org.bukkit.event.EventHandler;
@@ -15,22 +15,14 @@ import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Common;
-import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.menu.button.Button;
 import org.mineacademy.fo.menu.model.MenuClickLocation;
 import org.mineacademy.fo.remain.Remain;
-import org.mineacademy.fo.settings.SimpleLocalization;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * The bukkit listener responsible for menus to function.
  */
 public final class MenuListener implements Listener {
-
-	private final Map<UUID, SwapData> cacheData = new HashMap<>();
 
 	/**
 	 * Create a new menu listener
@@ -66,29 +58,8 @@ public final class MenuListener implements Listener {
 		final Player player = (Player) event.getPlayer();
 		final Menu menu = Menu.getMenu(player);
 
-		if (menu != null) {
+		if (menu != null)
 			menu.handleClose(event.getInventory());
-			addItemsToPlayer(player);
-		}
-	}
-
-	@EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
-	public void onMenuOpen(final InventoryOpenEvent event) {
-		if (!(event.getPlayer() instanceof Player))
-			return;
-
-		if (event.getInventory().getType() == InventoryType.PLAYER)
-			return;
-
-		final Player player = (Player) event.getPlayer();
-
-		if (MinecraftVersion.atLeast(MinecraftVersion.V.v1_14))
-			Common.runLater(3, () -> {
-				final Menu menu = Menu.getMenu(player);
-
-				if (menu != null)
-					cacheData.put(player.getUniqueId(), new SwapData(false, player.getInventory().getItemInOffHand()));
-			});
 	}
 
 	/**
@@ -132,7 +103,7 @@ public final class MenuListener implements Listener {
 
 			if (!allowed) {
 				event.setResult(Result.DENY);
-				checkIfPlayerSwapItem(event, player);
+
 				player.updateInventory();
 			}
 
@@ -145,17 +116,6 @@ public final class MenuListener implements Listener {
 					player.getInventory().setItemInOffHand(null);
 			}
 		}
-	}
-
-	private void addItemsToPlayer(Player player) {
-
-		SwapData data = cacheData.get(player.getUniqueId());
-		if (data != null && data.isPlayerUseSwapoffhand())
-			if (data.getItemInOfBeforeOpenMenuHand() != null && data.getItemInOfBeforeOpenMenuHand().getType() != Material.AIR)
-				player.getInventory().setItemInOffHand(data.getItemInOfBeforeOpenMenuHand());
-			else
-				player.getInventory().setItemInOffHand(null);
-		cacheData.remove(player.getUniqueId());
 	}
 
 	private static final class OffHandListener implements Listener {
@@ -204,25 +164,6 @@ public final class MenuListener implements Listener {
 					}
 				}
 			}
-			cacheData.put(player.getUniqueId(), new SwapData(true, item));
-		}
-	}
-
-	private static class SwapData {
-		boolean playerUseSwapoffhand;
-		ItemStack itemInOfBeforeOpenMenuHand;
-
-		public SwapData(boolean playerUseSwapoffhand, ItemStack itemInOfBeforeOpenMenuHand) {
-			this.playerUseSwapoffhand = playerUseSwapoffhand;
-			this.itemInOfBeforeOpenMenuHand = itemInOfBeforeOpenMenuHand;
-		}
-
-		public boolean isPlayerUseSwapoffhand() {
-			return playerUseSwapoffhand;
-		}
-
-		public ItemStack getItemInOfBeforeOpenMenuHand() {
-			return itemInOfBeforeOpenMenuHand;
 		}
 	}
 }

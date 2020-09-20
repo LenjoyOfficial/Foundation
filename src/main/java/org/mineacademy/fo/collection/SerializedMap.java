@@ -23,12 +23,11 @@ import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.jsonsimple.JSONObject;
 import org.mineacademy.fo.jsonsimple.JSONParser;
-import org.mineacademy.fo.model.IsInList;
 import org.mineacademy.fo.menu.model.ItemCreator;
+import org.mineacademy.fo.model.IsInList;
 import org.mineacademy.fo.model.Tuple;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompMaterial;
-import org.mineacademy.fo.remain.JsonItemStack;
 import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.settings.ConfigSection;
 
@@ -512,7 +511,7 @@ public final class SerializedMap extends StrictCollection implements Iterable<Ma
 	 * @param key
 	 * @return
 	 */
-	public ItemStack getItemStack(final String key) {
+	public ItemStack getItem(final String key) {
 		return this.getItem(key, null);
 	}
 
@@ -761,6 +760,7 @@ public final class SerializedMap extends StrictCollection implements Iterable<Ma
 			} finally {
 				SerializeUtil.setMode(oldMode);
 			}
+		}
 
 		return map;
 	}

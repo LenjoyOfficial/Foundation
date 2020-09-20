@@ -1,5 +1,6 @@
 package org.mineacademy.fo.settings;
 
+import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -23,8 +24,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -34,15 +33,22 @@ import org.mineacademy.fo.SerializeUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictList;
+import org.mineacademy.fo.command.SimpleCommand;
+import org.mineacademy.fo.command.SimpleCommandGroup;
 import org.mineacademy.fo.exception.FoException;
+import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.model.BoxedMessage;
+import org.mineacademy.fo.model.ColoredRanges;
 import org.mineacademy.fo.model.ConfigSerializable;
 import org.mineacademy.fo.model.IsInList;
+import org.mineacademy.fo.model.SimpleProgressBar;
 import org.mineacademy.fo.model.SimpleSound;
 import org.mineacademy.fo.model.SimpleTime;
 import org.mineacademy.fo.model.Tuple;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.Remain;
+import org.mineacademy.fo.settings.model.SimpleDisplay;
+import org.mineacademy.fo.settings.model.SimpleProgressDisplay;
 
 import lombok.AccessLevel;
 import lombok.NonNull;
@@ -474,6 +480,30 @@ public abstract class FileConfig {
 	}
 
 	/**
+	 * Gets a deserialized SimpleDisplay, or null if invalid or not found
+	 *
+	 * @param path
+	 * @return
+	 */
+	protected final SimpleDisplay getDisplay(final String path) {
+		final SerializedMap map = getMap(path);
+
+		return !map.isEmpty() ? new SimpleDisplay(map) : null;
+	}
+
+	/**
+	 * Gets a deserialized SimpleProgressDisplay, or null if invalid or not found
+	 *
+	 * @param path
+	 * @return
+	 */
+	protected final SimpleProgressDisplay getProgressDisplay(final String path) {
+		final SerializedMap map = getMap(path);
+
+		return !map.isEmpty() ? new SimpleProgressDisplay(map) : null;
+	}
+
+	/**
 	 * Return a "case" from the key at the given path
 	 * (see {@link #get(String, Class, Object, Object...)}).
 	 *
@@ -550,6 +580,54 @@ public abstract class FileConfig {
 	 */
 	public final SimpleTime getTime(final String path, final SimpleTime def) {
 		return this.get(path, SimpleTime.class, def);
+	}
+
+	/**
+	 * Get the colored ranges which can store colors for number ranges
+	 * or null if the path isn't set
+	 *
+	 * @param path
+	 * @return
+	 */
+	protected final ColoredRanges getColoredRanges(final String path) {
+		return this.getColoredRanges(path, null);
+	}
+
+	/**
+	 * Get the colored ranges which can store colors for number ranges
+	 *
+	 * @param path
+	 * @param def
+	 * @return
+	 */
+	protected final ColoredRanges getColoredRanges(final String path, final SerializedMap def) {
+		final SerializedMap map = getMap(path);
+
+		return !map.isEmpty() ? ColoredRanges.deserialize(map) : ColoredRanges.deserialize(def);
+	}
+
+	/**
+	 * Get a SimpleProgressBar that can create progress bars from a progress
+	 * or null if the path isn't set
+	 *
+	 * @param path
+	 * @return
+	 */
+	protected final SimpleProgressBar getProgressBar(final String path) {
+		return this.getProgressBar(path, null);
+	}
+
+	/**
+	 * Get a SimpleProgressBar that can create progress bars from a progress
+	 *
+	 * @param path
+	 * @param def
+	 * @return
+	 */
+	protected final SimpleProgressBar getProgressBar(final String path, final SerializedMap def) {
+		final SerializedMap map = getMap(path);
+
+		return !map.isEmpty() ? SimpleProgressBar.deserialize(map) : SimpleProgressBar.deserialize(def);
 	}
 
 	/**
@@ -638,27 +716,38 @@ public abstract class FileConfig {
 		return this.get(path, CompMaterial.class, def);
 	}
 
+
 	/**
-	 * Return an item from the key at the given path
-	 * (see {@link #get(String, Class, Object, Object...)}).
+	 * Returns an itemstack from the map, or null if does not exist
 	 *
 	 * @param path
 	 * @return
 	 */
-	public final ItemStack getItemStack(@NonNull String path) {
-		return this.getItemStack(path, null);
+	public ItemStack getItem(final String path) {
+		return this.getItem(path, null);
 	}
 
 	/**
-	 * Return an item from the key at the given path, or supply with default
-	 * (see {@link #get(String, Class, Object, Object...)}).
+	 * Return an itemstack at the key position or default
 	 *
 	 * @param path
 	 * @param def
 	 * @return
 	 */
-	public final ItemStack getItemStack(@NonNull String path, ItemStack def) {
-		return this.get(path, ItemStack.class, def);
+	public ItemStack getItem(final String path, final ItemStack def) {
+		return isSet(path) ? getItemCreator(path).make() : def;
+	}
+
+	/**
+	 * Returns an ItemCreator at the key position or null if not found
+	 *
+	 * @param path
+	 * @return
+	 */
+	public ItemCreator getItemCreator(final String path) {
+		final SerializedMap map = getMap(path);
+
+		return !map.isEmpty() ? ItemCreator.of(map) : null;
 	}
 
 	/**

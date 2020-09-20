@@ -159,6 +159,7 @@
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>StackMob</artifactId>
 			<version>5.3.4</version>
+			<scope>provided</scope>
 		</dependency>		
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>

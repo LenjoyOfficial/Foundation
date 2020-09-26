@@ -141,17 +141,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	}
 
 	/**
-	 * Return true if the {@link #getMainCommand()} is registered and its label
-	 * equals to the given label
-	 *
-	 * @param label
-	 * @return
-	 */
-	public static final boolean isMainCommand(final String label) {
-		return getInstance().getMainCommand() != null && getInstance().getMainCommand().getLabel().equals(label);
-	}
-
-	/**
 	 * Get if the instance that is used across the library has been set. Normally it
 	 * is always set, except for testing.
 	 *
@@ -318,8 +307,11 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			FoundationPacketListener.addPacketListener();
 
 			// Register DiscordSRV listener
-			if (HookManager.isDiscordSRVLoaded())
-				reloadables.registerEvents(new DiscordListener.DiscordListenerImpl());
+			if (HookManager.isDiscordSRVLoaded()) {
+				DiscordListener.DiscordListenerImpl.getInstance().resubscribe();
+
+				reloadables.registerEvents(DiscordListener.DiscordListenerImpl.getInstance());
+			}
 
 			// Set the logging and tell prefix
 			Common.setTellPrefix(SimpleSettings.PLUGIN_PREFIX);
@@ -760,6 +752,12 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			onReloadablesStart();
 			startingReloadables = false;
 
+			if (HookManager.isDiscordSRVLoaded()) {
+				DiscordListener.DiscordListenerImpl.getInstance().resubscribe();
+
+				reloadables.registerEvents(DiscordListener.DiscordListenerImpl.getInstance());
+			}
+
 			registerBungeeCord();
 
 		} catch (final Throwable t) {
@@ -779,6 +777,8 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 		BlockVisualizer.stopAll();
 		FolderWatcher.stopThreads();
+
+		DiscordListener.clearRegisteredListeners();
 
 		if (getMainCommand() != null && getMainCommand().isRegistered())
 			getMainCommand().unregister();
@@ -822,6 +822,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			reloadables.registerEvents(listener);
 		else
 			getServer().getPluginManager().registerEvents(listener, this);
+
+		if (listener instanceof DiscordListener)
+			((DiscordListener) listener).register();
 	}
 
 	/**

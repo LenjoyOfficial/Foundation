@@ -6,11 +6,13 @@ import java.util.Collection;
 import java.util.List;
 
 import org.bukkit.Material;
+import org.bukkit.block.banner.Pattern;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BannerMeta;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -90,6 +92,12 @@ public final class ItemCreator {
 	 */
 	@Singular
 	private List<CompItemFlag> flags;
+	
+	/**
+	 * The banner patterns
+	 */
+	@Singular
+	private final List<Pattern> patterns;
 
 	/**
 	 * Is the item unbreakable?
@@ -247,7 +255,7 @@ public final class ItemCreator {
 			if (MinecraftVersion.atLeast(V.v1_13))
 				is.setType(Material.valueOf(dye + "_WOOL"));
 
-			else if (MinecraftVersion.atLeast(V.v1_8))
+			else
 				applyColors0(color, material, is);
 
 		} else
@@ -337,6 +345,10 @@ public final class ItemCreator {
 
 			itemMeta.setLore(coloredLores);
 		}
+		
+		if (itemMeta instanceof BannerMeta && patterns != null)
+			for (final Pattern pattern : patterns)
+				((BannerMeta) itemMeta).addPattern(pattern);
 
 		if (unbreakable != null) {
 			flags.add(CompItemFlag.HIDE_ATTRIBUTES);

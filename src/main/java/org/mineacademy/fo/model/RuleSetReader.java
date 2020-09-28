@@ -64,12 +64,8 @@ public abstract class RuleSetReader<T extends Rule> {
 		T rule = null;
 		String match = null;
 
-		//System.out.println("# READING " + file);
-
 		for (int i = 0; i < lines.size(); i++) {
 			final String line = lines.get(i).trim();
-
-			//System.out.println(i + "/" + lines.size() + ": " + line);
 
 			if (!line.isEmpty() && !line.startsWith("#")) {
 
@@ -78,7 +74,7 @@ public abstract class RuleSetReader<T extends Rule> {
 
 					// Found another match, assuming previous rule is finished creating.
 					if (rule != null) {
-						Valid.checkBoolean(!rules.contains(rule), "Duplicate rule found in: " + file + "! Line (" + (i + 1) + "): '" + line + "' Rules: " + rules);
+						Valid.checkBoolean(!rules.contains(rule), "Duplicate rule found in: " + file + "! Duplicated rule: " + rule);
 
 						if (canFinish(rule))
 							rules.add(rule);
@@ -101,7 +97,8 @@ public abstract class RuleSetReader<T extends Rule> {
 
 				// If something is being created then attempt to parse operators.
 				else {
-					Valid.checkNotNull(match, "Cannot define operator when no rule is being created! File: '" + file + "' Line (" + (i + 1) + "): '" + line + "'");
+					if (!onNoMatchLineParse(file, line))
+						Valid.checkNotNull(match, "Cannot define operator when no rule is being created! File: '" + file + "' Line (" + (i + 1) + "): '" + line + "'");
 
 					if (rule != null)
 						try {
@@ -122,6 +119,20 @@ public abstract class RuleSetReader<T extends Rule> {
 		}
 
 		return rules;
+	}
+
+	/**
+	 * Called if there is no match {@link #newKeyword} but something is on the line
+	 * enabling you to inject your own custom operators and settings
+	 *
+	 * Return true if you processed the line, false if we should throw an error
+	 *
+	 * @param file the current file
+	 * @param line
+	 * @return
+	 */
+	protected boolean onNoMatchLineParse(File file, String line) {
+		return false;
 	}
 
 	/**

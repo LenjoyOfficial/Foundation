@@ -335,7 +335,7 @@ public final class SerializeUtil {
 		final String world = parts[0];
 		final World bukkitWorld = Bukkit.getWorld(world);
 		if (bukkitWorld == null)
-			throw new InvalidWorldException("Location with invalid world '" + world + "': " + raw + " (Doesn't exist)");
+			throw new InvalidWorldException("Location with invalid world '" + world + "': " + raw + " (Doesn't exist)", world);
 
 		final double x = Double.parseDouble(parts[1]), y = Double.parseDouble(parts[2]), z = Double.parseDouble(parts[3]);
 		final float yaw = Float.parseFloat(parts.length == 6 ? parts[4] : "0"), pitch = Float.parseFloat(parts.length == 6 ? parts[5] : "0");

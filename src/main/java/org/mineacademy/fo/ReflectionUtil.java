@@ -31,6 +31,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.SneakyThrows;
+import org.mineacademy.fo.remain.Remain;
 
 /**
  * Utility class for various reflection methods
@@ -407,7 +408,7 @@ public final class ReflectionUtil {
 			for (Field field : instance.getClass().getDeclaredFields())
 				if ((field.getType() == CHAT_COMPONENT_CLASS || field.getType() == String.class) && i++ == index) {
 					field.setAccessible(true);
-					field.set(instance, makeChatComponent(value));
+					field.set(instance, Remain.toIChatBaseComponent(Remain.toJson(value)));
 				}
 			
 		} catch (Throwable t) {

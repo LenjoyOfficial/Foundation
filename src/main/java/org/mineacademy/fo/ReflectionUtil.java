@@ -182,6 +182,11 @@ public final class ReflectionUtil {
 	 * The package name for Craftbukkit
 	 */
 	public static final String CRAFTBUKKIT = "org.bukkit.craftbukkit";
+	
+	/**
+	 * The chat component class
+	 */
+	public static final Class<?> CHAT_COMPONENT_CLASS = ReflectionUtil.getNMSClass("IChatBaseComponent");
 
 	/**
 	 * Find a class in net.minecraft.server package, adding the version
@@ -359,6 +364,54 @@ public final class ReflectionUtil {
 
 		} catch (final ReflectiveOperationException e) {
 			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Set a declared field of the given type at the given index in the instance's class to the given value
+	 *
+	 * @param instance
+	 * @param type
+	 * @param index
+	 * @param value
+	 */
+	public static void setDeclaredField(final Object instance, final Class<?> type, final int index, final Object value) {
+		int i = 0;
+		
+		try {
+			for (Field field : instance.getClass().getDeclaredFields())
+				if (type.isAssignableFrom(field.getType()) && i++ == index) {
+					field.setAccessible(true);
+					field.set(instance, value);
+				}
+			
+		} catch (ReflectiveOperationException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Set a chat component field in the instance's class to a component created from the given value
+	 *
+	 * @param instance
+	 * @param index
+	 * @param value
+	 */
+	public static void setChatComponentField(Object instance, int index, String value) {
+		if (MinecraftVersion.olderThan(MinecraftVersion.V.v1_13))
+			setDeclaredField(instance, String.class, index, value);
+		
+		int i = 0;
+		
+		try {
+			for (Field field : instance.getClass().getDeclaredFields())
+				if ((field.getType() == CHAT_COMPONENT_CLASS || field.getType() == String.class) && i++ == index) {
+					field.setAccessible(true);
+					field.set(instance, makeChatComponent(value));
+				}
+			
+		} catch (Throwable t) {
+			Common.throwError(t, "Couldn't set component for object " + instance + ": " + value);
 		}
 	}
 

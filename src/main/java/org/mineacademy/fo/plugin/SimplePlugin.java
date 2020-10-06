@@ -740,6 +740,8 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			if (getSettings() != null)
 				YamlStaticConfig.load(getSettings());
 
+			CompMetadata.MetadataFile.onReload();
+
 			FoundationPacketListener.addPacketListener();
 
 			Common.setTellPrefix(SimpleSettings.PLUGIN_PREFIX);

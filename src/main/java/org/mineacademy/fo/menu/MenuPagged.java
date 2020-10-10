@@ -19,6 +19,8 @@ import org.mineacademy.fo.remain.CompMaterial;
 
 import lombok.Getter;
 import lombok.val;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * An advanced menu listing items with automatic page support
@@ -26,6 +28,11 @@ import lombok.val;
  * @param <T> the item that each page consists of
  */
 public abstract class MenuPagged<T> extends Menu {
+	/**
+	 * The slots the current page's items will be in
+	 */
+	@Getter
+	private final List<Integer> slots;
 
 	/**
 	 * The pages by the page number, containing a list of items
@@ -70,16 +77,38 @@ public abstract class MenuPagged<T> extends Menu {
 	protected MenuPagged(final Menu parent, final Iterable<T> pages) {
 		this(null, parent, pages, false);
 	}
+	
+	/**
+	 * Create a new paged menu
+	 *
+	 * @param parent the parent menu
+	 * @param pages  the pages the pages
+	 */
+	protected MenuPagged(final Menu parent, final List<Integer> slots, final Iterable<T> pages) {
+		this(parent, slots, pages, false);
+	}
 
 	/**
 	 * Create a new paged menu
 	 *
-	 * @param parent
-	 * @param pages
+	 * @param parent the parent menu
+	 * @param pages  the pages
 	 * @param returnMakesNewInstance
 	 */
 	protected MenuPagged(final Menu parent, final Iterable<T> pages, final boolean returnMakesNewInstance) {
 		this(null, parent, pages, returnMakesNewInstance);
+	}
+	
+	/**
+	 * Create a new paged menu
+	 *
+	 * @param parent the parent menu
+	 * @param slots  the slots where the items will be
+	 * @param pages  the pages
+	 * @param returnMakesNewInstance
+	 */
+	protected MenuPagged(final Menu parent, final List<Integer> slots, final Iterable<T> pages, final boolean returnMakesNewInstance) {
+		this(null, parent, slots, pages, returnMakesNewInstance);
 	}
 
 	/**
@@ -122,8 +151,8 @@ public abstract class MenuPagged<T> extends Menu {
 	 * autocalculate
 	 */
 	@Deprecated
-	protected MenuPagged(final int pageSize, final Menu parent, final Iterable<T> pages, final boolean returnMakesNewInstance) {
-		this((Integer) pageSize, parent, pages, returnMakesNewInstance);
+	protected MenuPagged(final Integer pageSize, final Menu parent, final Iterable<T> pages, final boolean returnMakesNewInstance) {
+		this(pageSize, parent, null, pages, returnMakesNewInstance);
 	}
 
 	/**
@@ -135,7 +164,7 @@ public abstract class MenuPagged<T> extends Menu {
 	 * @param pages                  the pages the pages
 	 * @param returnMakesNewInstance should we re-instatiate the parent menu when returning to it?
 	 */
-	private MenuPagged(final Integer pageSize, final Menu parent, final Iterable<T> pages, final boolean returnMakesNewInstance) {
+	private MenuPagged(final Integer pageSize, final Menu parent, final List<Integer> slots, final Iterable<T> pages, final boolean returnMakesNewInstance) {
 		super(parent, returnMakesNewInstance);
 
 		final int items = getItemAmount(pages);
@@ -143,6 +172,7 @@ public abstract class MenuPagged<T> extends Menu {
 
 		this.currentPage = 1;
 		this.pages = Common.fillPages(autoPageSize, pages);
+		this.slots = slots != null ? slots : IntStream.range(0, autoPageSize).boxed().collect(Collectors.toList());
 
 		setSize(9 + autoPageSize);
 
@@ -315,8 +345,8 @@ public abstract class MenuPagged<T> extends Menu {
 	 */
 	@Override
 	public ItemStack getItemAt(final int slot) {
-		if (slot < getCurrentPageItems().size()) {
-			final T object = getCurrentPageItems().get(slot);
+		if (slots.contains(slot)) {
+			final T object = getCurrentPageItems().get(slots.indexOf(slot));
 
 			if (object != null)
 				return convertToItemStack(object);
@@ -337,8 +367,8 @@ public abstract class MenuPagged<T> extends Menu {
 	 */
 	@Override
 	public final void onMenuClick(final Player player, final int slot, final InventoryAction action, final ClickType click, final ItemStack cursor, final ItemStack clicked, final boolean cancelled) {
-		if (slot < getCurrentPageItems().size()) {
-			final T obj = getCurrentPageItems().get(slot);
+		if (slots.contains(slot)) {
+			final T obj = getCurrentPageItems().get(slots.indexOf(slot));
 
 			if (obj != null) {
 				final val prevType = player.getOpenInventory().getType();

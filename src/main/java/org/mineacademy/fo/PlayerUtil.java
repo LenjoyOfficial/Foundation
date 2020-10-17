@@ -327,7 +327,7 @@ public final class PlayerUtil {
 			player.setAllowFlight(false);
 			player.setFlying(false);
 
-			player.setFlySpeed(0.1F);
+			player.setFlySpeed(0.2F);
 			player.setWalkSpeed(0.2F);
 
 			player.setCanPickupItems(true);

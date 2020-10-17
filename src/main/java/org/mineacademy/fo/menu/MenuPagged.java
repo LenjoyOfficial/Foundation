@@ -1,6 +1,5 @@
 package org.mineacademy.fo.menu;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -20,8 +19,6 @@ import org.mineacademy.fo.remain.CompMaterial;
 
 import lombok.Getter;
 import lombok.val;
-
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -78,7 +75,7 @@ public abstract class MenuPagged<T> extends Menu {
 	 * @param pages  the pages the pages
 	 */
 	protected MenuPagged(final Menu parent, final Iterable<T> pages) {
-		this(parent, null, pages);
+		this(null, parent, pages, false);
 	}
 	
 	/**
@@ -174,12 +171,8 @@ public abstract class MenuPagged<T> extends Menu {
 		final int autoPageSize = pageSize != null ? pageSize : items <= 9 ? 9 * 1 : items <= 9 * 2 ? 9 * 2 : items <= 9 * 3 ? 9 * 3 : items <= 9 * 4 ? 9 * 4 : 9 * 5;
 
 		this.currentPage = 1;
-		this.slots = slots != null ? slots : new ArrayList<>();
-		if (slots == null)
-			for (int i = 0; i < autoPageSize; i++)
-				this.slots.add(i);
-		
-		this.pages = Common.fillPages(this.slots.size(), pages);
+		this.pages = Common.fillPages(autoPageSize, pages);
+		this.slots = slots != null ? slots : IntStream.range(0, autoPageSize).boxed().collect(Collectors.toList());
 
 		setSize(9 + autoPageSize);
 
@@ -292,7 +285,7 @@ public abstract class MenuPagged<T> extends Menu {
 	 * @param
 	 */
 	@Override
-	protected void onDisplay(final InventoryDrawer drawer) {
+	protected final void onDisplay(final InventoryDrawer drawer) {
 		drawer.setTitle(compileTitle0());
 	}
 
@@ -352,15 +345,16 @@ public abstract class MenuPagged<T> extends Menu {
 	 */
 	@Override
 	public ItemStack getItemAt(final int slot) {
-		if (slots.contains(slot) && slots.indexOf(slot) < getCurrentPageItems().size()) {
+		if (slots.contains(slot)) {
 			final T object = getCurrentPageItems().get(slots.indexOf(slot));
 
 			if (object != null)
 				return convertToItemStack(object);
 		}
 
-		if (slot == nextPageSlot)
+		if (slot == nextPageSlot) {
 			return prevButton.getItem();
+		}
 
 		if (slot == previousPageSlot)
 			return nextButton.getItem();
@@ -373,7 +367,7 @@ public abstract class MenuPagged<T> extends Menu {
 	 */
 	@Override
 	public final void onMenuClick(final Player player, final int slot, final InventoryAction action, final ClickType click, final ItemStack cursor, final ItemStack clicked, final boolean cancelled) {
-		if (slots.contains(slot) && slots.indexOf(slot) < getCurrentPageItems().size()) {
+		if (slots.contains(slot)) {
 			final T obj = getCurrentPageItems().get(slots.indexOf(slot));
 
 			if (obj != null) {

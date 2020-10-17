@@ -2027,10 +2027,7 @@ public final class Common {
 		final List<T> list = new ArrayList<>();
 
 		if (it != null)
-			it.forEach(el -> {
-				if (el != null)
-					list.add(el);
-			});
+			it.forEach(el -> list.add(el));
 
 		return list;
 	}

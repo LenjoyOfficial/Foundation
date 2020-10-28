@@ -516,8 +516,7 @@ public final class Common {
 	 * @return
 	 */
 	public static List<String> colorize(final List<String> list) {
-		final List<String> copy = new ArrayList<>();
-		copy.addAll(list);
+		final List<String> copy = new ArrayList<>(list);
 
 		for (int i = 0; i < copy.size(); i++) {
 			final String message = copy.get(i);
@@ -764,10 +763,10 @@ public final class Common {
 	 * @return
 	 */
 	public static String scoreboardLine(final int length) {
-		String fill = "";
+		final StringBuilder fill = new StringBuilder();
 
 		for (int i = 0; i < length; i++)
-			fill += "-";
+			fill.append("-");
 
 		return "&m|" + fill + "|";
 	}
@@ -895,17 +894,17 @@ public final class Common {
 	 * @return
 	 */
 	public static String fancyBar(final int min, final char minChar, final int max, final char maxChar, final ChatColor delimiterColor) {
-		String formatted = "";
+		StringBuilder formatted = new StringBuilder();
 
 		for (int i = 0; i < min; i++)
-			formatted += minChar;
+			formatted.append(minChar);
 
-		formatted += delimiterColor;
+		formatted.append(delimiterColor);
 
 		for (int i = 0; i < max - min; i++)
-			formatted += maxChar;
+			formatted.append(maxChar);
 
-		return formatted;
+		return formatted.toString();
 	}
 
 	/**
@@ -950,11 +949,12 @@ public final class Common {
 			return "";
 
 		final String toDuplicate = new String(text);
+		final StringBuilder textBuilder = new StringBuilder(text);
 
 		for (int i = 1; i < nTimes; i++)
-			text += toDuplicate;
+			textBuilder.append(toDuplicate);
 
-		return text;
+		return textBuilder.toString();
 	}
 
 	/**
@@ -1424,16 +1424,16 @@ public final class Common {
 	 */
 	public static <T extends CommandSender> String joinPlayersExcept(final Iterable<T> array, final String nameToIgnore) {
 		final Iterator<T> it = array.iterator();
-		String message = "";
+		final StringBuilder message = new StringBuilder();
 
 		while (it.hasNext()) {
 			final T next = it.next();
 
 			if (!next.getName().equals(nameToIgnore))
-				message += next.getName() + (it.hasNext() ? ", " : "");
+				message.append(next.getName()).append(it.hasNext() ? ", " : "");
 		}
 
-		return message.endsWith(", ") ? message.substring(0, message.length() - 2) : message;
+		return message.toString().endsWith(", ") ? message.substring(0, message.length() - 2) : message.toString();
 	}
 
 	/**
@@ -1469,12 +1469,12 @@ public final class Common {
 	 * @return
 	 */
 	public static String joinRange(final int start, final int stop, final String[] array, final String delimiter) {
-		String joined = "";
+		final StringBuilder joined = new StringBuilder();
 
 		for (int i = start; i < MathUtil.range(stop, 0, array.length); i++)
-			joined += (joined.isEmpty() ? "" : delimiter) + array[i];
+			joined.append((joined.length() == 0) ? "" : delimiter).append(array[i]);
 
-		return joined;
+		return joined.toString();
 	}
 
 	/**

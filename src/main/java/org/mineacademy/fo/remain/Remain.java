@@ -31,11 +31,13 @@ import javax.annotation.Nullable;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Color;
 import org.bukkit.GameRule;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Particle;
 import org.bukkit.Statistic;
 import org.bukkit.Statistic.Type;
 import org.bukkit.World;
@@ -2171,6 +2173,46 @@ public final class Remain {
 		} catch (final Throwable t) {
 			Common.error(t, "Game rule " + gameRule + " not found.");
 		}
+	}
+
+	/**
+	 * Spawns a particle at the given location to the world's players
+	 *
+	 * @param particle
+	 * @param location
+	 * @param count
+	 * @param offsetX
+	 * @param offsetY
+	 * @param offsetZ
+	 * @param extra particle specific data, like speed or brightness
+	 */
+	public static void spawnParticle(final String particle, final Location location, final int count, final double offsetX, final double offsetY, final double offsetZ, final double extra) {
+		if (hasParticleAPI())
+			location.getWorld().spawnParticle(Particle.valueOf(particle), location, count, offsetX, offsetY, offsetZ, extra);
+		else
+			for (final Player player : location.getWorld().getPlayers())
+				ParticleInternals.valueOf(particle).send(player, location, (float) offsetX, (float) offsetY, (float) offsetZ, (float) extra, count);
+	}
+
+	/**
+	 * Spawns a colored particle at the given location. Particle must be REDSTONE, SPELL_MOB or SPELL_MOB_AMBIENT!
+	 *
+	 * @param particle
+	 * @param location
+	 * @param color
+	 */
+	public static void spawnColoredParticle(final String particle, final Location location, final Color color) {
+		if (!Arrays.asList("REDSTONE", "SPELL_MOB", "SPELL_MOB_AMBIENT").contains(particle))
+			throw new FoException("Particle must be REDSTONE, SPELL_MOB or SPELL_MOB_AMBIENT! Got " + particle);
+
+		final double red = (double) color.getRed() / 255;
+		final double green = (double) color.getGreen() / 255;
+		final double blue = (double) color.getBlue() / 255;
+
+		if (hasParticleAPI())
+			location.getWorld().spawnParticle(Particle.valueOf(particle), location, 0, red, green, blue);
+		else
+			ParticleInternals.valueOf(particle).sendColor(location, color);
 	}
 
 	/**

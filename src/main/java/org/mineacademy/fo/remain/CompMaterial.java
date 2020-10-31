@@ -1845,7 +1845,7 @@ public enum CompMaterial {
 			final CompMaterial modern = valueOf(name);
 
 			if (modern.legacyName.equals(name))
-				return null;
+				return modern;
 
 			return fromLegacy(modern.legacyName, data);
 

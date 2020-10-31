@@ -382,9 +382,7 @@ public class YamlConfig {
 	}
 
 	/**
-	 * Replace variables in the destination file before it is copied. Variables
-	 * include {plugin_name} (lowercase), {file} and {file_lowercase} as well as
-	 * custom variables from {@link #replaceVariables(String)} method
+	 * Replace variables in the destination file before it is copied.
 	 *
 	 * @param line
 	 * @param fileName
@@ -409,6 +407,8 @@ public class YamlConfig {
 	 * @return
 	 */
 	protected final YamlConfiguration getConfig() {
+		Valid.checkNotNull(instance, "Cannot call getConfig when no instance is set!");
+
 		return instance.getConfig();
 	}
 
@@ -419,6 +419,8 @@ public class YamlConfig {
 	 */
 	@Nullable
 	protected final YamlConfiguration getDefaults() {
+		Valid.checkNotNull(instance, "Cannot call getDefaults when no instance is set!");
+
 		return instance.getDefaultConfig();
 	}
 

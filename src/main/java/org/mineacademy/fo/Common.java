@@ -51,6 +51,7 @@ import org.mineacademy.fo.model.DiscordSender;
 import org.mineacademy.fo.model.HookManager;
 import org.mineacademy.fo.model.Replacer;
 import org.mineacademy.fo.plugin.SimplePlugin;
+import org.mineacademy.fo.remain.CompChatColor;
 import org.mineacademy.fo.remain.CompRunnable;
 import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.settings.SimpleLocalization;
@@ -433,6 +434,15 @@ public final class Common {
 				else
 					tellJson(sender, stripped);
 
+		} else if (colorlessMessage.startsWith("<toast>")) {
+			final String stripped = message.replace("<toast>", "");
+
+			if (!stripped.isEmpty())
+				if (sender instanceof Player)
+					Remain.sendToast((Player) sender, stripped);
+				else
+					tellJson(sender, stripped);
+
 		} else if (colorlessMessage.startsWith("<title>")) {
 			final String stripped = message.replace("<title>", "");
 
@@ -554,7 +564,6 @@ public final class Common {
 				.replace("{prefix}", message.startsWith(tellPrefix) ? "" : removeSurroundingSpaces(tellPrefix.trim()))
 				.replace("{server}", SimpleLocalization.SERVER_PREFIX)
 				.replace("{plugin_name}", SimplePlugin.getNamed())
-				.replace("{plugin_name_lower}", SimplePlugin.getNamed().toLowerCase())
 				.replace("{plugin_version}", SimplePlugin.getVersion()));
 
 		// RGB colors
@@ -1579,8 +1588,21 @@ public final class Common {
 		else if (arg instanceof Collection)
 			return Common.join((Collection<?>) arg, ", ", Common::simplify);
 
+		else if (arg instanceof ChatColor)
+			return ((Enum<?>) arg).name().toLowerCase();
+
+		else if (arg instanceof CompChatColor)
+			return ((CompChatColor) arg).getName();
+
 		else if (arg instanceof Enum)
-			return ((Enum<?>) arg).name();
+			return ((Enum<?>) arg).toString().toLowerCase();
+
+		try {
+			if (arg instanceof net.md_5.bungee.api.ChatColor)
+				return ((net.md_5.bungee.api.ChatColor) arg).getName();
+		} catch (final Exception e) {
+			// No MC compatible
+		}
 
 		return arg.toString();
 	}
@@ -1622,7 +1644,7 @@ public final class Common {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Return the last key in the list or null if null list or empty
+	 * Return the last key in the list or null if list is null or empty
 	 *
 	 * @param <T>
 	 * @param list
@@ -1630,6 +1652,17 @@ public final class Common {
 	 */
 	public static <T> T last(List<T> list) {
 		return list == null || list.isEmpty() ? null : list.get(list.size() - 1);
+	}
+
+	/**
+	 * Return the last key in the array or null if array is null or empty
+	 * 
+	 * @param <T>
+	 * @param array
+	 * @return
+	 */
+	public static <T> T last(T[] array) {
+		return array == null || array.length == 0 ? null : array[array.length - 1];
 	}
 
 	/**
@@ -2183,19 +2216,6 @@ public final class Common {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Runs the task if the condition is met
-	 *
-	 * @param condition
-	 * @param task
-	 */
-	public static void runLaterIf(final boolean condition, final Runnable task) {
-		if (condition)
-			runLater(1, task);
-		else
-			task.run();
-	}
-
-	/**
 	 * Runs the task if the plugin is enabled correctly
 	 *
 	 * @param task the task
@@ -2212,9 +2232,11 @@ public final class Common {
 	 * @param task
 	 * @return the task or null
 	 */
-	public static BukkitTask runLater(final int delayTicks, final Runnable task) {
+	public static BukkitTask runLater(final int delayTicks, Runnable task) {
 		final BukkitScheduler scheduler = Bukkit.getScheduler();
 		final JavaPlugin instance = SimplePlugin.getInstance();
+
+		task = new CompRunnable.SafeRunnable(task);
 
 		try {
 			return runIfDisabled(task) ? null : delayTicks == 0 ? task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTask(instance) : scheduler.runTask(instance, task) : task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskLater(instance, delayTicks) : scheduler.runTaskLater(instance, task, delayTicks);
@@ -2262,9 +2284,11 @@ public final class Common {
 	 * @param task
 	 * @return the task or null
 	 */
-	public static BukkitTask runLaterAsync(final int delayTicks, final Runnable task) {
+	public static BukkitTask runLaterAsync(final int delayTicks, Runnable task) {
 		final BukkitScheduler scheduler = Bukkit.getScheduler();
 		final JavaPlugin instance = SimplePlugin.getInstance();
+
+		task = new CompRunnable.SafeRunnable(task);
 
 		try {
 			return runIfDisabled(task) ? null : delayTicks == 0 ? task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskAsynchronously(instance) : scheduler.runTaskAsynchronously(instance, task) : task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskLaterAsynchronously(instance, delayTicks) : scheduler.runTaskLaterAsynchronously(instance, task, delayTicks);
@@ -2296,7 +2320,10 @@ public final class Common {
 	 * @param task        the task
 	 * @return the bukkit task or null if error
 	 */
-	public static BukkitTask runTimer(final int delayTicks, final int repeatTicks, final Runnable task) {
+	public static BukkitTask runTimer(final int delayTicks, final int repeatTicks, Runnable task) {
+
+		task = new CompRunnable.SafeRunnable(task);
+
 		try {
 			return runIfDisabled(task) ? null : task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskTimer(SimplePlugin.getInstance(), delayTicks, repeatTicks) : Bukkit.getScheduler().runTaskTimer(SimplePlugin.getInstance(), task, delayTicks, repeatTicks);
 
@@ -2327,7 +2354,10 @@ public final class Common {
 	 * @param task
 	 * @return
 	 */
-	public static BukkitTask runTimerAsync(final int delayTicks, final int repeatTicks, final Runnable task) {
+	public static BukkitTask runTimerAsync(final int delayTicks, final int repeatTicks, Runnable task) {
+
+		task = new CompRunnable.SafeRunnable(task);
+
 		try {
 			return runIfDisabled(task) ? null : task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskTimerAsynchronously(SimplePlugin.getInstance(), delayTicks, repeatTicks) : Bukkit.getScheduler().runTaskTimerAsynchronously(SimplePlugin.getInstance(), task, delayTicks, repeatTicks);
 
@@ -2358,7 +2388,7 @@ public final class Common {
 	// This is fail-safe to critical save-on-exit operations in case our plugin is improperly reloaded (PlugMan) or malfunctions
 	private static boolean runIfDisabled(final Runnable run) {
 		if (!SimplePlugin.getInstance().isEnabled()) {
-			run.run();
+			new CompRunnable.SafeRunnable(run).run();
 
 			return true;
 		}

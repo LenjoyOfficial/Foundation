@@ -100,6 +100,12 @@ final @Builder public class ItemCreator {
 	private final List<Pattern> patterns;
 
 	/**
+	 * The banner patterns
+	 */
+	@Singular
+	private final List<Pattern> patterns;
+
+	/**
 	 * Is the item unbreakable?
 	 */
 	private Boolean unbreakable;
@@ -346,6 +352,10 @@ final @Builder public class ItemCreator {
 			itemMeta.setLore(coloredLores);
 		}
 		
+		if (itemMeta instanceof BannerMeta && patterns != null)
+			for (final Pattern pattern : patterns)
+				((BannerMeta) itemMeta).addPattern(pattern);
+
 		if (itemMeta instanceof BannerMeta && patterns != null)
 			for (final Pattern pattern : patterns)
 				((BannerMeta) itemMeta).addPattern(pattern);

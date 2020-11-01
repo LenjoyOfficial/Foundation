@@ -425,7 +425,7 @@ final @Builder public class ItemCreator {
 		if (MinecraftVersion.olderThan(V.v1_13))
 			is.setDurability((short) dataValue);
 
-		if (itemMeta instanceof LeatherArmorMeta)
+		if (itemMeta instanceof LeatherArmorMeta && color != null)
 			((LeatherArmorMeta) itemMeta).setColor(color.getColor());
 
 	}

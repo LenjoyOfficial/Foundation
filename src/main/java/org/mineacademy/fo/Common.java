@@ -1553,16 +1553,16 @@ public final class Common {
 	 */
 	public static <T> String join(final Iterable<T> array, final String delimiter, final Stringer<T> stringer) {
 		final Iterator<T> it = array.iterator();
-		String message = "";
+		final StringBuilder message = new StringBuilder();
 
 		while (it.hasNext()) {
 			final T next = it.next();
 
 			if (next != null)
-				message += stringer.toString(next) + (it.hasNext() ? delimiter : "");
+				message.append(stringer.toString(next)).append(it.hasNext() ? delimiter : "");
 		}
 
-		return message;
+		return message.toString();
 	}
 
 	/**
@@ -1658,7 +1658,7 @@ public final class Common {
 
 	/**
 	 * Return the last key in the array or null if array is null or empty
-	 * 
+	 *
 	 * @param <T>
 	 * @param array
 	 * @return

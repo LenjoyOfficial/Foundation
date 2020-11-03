@@ -92,12 +92,6 @@ final @Builder public class ItemCreator {
 	 */
 	@Singular
 	private List<CompItemFlag> flags;
-	
-	/**
-	 * The banner patterns
-	 */
-	@Singular
-	private final List<Pattern> patterns;
 
 	/**
 	 * The banner patterns
@@ -351,10 +345,6 @@ final @Builder public class ItemCreator {
 
 			itemMeta.setLore(coloredLores);
 		}
-		
-		if (itemMeta instanceof BannerMeta && patterns != null)
-			for (final Pattern pattern : patterns)
-				((BannerMeta) itemMeta).addPattern(pattern);
 
 		if (itemMeta instanceof BannerMeta && patterns != null)
 			for (final Pattern pattern : patterns)

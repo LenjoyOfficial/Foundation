@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
@@ -228,11 +229,17 @@ public class YamlConfig {
 
 					Valid.checkBoolean(file != null && file.exists(), "Failed to load " + localePath + " from " + file);
 
-					instance = new ConfigInstance(localePath, file, config, defaultsConfig, saveComments(), getUncommentedSections());
+					instance = new ConfigInstance(file, config, defaultsConfig, saveComments(), getUncommentedSections(), localePath);
 					addConfig(instance, this);
 				}
 
 				this.instance = instance;
+
+				// Place comments first (this also copies default keys to be used in onLoadFinish) before loading
+				if (saveComments()) {
+					this.instance.writeComments();
+					this.instance.reload();
+				}
 
 				onLoadFinish();
 
@@ -317,7 +324,7 @@ public class YamlConfig {
 
 					config = FileUtil.loadConfigurationStrict(file);
 
-					instance = new ConfigInstance(from == null ? to : from, file, config, defaultsConfig, saveComments(), getUncommentedSections());
+					instance = new ConfigInstance(file, config, defaultsConfig, saveComments(), getUncommentedSections(), from == null ? to : from);
 					addConfig(instance, this);
 				}
 
@@ -325,8 +332,7 @@ public class YamlConfig {
 
 				try {
 
-					// Place comments first (this also copies default keys to be used in onLoadFinish)
-					// before loading
+					// Place comments first (this also copies default keys to be used in onLoadFinish) before loading
 					if (saveComments()) {
 						this.instance.writeComments();
 						this.instance.reload();
@@ -705,7 +711,28 @@ public class YamlConfig {
 	 * @return
 	 */
 	protected final String getString(final String path) {
-		return getT(path, String.class);
+		final Object object = getObject(path);
+
+		if (object == null)
+			return null;
+
+		else if (object instanceof List)
+			return Common.join((List<?>) object, "\n");
+
+		else if (object instanceof String[])
+			return Common.join(Arrays.asList((String[]) object), "\n");
+
+		else if (object instanceof Boolean
+				|| object instanceof Integer
+				|| object instanceof Long
+				|| object instanceof Double
+				|| object instanceof Float)
+			return Objects.toString(object);
+
+		else if (object instanceof String)
+			return (String) object;
+
+		throw new FoException("Excepted string at '" + path + "' in " + getFileName() + ", got (" + object.getClass() + "): " + object);
 	}
 
 	/**
@@ -1136,7 +1163,19 @@ public class YamlConfig {
 	protected final String[] getStringArray(final String path) {
 		final Object array = getObject(path);
 
-		return array != null ? String.join("\n", array.toString()).split("\n") : new String[0];
+		if (array == null)
+			return new String[0];
+
+		else if (array instanceof String)
+			return ((String) array).split("\n");
+
+		else if (array instanceof List)
+			return Common.join((List<?>) array, "\n").split("\n");
+
+		else if (array instanceof String[])
+			return (String[]) array;
+
+		throw new FoException("Excepted string or string list at '" + path + "' in " + getFileName() + ", got (" + array.getClass() + "): " + array);
 	}
 
 	/**
@@ -1970,11 +2009,6 @@ public class YamlConfig {
 class ConfigInstance {
 
 	/**
-	 * The path where the default config lays
-	 */
-	private final String defaultsPath;
-
-	/**
 	 * The file this configuration belongs to.
 	 */
 	@Getter
@@ -2010,6 +2044,11 @@ class ConfigInstance {
 	private final List<String> uncommentedSections;
 
 	/**
+	 * Wherefrom shall we save o' mighty comments?
+	 */
+	private final String commentsFilePath;
+
+	/**
 	 * Saves the config instance with the given header, can be null
 	 *
 	 * @param header
@@ -2042,9 +2081,9 @@ class ConfigInstance {
 	 *
 	 * @throws IOException
 	 */
-	protected void writeComments() throws IOException {
-		if (defaultsPath != null && saveComments)
-			YamlComments.writeComments(defaultsPath, file, Common.getOrDefault(uncommentedSections, new ArrayList<>()));
+	public void writeComments() throws IOException {
+		if (this.commentsFilePath != null && this.saveComments)
+			YamlComments.writeComments(this.commentsFilePath, this.file, Common.getOrDefault(this.uncommentedSections, new ArrayList<>()));
 	}
 
 	/**

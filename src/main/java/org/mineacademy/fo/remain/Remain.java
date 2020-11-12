@@ -607,7 +607,7 @@ public final class Remain {
 	 * @param itemStack
 	 * @return
 	 */
-	public static Object asNMSCopy(ItemStack itemStack) {
+	public static Object asNMSCopy(final ItemStack itemStack) {
 		try {
 			final Method asNmsCopy = getOBCClass("inventory.CraftItemStack").getMethod("asNMSCopy", ItemStack.class);
 
@@ -747,10 +747,9 @@ public final class Remain {
 	 * Convert the given json into list
 	 *
 	 * @param json
-	 * @param typeOf
 	 * @return
 	 */
-	public static List<String> fromJsonList(String json) {
+	public static List<String> fromJsonList(final String json) {
 		return gson.fromJson(json, List.class);
 	}
 
@@ -792,7 +791,7 @@ public final class Remain {
 	 * @param item the item to convert
 	 * @return the Json string representation of the item
 	 */
-	public static String toJson(ItemStack item) {
+	public static String toJson(final ItemStack item) {
 		// ItemStack methods to get a net.minecraft.server.ItemStack object for serialization
 		final Class<?> craftItemstack = ReflectionUtil.getOBCClass("inventory.CraftItemStack");
 		final Method asNMSCopyMethod = ReflectionUtil.getMethod(craftItemstack, "asNMSCopy", ItemStack.class);
@@ -1330,7 +1329,7 @@ public final class Remain {
 	 * @param player
 	 * @param book
 	 */
-	public static void openBook(Player player, ItemStack book) {
+	public static void openBook(final Player player, final ItemStack book) {
 		Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_8), "Opening books is only supported on MC 1.8 and greater");
 
 		try {
@@ -1627,7 +1626,7 @@ public final class Remain {
 	 * @param meta
 	 * @return
 	 */
-	public static List<BaseComponent[]> getPages(BookMeta meta) {
+	public static List<BaseComponent[]> getPages(final BookMeta meta) {
 		try {
 			return meta.spigot().getPages();
 
@@ -1647,16 +1646,16 @@ public final class Remain {
 	 * @param meta
 	 * @param pages
 	 */
-	public static void setPages(BookMeta meta, List<BaseComponent[]> pages) {
+	public static void setPages(final BookMeta meta, final List<BaseComponent[]> pages) {
 		try {
 			meta.spigot().setPages(pages);
 
 		} catch (final NoSuchMethodError ex) {
 			/*final List<String> list = new ArrayList<>();
-			
+
 			for (final BaseComponent[] page : pages)
 				list.add(TextComponent.toLegacyText(page));
-			
+
 			meta.setPages(list);*/
 
 			try {
@@ -1677,7 +1676,7 @@ public final class Remain {
 	 * @param baseComponents
 	 * @return
 	 */
-	public static Object toIChatBaseComponent(BaseComponent[] baseComponents) {
+	public static Object toIChatBaseComponent(final BaseComponent[] baseComponents) {
 		return toIChatBaseComponent(toJson(baseComponents));
 	}
 
@@ -1687,7 +1686,7 @@ public final class Remain {
 	 * @param json
 	 * @return
 	 */
-	public static Object toIChatBaseComponent(String json) {
+	public static Object toIChatBaseComponent(final String json) {
 		Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_7), "Serializing chat components requires Minecraft 1.7.10 and greater");
 
 		final Class<?> chatSerializer = ReflectionUtil.getNMSClass((MinecraftVersion.equals(V.v1_7) ? "" : "IChatBaseComponent$") + "ChatSerializer");
@@ -2146,7 +2145,6 @@ public final class Remain {
 	 * @param gameRule game rule
 	 * @param value    value to set (true/false)
 	 */
-	@SuppressWarnings("rawtypes")
 	public static void setGameRule(final World world, final String gameRule, final boolean value) {
 		try {
 			if (MinecraftVersion.newerThan(V.v1_13)) {
@@ -2159,46 +2157,6 @@ public final class Remain {
 		} catch (final Throwable t) {
 			Common.error(t, "Game rule " + gameRule + " not found.");
 		}
-	}
-
-	/**
-	 * Spawns a particle at the given location to the world's players
-	 *
-	 * @param particle
-	 * @param location
-	 * @param count
-	 * @param offsetX
-	 * @param offsetY
-	 * @param offsetZ
-	 * @param extra particle specific data, like speed or brightness
-	 */
-	public static void spawnParticle(final String particle, final Location location, final int count, final double offsetX, final double offsetY, final double offsetZ, final double extra) {
-		if (hasParticleAPI())
-			location.getWorld().spawnParticle(Particle.valueOf(particle), location, count, offsetX, offsetY, offsetZ, extra);
-		else
-			for (final Player player : location.getWorld().getPlayers())
-				ParticleInternals.valueOf(particle).send(player, location, (float) offsetX, (float) offsetY, (float) offsetZ, (float) extra, count);
-	}
-
-	/**
-	 * Spawns a colored particle at the given location. Particle must be REDSTONE, SPELL_MOB or SPELL_MOB_AMBIENT!
-	 *
-	 * @param particle
-	 * @param location
-	 * @param color
-	 */
-	public static void spawnColoredParticle(final String particle, final Location location, final Color color) {
-		if (!Arrays.asList("REDSTONE", "SPELL_MOB", "SPELL_MOB_AMBIENT").contains(particle))
-			throw new FoException("Particle must be REDSTONE, SPELL_MOB or SPELL_MOB_AMBIENT! Got " + particle);
-
-		final double red = (double) color.getRed() / 255;
-		final double green = (double) color.getGreen() / 255;
-		final double blue = (double) color.getBlue() / 255;
-
-		if (hasParticleAPI())
-			location.getWorld().spawnParticle(Particle.valueOf(particle), location, 0, red, green, blue);
-		else
-			ParticleInternals.valueOf(particle).sendColor(location, color);
 	}
 
 	/**
@@ -2231,7 +2189,7 @@ public final class Remain {
 			if (!properties.containsKey("server-name") || previousName != null) {
 				properties.setProperty("server-name", previousName != null ? previousName : "Undefined - see mineacademy.org/server-properties to configure");
 
-				try (FileWriter fileWriter = new FileWriter(props)) {
+				try (final FileWriter fileWriter = new FileWriter(props)) {
 					properties.store(fileWriter, "Minecraft server properties\nModified by " + SimplePlugin.getNamed() + ", see mineacademy.org/server-properties for more information");
 				}
 			}

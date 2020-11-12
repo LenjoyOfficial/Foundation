@@ -11,7 +11,7 @@ import org.mineacademy.fo.remain.Remain;
 /**
  * Reflection class to support packet sending of particles
  *
- * @deprecated internal use only, please use {@link Remain}
+ * @deprecated internal use only, please use {@link org.mineacademy.fo.remain.CompParticle}
  * to call methods from this class for best performance
  */
 @Deprecated
@@ -208,7 +208,6 @@ public enum ParticleInternals {
 	 * @param enumFullName
 	 * @return
 	 */
-	@SuppressWarnings("rawtypes")
 	private static Enum<?> getEnum(final String enumFullName) {
 		final String[] x = enumFullName.split("\\.(?=[^\\.]+$)");
 

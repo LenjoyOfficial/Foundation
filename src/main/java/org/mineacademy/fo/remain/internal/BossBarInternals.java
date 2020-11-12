@@ -136,12 +136,12 @@ public class BossBarInternals implements Listener {
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public void onPlayerTeleport(final PlayerTeleportEvent event) {
-		handleTeleport(event.getPlayer(), event.getTo().clone());
+		handleTeleport(event.getPlayer(), event.getTo());
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public void onPlayerTeleport(final PlayerRespawnEvent event) {
-		handleTeleport(event.getPlayer(), event.getRespawnLocation().clone());
+		handleTeleport(event.getPlayer(), event.getRespawnLocation());
 	}
 
 	// Fixes bar disappearing on teleport

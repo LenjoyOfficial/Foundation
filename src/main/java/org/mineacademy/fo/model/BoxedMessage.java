@@ -52,7 +52,7 @@ public final class BoxedMessage {
 	 *
 	 * @param messages
 	 */
-	public BoxedMessage(String... messages) {
+	public BoxedMessage(final String... messages) {
 		this(null, null, messages);
 	}
 
@@ -63,7 +63,7 @@ public final class BoxedMessage {
 	 * @param sender
 	 * @param messages
 	 */
-	private BoxedMessage(@Nullable Iterable<? extends CommandSender> recipients, Player sender, String[] messages) {
+	private BoxedMessage(@Nullable final Iterable<? extends CommandSender> recipients, final Player sender, final String[] messages) {
 		this.recipients = recipients == null ? null : Common.toList(recipients); // Make a copy to prevent changes in the list on send
 		this.sender = sender;
 		this.messages = messages;
@@ -137,8 +137,8 @@ public final class BoxedMessage {
 		int length = 0;
 
 		for (final String message : messages)
-			for (@SuppressWarnings("unused")
-			final String part : message.split("\n"))
+			for (
+					final String part : message.split("\n"))
 				length++;
 
 		return length;
@@ -154,14 +154,14 @@ public final class BoxedMessage {
 			tell0(message);
 	}
 
-	private String centerMessage0(String message) {
+	private String centerMessage0(final String message) {
 		if (message.startsWith("<center>"))
 			return ChatUtil.center(message.replaceFirst("\\<center\\>(\\s|)", ""));
 
 		return message;
 	}
 
-	private void broadcast0(String message) {
+	private void broadcast0(final String message) {
 		if (sender != null)
 			Common.broadcast(message, sender);
 		else
@@ -182,8 +182,8 @@ public final class BoxedMessage {
 	 * @param variables
 	 * @return
 	 */
-	public Replacor find(String... variables) {
-		return new Replacor(variables);
+	public Replacer find(final String... variables) {
+		return new Replacer(variables);
 	}
 
 	public String getMessage() {
@@ -212,7 +212,7 @@ public final class BoxedMessage {
 	 *
 	 * @param sender
 	 */
-	public void broadcastAs(Player sender) {
+	public void broadcastAs(final Player sender) {
 		new BoxedMessage(null, sender, messages).launch();
 	}
 
@@ -221,7 +221,7 @@ public final class BoxedMessage {
 	 *
 	 * @param recipient
 	 */
-	public void tell(CommandSender recipient) {
+	public void tell(final CommandSender recipient) {
 		tell(null, Arrays.asList(recipient), messages);
 	}
 
@@ -230,7 +230,7 @@ public final class BoxedMessage {
 	 *
 	 * @param recipients
 	 */
-	public void tell(Iterable<? extends CommandSender> recipients) {
+	public void tell(final Iterable<? extends CommandSender> recipients) {
 		tell(null, recipients, messages);
 	}
 
@@ -241,7 +241,7 @@ public final class BoxedMessage {
 	 * @param receiver
 	 * @param sender
 	 */
-	public void tellAs(CommandSender receiver, Player sender) {
+	public void tellAs(final CommandSender receiver, final Player sender) {
 		tell(sender, Arrays.asList(receiver), messages);
 	}
 
@@ -252,7 +252,7 @@ public final class BoxedMessage {
 	 * @param receivers
 	 * @param sender
 	 */
-	public void tellAs(Iterable<? extends CommandSender> receivers, Player sender) {
+	public void tellAs(final Iterable<? extends CommandSender> receivers, final Player sender) {
 		new BoxedMessage(receivers, sender, messages).launch();
 	}
 
@@ -265,7 +265,7 @@ public final class BoxedMessage {
 	 *
 	 * @param messages
 	 */
-	public static void broadcast(String... messages) {
+	public static void broadcast(final String... messages) {
 		broadcast(null, messages);
 	}
 
@@ -275,7 +275,7 @@ public final class BoxedMessage {
 	 * @param sender
 	 * @param messages
 	 */
-	public static void broadcast(Player sender, String... messages) {
+	public static void broadcast(final Player sender, final String... messages) {
 		new BoxedMessage(null, sender, messages).launch();
 	}
 
@@ -285,7 +285,7 @@ public final class BoxedMessage {
 	 * @param recipient
 	 * @param messages
 	 */
-	public static void tell(CommandSender recipient, String... messages) {
+	public static void tell(final CommandSender recipient, final String... messages) {
 		tell(null, Arrays.asList(recipient), messages);
 	}
 
@@ -295,7 +295,7 @@ public final class BoxedMessage {
 	 * @param recipients
 	 * @param messages
 	 */
-	public static void tell(Iterable<? extends CommandSender> recipients, String... messages) {
+	public static void tell(final Iterable<? extends CommandSender> recipients, final String... messages) {
 		tell(null, recipients, messages);
 	}
 
@@ -306,7 +306,7 @@ public final class BoxedMessage {
 	 * @param receiver
 	 * @param messages
 	 */
-	public static void tell(Player sender, CommandSender receiver, String... messages) {
+	public static void tell(final Player sender, final CommandSender receiver, final String... messages) {
 		tell(sender, Arrays.asList(receiver), messages);
 	}
 
@@ -317,7 +317,7 @@ public final class BoxedMessage {
 	 * @param receivers
 	 * @param messages
 	 */
-	public static void tell(Player sender, Iterable<? extends CommandSender> receivers, String... messages) {
+	public static void tell(final Player sender, final Iterable<? extends CommandSender> receivers, final String... messages) {
 		new BoxedMessage(receivers, sender, messages).launch();
 	}
 
@@ -329,7 +329,7 @@ public final class BoxedMessage {
 	 * Utility class for quickly replacing variables
 	 */
 	@RequiredArgsConstructor
-	public class Replacor {
+	public class Replacer {
 
 		/**
 		 * The placeholder names to replace
@@ -342,7 +342,7 @@ public final class BoxedMessage {
 		 * @param replacements
 		 * @return
 		 */
-		public final BoxedMessage replace(Object... replacements) {
+		public final BoxedMessage replace(final Object... replacements) {
 			String message = StringUtils.join(messages, "%delimiter%");
 
 			for (int i = 0; i < variables.length; i++) {

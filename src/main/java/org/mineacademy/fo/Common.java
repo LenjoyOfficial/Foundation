@@ -1,26 +1,10 @@
 package org.mineacademy.fo;
 
-import java.io.IOException;
-import java.lang.reflect.Array;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.StringTokenizer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
-
-import javax.annotation.Nullable;
-
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -56,11 +40,25 @@ import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.settings.SimpleLocalization;
 import org.mineacademy.fo.settings.SimpleSettings;
 
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import net.md_5.bungee.api.chat.TextComponent;
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.lang.reflect.Array;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.StringTokenizer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * Our main utility class hosting a large variety of different convenience functions
@@ -397,7 +395,7 @@ public final class Common {
 	 * @param message
 	 * @param replacements
 	 */
-	public static void tellReplaced(CommandSender recipient, String message, Object... replacements) {
+	public static void tellReplaced(final CommandSender recipient, final String message, final Object... replacements) {
 		tell(recipient, Replacer.replaceArray(message, replacements));
 	}
 
@@ -951,7 +949,7 @@ public final class Common {
 	 * @return
 	 */
 	public static String fancyBar(final int min, final char minChar, final int max, final char maxChar, final ChatColor delimiterColor) {
-		StringBuilder formatted = new StringBuilder();
+		final StringBuilder formatted = new StringBuilder();
 
 		for (int i = 0; i < min; i++)
 			formatted.append(minChar);
@@ -994,14 +992,14 @@ public final class Common {
 
 	/**
 	 * A very simple helper for duplicating the given text the given amount of times.
-	 *
+	 * <p>
 	 * Example: duplicate("apple", 2) will produce "appleapple"
 	 *
 	 * @param text
 	 * @param nTimes
 	 * @return
 	 */
-	public static String duplicate(String text, int nTimes) {
+	public static String duplicate(final String text, final int nTimes) {
 		if (nTimes == 0)
 			return "";
 
@@ -1022,7 +1020,7 @@ public final class Common {
 	 * @param maxLength
 	 * @return
 	 */
-	public static String limit(String text, int maxLength) {
+	public static String limit(final String text, final int maxLength) {
 		final int length = text.length();
 
 		return maxLength >= length ? text : text.substring(0, maxLength) + "...";
@@ -1033,12 +1031,10 @@ public final class Common {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * @see #doesPluginExist(String)
-	 *
-	 * @deprecated subject for removal, this simply calls {@link #doesPluginExist(String)}
-	 *
 	 * @param pluginName
 	 * @return
+	 * @see #doesPluginExist(String)
+	 * @deprecated subject for removal, this simply calls {@link #doesPluginExist(String)}
 	 */
 	@Deprecated
 	public static boolean doesPluginExistSilently(final String pluginName) {
@@ -1098,7 +1094,7 @@ public final class Common {
 	 * @param playerSender
 	 * @param command
 	 */
-	public static void dispatchCommandAsPlayer(@NonNull final Player playerSender, @NonNull String command) {
+	public static void dispatchCommandAsPlayer(@NonNull final Player playerSender, @NonNull final String command) {
 		if (command.isEmpty() || command.equalsIgnoreCase("none"))
 			return;
 
@@ -1651,7 +1647,7 @@ public final class Common {
 	 * @param arg
 	 * @return
 	 */
-	public static String simplify(Object arg) {
+	public static String simplify(final Object arg) {
 		if (arg instanceof Entity)
 			return Remain.getName((Entity) arg);
 
@@ -1695,7 +1691,7 @@ public final class Common {
 	 * @param allItems all items that will be split
 	 * @return the map containing pages and their items
 	 */
-	public static <T> Map<Integer, List<T>> fillPages(int cellSize, Iterable<T> items) {
+	public static <T> Map<Integer, List<T>> fillPages(final int cellSize, final Iterable<T> items) {
 		final List<T> allItems = Common.toList(items);
 
 		final Map<Integer, List<T>> pages = new HashMap<>();
@@ -1732,7 +1728,7 @@ public final class Common {
 	 * @param list
 	 * @return
 	 */
-	public static <T> T last(List<T> list) {
+	public static <T> T last(final List<T> list) {
 		return list == null || list.isEmpty() ? null : list.get(list.size() - 1);
 	}
 
@@ -1743,7 +1739,7 @@ public final class Common {
 	 * @param array
 	 * @return
 	 */
-	public static <T> T last(T[] array) {
+	public static <T> T last(final T[] array) {
 		return array == null || array.length == 0 ? null : array[array.length - 1];
 	}
 
@@ -1782,10 +1778,9 @@ public final class Common {
 	 *
 	 * @param includeVanished
 	 * @param otherPlayer
-	 *
 	 * @return
 	 */
-	public static List<String> getPlayerNames(final boolean includeVanished, @Nullable Player otherPlayer) {
+	public static List<String> getPlayerNames(final boolean includeVanished, @Nullable final Player otherPlayer) {
 		final List<String> found = new ArrayList<>();
 
 		for (final Player online : Remain.getOnlinePlayers()) {
@@ -1815,7 +1810,7 @@ public final class Common {
 	 * @param otherPlayer
 	 * @return
 	 */
-	public static List<String> getPlayerNicknames(final boolean includeVanished, @Nullable Player otherPlayer) {
+	public static List<String> getPlayerNicknames(final boolean includeVanished, @Nullable final Player otherPlayer) {
 		final List<String> found = new ArrayList<>();
 
 		for (final Player online : Remain.getOnlinePlayers()) {
@@ -1998,7 +1993,7 @@ public final class Common {
 	 * @param maxLineLength
 	 * @return
 	 */
-	public static String[] split(String input, int maxLineLength) {
+	public static String[] split(final String input, final int maxLineLength) {
 		final StringTokenizer tok = new StringTokenizer(input, " ");
 		final StringBuilder output = new StringBuilder(input.length());
 
@@ -2108,19 +2103,18 @@ public final class Common {
 	 *
 	 * @param value
 	 * @param def
-	 *
-	 * @deprecated subject for removal, use {@link #getOrDefault(Object, Object)}
-	 * 			   as it works exactly the same now
 	 * @return
+	 * @deprecated subject for removal, use {@link #getOrDefault(Object, Object)}
+	 * as it works exactly the same now
 	 */
 	@Deprecated
-	public static String getOrSupply(String value, String def) {
+	public static String getOrSupply(final String value, final String def) {
 		return getOrDefault(value, def);
 	}
 
 	/**
 	 * Returns the value or its default counterpart in case it is null
-	 *
+	 * <p>
 	 * PSA: If values are strings, we return default if the value is empty or equals to "none"
 	 *
 	 * @param value the primary value
@@ -2314,11 +2308,9 @@ public final class Common {
 	 * @param task
 	 * @return the task or null
 	 */
-	public static BukkitTask runLater(final int delayTicks, Runnable task) {
+	public static BukkitTask runLater(final int delayTicks, final Runnable task) {
 		final BukkitScheduler scheduler = Bukkit.getScheduler();
 		final JavaPlugin instance = SimplePlugin.getInstance();
-
-		task = new CompRunnable.SafeRunnable(task);
 
 		try {
 			return runIfDisabled(task) ? null : delayTicks == 0 ? task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTask(instance) : scheduler.runTask(instance, task) : task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskLater(instance, delayTicks) : scheduler.runTaskLater(instance, task, delayTicks);
@@ -2326,8 +2318,8 @@ public final class Common {
 
 			return runIfDisabled(task) ? null
 					: delayTicks == 0
-							? task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTask(instance) : getTaskFromId(scheduler.scheduleSyncDelayedTask(instance, task))
-							: task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskLater(instance, delayTicks) : getTaskFromId(scheduler.scheduleSyncDelayedTask(instance, task, delayTicks));
+					? task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTask(instance) : getTaskFromId(scheduler.scheduleSyncDelayedTask(instance, task))
+					: task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskLater(instance, delayTicks) : getTaskFromId(scheduler.scheduleSyncDelayedTask(instance, task, delayTicks));
 		}
 	}
 
@@ -2366,11 +2358,9 @@ public final class Common {
 	 * @param task
 	 * @return the task or null
 	 */
-	public static BukkitTask runLaterAsync(final int delayTicks, Runnable task) {
+	public static BukkitTask runLaterAsync(final int delayTicks, final Runnable task) {
 		final BukkitScheduler scheduler = Bukkit.getScheduler();
 		final JavaPlugin instance = SimplePlugin.getInstance();
-
-		task = new CompRunnable.SafeRunnable(task);
 
 		try {
 			return runIfDisabled(task) ? null : delayTicks == 0 ? task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskAsynchronously(instance) : scheduler.runTaskAsynchronously(instance, task) : task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskLaterAsynchronously(instance, delayTicks) : scheduler.runTaskLaterAsynchronously(instance, task, delayTicks);
@@ -2378,8 +2368,8 @@ public final class Common {
 		} catch (final NoSuchMethodError err) {
 			return runIfDisabled(task) ? null
 					: delayTicks == 0
-							? task instanceof CompRunnable ? ((CompRunnable) task).runTaskAsynchronously(instance) : getTaskFromId(scheduler.scheduleAsyncDelayedTask(instance, task))
-							: task instanceof CompRunnable ? ((CompRunnable) task).runTaskLaterAsynchronously(instance, delayTicks) : getTaskFromId(scheduler.scheduleAsyncDelayedTask(instance, task, delayTicks));
+					? task instanceof CompRunnable ? ((CompRunnable) task).runTaskAsynchronously(instance) : getTaskFromId(scheduler.scheduleAsyncDelayedTask(instance, task))
+					: task instanceof CompRunnable ? ((CompRunnable) task).runTaskLaterAsynchronously(instance, delayTicks) : getTaskFromId(scheduler.scheduleAsyncDelayedTask(instance, task, delayTicks));
 		}
 	}
 
@@ -2402,18 +2392,15 @@ public final class Common {
 	 * @param task        the task
 	 * @return the bukkit task or null if error
 	 */
-	public static BukkitTask runTimer(final int delayTicks, final int repeatTicks, Runnable task) {
-
-		task = new CompRunnable.SafeRunnable(task);
-
+	public static BukkitTask runTimer(final int delayTicks, final int repeatTicks, final Runnable task) {
 		try {
 			return runIfDisabled(task) ? null : task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskTimer(SimplePlugin.getInstance(), delayTicks, repeatTicks) : Bukkit.getScheduler().runTaskTimer(SimplePlugin.getInstance(), task, delayTicks, repeatTicks);
 
 		} catch (final NoSuchMethodError err) {
 			return runIfDisabled(task) ? null
 					: task instanceof CompRunnable
-							? ((CompRunnable) task).runTaskTimer(SimplePlugin.getInstance(), delayTicks, repeatTicks)
-							: getTaskFromId(Bukkit.getScheduler().scheduleSyncRepeatingTask(SimplePlugin.getInstance(), task, delayTicks, repeatTicks));
+					? ((CompRunnable) task).runTaskTimer(SimplePlugin.getInstance(), delayTicks, repeatTicks)
+					: getTaskFromId(Bukkit.getScheduler().scheduleSyncRepeatingTask(SimplePlugin.getInstance(), task, delayTicks, repeatTicks));
 		}
 	}
 
@@ -2436,25 +2423,22 @@ public final class Common {
 	 * @param task
 	 * @return
 	 */
-	public static BukkitTask runTimerAsync(final int delayTicks, final int repeatTicks, Runnable task) {
-
-		task = new CompRunnable.SafeRunnable(task);
-
+	public static BukkitTask runTimerAsync(final int delayTicks, final int repeatTicks, final Runnable task) {
 		try {
 			return runIfDisabled(task) ? null : task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskTimerAsynchronously(SimplePlugin.getInstance(), delayTicks, repeatTicks) : Bukkit.getScheduler().runTaskTimerAsynchronously(SimplePlugin.getInstance(), task, delayTicks, repeatTicks);
 
 		} catch (final NoSuchMethodError err) {
 			return runIfDisabled(task) ? null
 					: task instanceof CompRunnable
-							? ((CompRunnable) task).runTaskTimerAsynchronously(SimplePlugin.getInstance(), delayTicks, repeatTicks)
-							: getTaskFromId(Bukkit.getScheduler().scheduleAsyncRepeatingTask(SimplePlugin.getInstance(), task, delayTicks, repeatTicks));
+					? ((CompRunnable) task).runTaskTimerAsynchronously(SimplePlugin.getInstance(), delayTicks, repeatTicks)
+					: getTaskFromId(Bukkit.getScheduler().scheduleAsyncRepeatingTask(SimplePlugin.getInstance(), task, delayTicks, repeatTicks));
 		}
 	}
 
 	/*
 	 * A compatibility method that converts the given task id into a bukkit task
 	 */
-	private static BukkitTask getTaskFromId(int taskId) {
+	private static BukkitTask getTaskFromId(final int taskId) {
 
 		for (final BukkitTask task : Bukkit.getScheduler().getPendingTasks())
 			if (task.getTaskId() == taskId)
@@ -2488,7 +2472,7 @@ public final class Common {
 	public static boolean callEvent(final Event event) {
 		Bukkit.getPluginManager().callEvent(event);
 
-		return event instanceof Cancellable ? !((Cancellable) event).isCancelled() : true;
+		return !(event instanceof Cancellable) || !((Cancellable) event).isCancelled();
 	}
 
 	/**
@@ -2668,7 +2652,7 @@ final class TimedCharSequence implements CharSequence {
 	/*
 	 * Create a new timed message for the given message with a timeout in millis
 	 */
-	private TimedCharSequence(@NonNull final CharSequence message, long futureTimestampLimit) {
+	private TimedCharSequence(@NonNull final CharSequence message, final long futureTimestampLimit) {
 		this.message = message;
 		this.futureTimestampLimit = futureTimestampLimit;
 	}
@@ -2707,7 +2691,7 @@ final class TimedCharSequence implements CharSequence {
 	 * @param message
 	 * @return
 	 */
-	static TimedCharSequence withSettingsLimit(CharSequence message) {
+	static TimedCharSequence withSettingsLimit(final CharSequence message) {
 		return new TimedCharSequence(message, System.currentTimeMillis() + SimpleSettings.REGEX_TIMEOUT);
 	}
 }

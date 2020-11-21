@@ -1,5 +1,20 @@
 package org.mineacademy.fo;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.SneakyThrows;
+import org.apache.commons.lang.ClassUtils;
+import org.apache.commons.lang.StringUtils;
+import org.bukkit.Material;
+import org.bukkit.entity.EntityType;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.mineacademy.fo.MinecraftVersion.V;
+import org.mineacademy.fo.exception.FoException;
+import org.mineacademy.fo.remain.CompMaterial;
+import org.mineacademy.fo.remain.Remain;
+
 import java.io.File;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -16,22 +31,6 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
-import org.apache.commons.lang.ClassUtils;
-import org.apache.commons.lang.StringUtils;
-import org.bukkit.Material;
-import org.bukkit.entity.EntityType;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.java.JavaPlugin;
-import org.mineacademy.fo.MinecraftVersion.V;
-import org.mineacademy.fo.exception.FoException;
-import org.mineacademy.fo.remain.CompMaterial;
-
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.SneakyThrows;
-import org.mineacademy.fo.remain.Remain;
 
 /**
  * Utility class for various reflection methods
@@ -237,7 +236,6 @@ public final class ReflectionUtil {
 
 	/**
 	 * Return a constructor for the given class
-	 *
 	 */
 	public static Constructor<?> getConstructor(@NonNull final Class<?> clazz, final Class<?>... params) {
 		try {
@@ -330,7 +328,6 @@ public final class ReflectionUtil {
 
 	/**
 	 * Gets the declared field in class by its name
-	 *
 	 */
 	public static Field getDeclaredField(final Class<?> clazz, final String fieldName) {
 		try {
@@ -376,17 +373,17 @@ public final class ReflectionUtil {
 	 * @param index
 	 * @param value
 	 */
-	public static void setDeclaredField(final Object instance, final Class<?> type, final int index, final Object value) {
+	public static void setDeclaredField(@NonNull final Object instance, final Class<?> type, final int index, final Object value) {
 		int i = 0;
 
 		try {
-			for (Field field : instance.getClass().getDeclaredFields())
+			for (final Field field : instance.getClass().getDeclaredFields())
 				if (type.isAssignableFrom(field.getType()) && i++ == index) {
 					field.setAccessible(true);
 					field.set(instance, value);
 				}
 
-		} catch (ReflectiveOperationException e) {
+		} catch (final ReflectiveOperationException e) {
 			e.printStackTrace();
 		}
 	}
@@ -398,7 +395,7 @@ public final class ReflectionUtil {
 	 * @param index
 	 * @param value
 	 */
-	public static void setChatComponentField(Object instance, int index, String value) {
+	public static void setChatComponentField(@NonNull final Object instance, final int index, final String value) {
 		if (MinecraftVersion.olderThan(MinecraftVersion.V.v1_13)) {
 			setDeclaredField(instance, String.class, index, value);
 
@@ -408,13 +405,13 @@ public final class ReflectionUtil {
 		int i = 0;
 
 		try {
-			for (Field field : instance.getClass().getDeclaredFields())
+			for (final Field field : instance.getClass().getDeclaredFields())
 				if ((field.getType() == CHAT_COMPONENT_CLASS || field.getType() == String.class) && i++ == index) {
 					field.setAccessible(true);
 					field.set(instance, Remain.toIChatBaseComponent(Remain.toJson(value)));
 				}
 
-		} catch (Throwable t) {
+		} catch (final Throwable t) {
 			Common.throwError(t, "Couldn't set component for object " + instance + ": " + value);
 		}
 	}
@@ -500,9 +497,8 @@ public final class ReflectionUtil {
 
 	/**
 	 * Get a declared class method
-	 *
 	 */
-	public static Method getDeclaredMethod(final Class<?> clazz, final String methodName, Class<?>... args) {
+	public static Method getDeclaredMethod(final Class<?> clazz, final String methodName, final Class<?>... args) {
 		try {
 			if (reflectionDataCache.containsKey(clazz))
 				return reflectionDataCache.get(clazz).getDeclaredMethod(methodName, args);
@@ -681,8 +677,8 @@ public final class ReflectionUtil {
 
 	/**
 	 * Wrapper for Class.forName
-	 * @param <T>
 	 *
+	 * @param <T>
 	 * @return
 	 */
 	public static <T> Class<T> lookupClass(final String path) {

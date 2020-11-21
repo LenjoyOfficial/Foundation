@@ -1,6 +1,7 @@
 package org.mineacademy.fo.remain;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -10,9 +11,12 @@ import org.bukkit.material.MaterialData;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.ReflectionUtil;
+import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.remain.internal.ParticleInternals;
 
 import lombok.Getter;
+
+import java.util.Arrays;
 
 /**
  * Wrapper for {@link Particle}
@@ -126,29 +130,22 @@ public enum CompParticle {
 	 * @param extra
 	 */
 	public final void spawn(final Location location, final Double extra) {
-		if (Remain.hasParticleAPI()) {
-			final org.bukkit.Particle particle = ReflectionUtil.lookupEnumSilent(org.bukkit.Particle.class, toString());
+		spawn(location, 1, 0, 0, 0, extra);
+	}
 
-			if (particle != null) {
-				if (MinecraftVersion.atLeast(V.v1_13))
-					if (particle.getDataType() == org.bukkit.block.data.BlockData.class) {
-						org.bukkit.block.data.BlockData opt = org.bukkit.Material.END_ROD.createBlockData(); // GRAVEL
-
-						if (data != null)
-							opt = Bukkit.getUnsafe().fromLegacy(data.getItemType(), data.getData());
-
-						location.getWorld().spawnParticle(particle, location, 1, 0D, 0D, 0D, extra != null ? extra : 0D, opt);
-						return;
-					}
-
-				location.getWorld().spawnParticle(particle, location, 1, 0D, 0D, 0D, extra != null ? extra : 0D);
-			}
-		} else {
-			final ParticleInternals particle = ReflectionUtil.lookupEnumSilent(ParticleInternals.class, toString());
-
-			if (particle != null)
-				particle.send(location, extra != null ? extra.floatValue() : 0F);
-		}
+	/**
+	 * Spawns the particle at the given location with the count and offsets
+	 *
+	 * @param location
+	 * @param count
+	 * @param offsetX
+	 * @param offsetY
+	 * @param offsetZ
+	 * @param extra
+	 */
+	public final void spawn(final Location location, final int count, final double offsetX, final double offsetY, final double offsetZ, final Double extra) {
+		for (final Player player : location.getWorld().getPlayers())
+			spawnFor(player, location, count, offsetX, offsetY, offsetZ, extra);
 	}
 
 	/**
@@ -176,13 +173,41 @@ public enum CompParticle {
 	}
 
 	/**
+	 * Spawns the particle at the given location with the given color
+	 *
+	 * @param location
+	 * @param color
+	 */
+	public final void spawnWithColor(final Location location, final Color color) {
+		if (!Arrays.asList("REDSTONE", "SPELL_MOB", "SPELL_MOB_AMBIENT").contains(toString()))
+			throw new FoException("Particle must be REDSTONE, SPELL_MOB or SPELL_MOB_AMBIENT! Got " + toString());
+
+		final double red = (double) color.getRed() / 255;
+		final double green = (double) color.getGreen() / 255;
+		final double blue = (double) color.getBlue() / 255;
+
+		if (Remain.hasParticleAPI()) {
+			final org.bukkit.Particle particle = ReflectionUtil.lookupEnumSilent(org.bukkit.Particle.class, toString());
+
+			if (particle != null)
+				location.getWorld().spawnParticle(particle, location, 0, red, green, blue);
+
+		} else {
+			final ParticleInternals particle = ReflectionUtil.lookupEnumSilent(ParticleInternals.class, toString());
+
+			if (particle != null)
+				particle.sendColor(location, color);
+		}
+	}
+
+	/**
 	 * Spawns the particle at the given location only visible for the given player
 	 *
 	 * @param player
 	 * @param location
 	 */
 	public final void spawnFor(final Player player, final Location location) {
-		spawnFor(player, location, null);
+		spawnFor(player, location, 1, 0, 0, 0, 0D);
 	}
 
 	/**
@@ -191,20 +216,35 @@ public enum CompParticle {
 	 *
 	 * @param player
 	 * @param location
+	 * @param count
+	 * @param offsetX
+	 * @param offsetY
+	 * @param offsetZ
 	 * @param extra
 	 */
-	public final void spawnFor(final Player player, final Location location, final Double extra) {
+	public final void spawnFor(final Player player, final Location location, final int count, final double offsetX, final double offsetY, final double offsetZ, final Double extra) {
 		if (Remain.hasParticleAPI()) {
 			final org.bukkit.Particle particle = ReflectionUtil.lookupEnumSilent(org.bukkit.Particle.class, toString());
 
-			if (particle != null)
-				player.spawnParticle(particle, location, 1, 0D, 0D, 0D, extra != null ? extra : 0D);
+			if (particle != null) {
+				if (hasNewMaterials)
+					if (particle.getDataType() == org.bukkit.block.data.BlockData.class) {
+						org.bukkit.block.data.BlockData opt = org.bukkit.Material.END_ROD.createBlockData(); // GRAVEL
 
+						if (data != null)
+							opt = Bukkit.getUnsafe().fromLegacy(data.getItemType(), data.getData());
+
+						player.spawnParticle(particle, location, count, offsetX, offsetY, offsetZ, extra != null ? extra : 0D, opt);
+						return;
+					}
+
+				player.spawnParticle(particle, location, count, offsetX, offsetY, offsetZ, extra != null ? extra : 0D);
+			}
 		} else {
-			final ParticleInternals p = ReflectionUtil.lookupEnumSilent(ParticleInternals.class, toString());
+			final ParticleInternals particle = ReflectionUtil.lookupEnumSilent(ParticleInternals.class, toString());
 
-			if (p != null)
-				p.send(player, location, extra != null ? extra.floatValue() : 0F);
+			if (particle != null)
+				particle.send(player, location, (float) offsetX, (float) offsetY, (float) offsetZ, extra != null ? extra.floatValue() : 0F, count);
 		}
 	}
 }

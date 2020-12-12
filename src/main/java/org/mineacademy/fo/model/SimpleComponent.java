@@ -74,23 +74,53 @@ public final class SimpleComponent implements ConfigSerializable {
 	// --------------------------------------------------------------------
 
 	/**
-	 * Add a show text hover event for the {@link #currentComponents}
+	 * Add a show text ; event for the {@link #currentComponents}
 	 *
 	 * @param texts
 	 * @return
 	 */
 	public SimpleComponent onHover(Collection<String> texts) {
-		return onHover(texts.toArray(new String[texts.size()]));
+		return onHover(Common.toArray(texts));
 	}
 
 	/**
 	 * Add a show text hover event for the {@link #currentComponents}
 	 *
-	 * @param text
+	 * @param lines
 	 * @return
 	 */
-	public SimpleComponent onHover(String... text) {
-		return onHover(HoverEvent.Action.SHOW_TEXT, String.join("&r\n", text));
+	public SimpleComponent onHover(String... lines) {
+
+		final List<BaseComponent> components = new ArrayList<>();
+
+		// We must compile each component separately otherwise decoration such as bold will overflow lines
+		for (int i = 0; i < lines.length; i++) {
+			final String line = lines[i];
+
+			for (final BaseComponent extra : toComponent(Common.colorize(line) + (i + 1 < lines.length ? "\n" : ""), null)) {
+
+				if (!line.contains(ChatColor.BOLD.toString()))
+					extra.setBold(false);
+
+				if (!line.contains(ChatColor.ITALIC.toString()))
+					extra.setItalic(false);
+
+				if (!line.contains(ChatColor.MAGIC.toString()))
+					extra.setObfuscated(false);
+
+				if (!line.contains(ChatColor.STRIKETHROUGH.toString()))
+					extra.setStrikethrough(false);
+
+				if (!line.contains(ChatColor.UNDERLINE.toString()))
+					extra.setUnderlined(false);
+
+				components.add(extra);
+			}
+		}
+
+		this.currentComponent.hoverEvent = new HoverEvent(HoverEvent.Action.SHOW_TEXT, components.toArray(new BaseComponent[components.size()]));
+
+		return this;
 	}
 
 	/**
@@ -102,18 +132,10 @@ public final class SimpleComponent implements ConfigSerializable {
 	 * @return
 	 */
 	public SimpleComponent onHover(ItemStack item) {
-		return CompMaterial.isAir(item.getType()) ? onHover("Air") : onHover(HoverEvent.Action.SHOW_ITEM, Remain.toJson(item));
-	}
+		if (CompMaterial.isAir(item.getType()))
+			return onHover("Air");
 
-	/**
-	 * Add a hover event for the {@link #currentComponents}
-	 *
-	 * @param action
-	 * @param text
-	 * @return
-	 */
-	public SimpleComponent onHover(HoverEvent.Action action, String text) {
-		this.currentComponent.hoverEvent = new HoverEvent(action, toComponent(Common.colorize(text), null));
+		this.currentComponent.hoverEvent = new HoverEvent(HoverEvent.Action.SHOW_ITEM, new BaseComponent[] { new TextComponent(Remain.toJson(item)) });
 
 		return this;
 	}
@@ -408,12 +430,20 @@ public final class SimpleComponent implements ConfigSerializable {
 	 */
 	public <T extends CommandSender> void sendAs(@Nullable CommandSender sender, Iterable<T> receivers) {
 		for (final CommandSender receiver : receivers) {
-			final TextComponent component = new TextComponent(build(receiver));
+			final TextComponent component = build(receiver);
 
 			if (receiver instanceof Player && sender instanceof Player)
 				setRelationPlaceholders(component, (Player) receiver, (Player) sender);
 
-			Remain.sendComponent(receiver, component);
+			// Prevent clients being kicked out, so we just send plain message instead
+			if (Remain.toJson(component).length() > Short.MAX_VALUE) {
+				final String legacy = Common.colorize(component.toLegacyText());
+
+				Common.log("Warning: JSON Message to " + receiver.getName() + " was too large, removing interactive elements to avoid kick. Sending plain: " + legacy);
+				receiver.sendMessage(legacy);
+
+			} else
+				Remain.sendComponent(receiver, component);
 		}
 	}
 

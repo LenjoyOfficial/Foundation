@@ -1,7 +1,8 @@
 package org.mineacademy.fo.remain;
 
-import java.util.HashMap;
-
+import com.google.common.collect.Sets;
+import lombok.Getter;
+import lombok.NonNull;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.EntityType;
@@ -16,10 +17,7 @@ import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.plugin.SimplePlugin;
 
-import com.google.common.collect.Sets;
-
-import lombok.Getter;
-import lombok.NonNull;
+import java.util.HashMap;
 
 /**
  * Heavily inspired by a library made by Hex_27.
@@ -252,7 +250,7 @@ public enum CompMaterial {
 	CRIMSON_FUNGUS("RED_MUSHROOM"),
 	CRIMSON_HYPHAE("NETHERRACK"),
 	CRIMSON_NYLIUM("NETHERRACK"),
-	CRIMSON_PLANKS("OAK_PLANKS"),
+	CRIMSON_PLANKS("WOOD", "OAK_PLANKS", 0),
 	CRIMSON_PRESSURE_PLATE("WOODEN_PRESSURE_PLATE"),
 	CRIMSON_ROOTS("GRASS"),
 	CRIMSON_SIGN("SIGN"),
@@ -583,7 +581,7 @@ public enum CompMaterial {
 	LIME_CONCRETE_POWDER("CONCRETE_POWDER", 5),
 	LIME_DYE("INK_SACK", 10),
 	LIME_GLAZED_TERRACOTTA("LIME_GLAZED_TERRACOTTA"),
-	LIME_SHULKER_BOX("LIME_STAINED_GLASS", "STAINED_GLASS", 5),
+	LIME_SHULKER_BOX("LIME_SHULKER_BOX", 5),
 	LIME_STAINED_GLASS("STAINED_GLASS", 5),
 	LIME_STAINED_GLASS_PANE("STAINED_GLASS_PANE", 5),
 	LIME_TERRACOTTA("STAINED_CLAY", 5),
@@ -593,7 +591,7 @@ public enum CompMaterial {
 	LLAMA_SPAWN_EGG("MONSTER_EGG"),
 	LODESTONE("STONE"),
 	LOOM("CRAFTING_TABLE"),
-	Lmd23519269ILY_OF_THE_VALLEY("FLOWER", 10),
+	LILY_OF_THE_VALLEY("FLOWER", 10),
 	MAGENTA_BANNER("BANNER", 13),
 	MAGENTA_BED("BED", 2),
 	MAGENTA_CARPET("CARPET", 2),
@@ -1193,7 +1191,7 @@ public enum CompMaterial {
 
 	// Handles Minecraft below 1.12 and replaces non-existing Materials to STONE.
 	private Material findName() {
-		final String[] names = { name(), legacyName, alternativeName, "STONE" };
+		final String[] names = {name(), legacyName, alternativeName, "STONE"};
 
 		for (final String legacy : names)
 			if (legacy != null)
@@ -1730,7 +1728,7 @@ public enum CompMaterial {
 	 * @param item
 	 * @return
 	 */
-	public static CompMaterial fromItem(ItemStack item) {
+	public static CompMaterial fromItem(final ItemStack item) {
 		if (MinecraftVersion.atLeast(V.v1_13))
 			return fromMaterial(item.getType());
 
@@ -1802,7 +1800,7 @@ public enum CompMaterial {
 			return CompMaterial.valueOf(key);
 
 		} catch (final IllegalArgumentException e) {
-			CompMaterial legacy;
+			final CompMaterial legacy;
 			final String[] split = key.split(":");
 
 			if (split.length == 1)

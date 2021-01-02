@@ -165,10 +165,10 @@ public enum CompSound {
 	ZOMBIE_UNFECT("ZOMBIE_UNFECT", "ENTITY_ZOMBIE_VILLAGER_CONVERTED"),
 	ZOMBIE_REMEDY("ZOMBIE_REMEDY", "ENTITY_ZOMBIE_VILLAGER_CURE"),
 	ZOMBIE_WALK("ZOMBIE_WALK", "ENTITY_ZOMBIE_STEP"),
-	ZOMBIE_PIG_IDLE("ZOMBIE_PIG_IDLE", "ENTITY_ZOMBIE_PIG_AMBIENT", "ENTITY_ZOMBIE_PIGMAN_AMBIENT"),
-	ZOMBIE_PIG_ANGRY("ZOMBIE_PIG_ANGRY", "ENTITY_ZOMBIE_PIG_ANGRY", "ENTITY_ZOMBIE_PIGMAN_ANGRY"),
-	ZOMBIE_PIG_DEATH("ZOMBIE_PIG_DEATH", "ENTITY_ZOMBIE_PIG_DEATH", "ENTITY_ZOMBIE_PIGMAN_DEATH"),
-	ZOMBIE_PIG_HURT("ZOMBIE_PIG_HURT", "ENTITY_ZOMBIE_PIG_HURT", "ENTITY_ZOMBIE_PIGMAN_HURT"),
+	ZOMBIE_PIG_IDLE("ZOMBIE_PIG_IDLE", "ENTITY_ZOMBIE_PIG_AMBIENT", "ENTITY_ZOMBIE_PIGMAN_AMBIENT", "ENTITY_ZOMBIFIED_PIGLIN_AMBIENT"),
+	ZOMBIE_PIG_ANGRY("ZOMBIE_PIG_ANGRY", "ENTITY_ZOMBIE_PIG_ANGRY", "ENTITY_ZOMBIE_PIGMAN_ANGRY", "ENTITY_ZOMBIFIED_PIGLIN_ANGRY"),
+	ZOMBIE_PIG_DEATH("ZOMBIE_PIG_DEATH", "ENTITY_ZOMBIE_PIG_DEATH", "ENTITY_ZOMBIE_PIGMAN_DEATH", "ENTITY_ZOMBIFIED_PIGLIN_DEATH"),
+	ZOMBIE_PIG_HURT("ZOMBIE_PIG_HURT", "ENTITY_ZOMBIE_PIG_HURT", "ENTITY_ZOMBIE_PIGMAN_HURT", "ENTITY_ZOMBIFIED_PIGLIN_HURT"),
 	DIG_WOOL("DIG_WOOL", "BLOCK_CLOTH_BREAK", "BLOCK_WOOL_BREAK"),
 	DIG_GRASS("DIG_GRASS", "BLOCK_GRASS_BREAK"),
 	DIG_GRAVEL("DIG_GRAVEL", "BLOCK_GRAVEL_BREAK"),
@@ -220,7 +220,7 @@ public enum CompSound {
 	private String[] versionDependentNames;
 	private org.bukkit.Sound cached = null;
 
-	CompSound(String... versionDependentNames) {
+	CompSound(final String... versionDependentNames) {
 		this.versionDependentNames = versionDependentNames;
 
 		// Assume most servers use the latest version so reverse for performance
@@ -232,7 +232,7 @@ public enum CompSound {
 	 *
 	 * @param player
 	 */
-	public final void play(Player player) {
+	public final void play(final Player player) {
 		play(player, 1F, 1F);
 	}
 
@@ -240,11 +240,10 @@ public enum CompSound {
 	 * Plays a sound for the given player
 	 *
 	 * @param player
-	 * @param sound
 	 * @param volume
 	 * @param pitch
 	 */
-	public final void play(Player player, float volume, float pitch) {
+	public final void play(final Player player, final float volume, final float pitch) {
 		try {
 			player.playSound(player.getLocation(), getSound(), volume, pitch);
 		} catch (final Throwable t) {
@@ -257,7 +256,7 @@ public enum CompSound {
 	 *
 	 * @param loc
 	 */
-	public final void play(Location loc) {
+	public final void play(final Location loc) {
 		play(loc, 1F, 1F);
 	}
 
@@ -265,11 +264,10 @@ public enum CompSound {
 	 * Plays a sound on a specific location
 	 *
 	 * @param loc
-	 * @param sound
 	 * @param volume
 	 * @param pitch
 	 */
-	public final void play(Location loc, float volume, float pitch) {
+	public final void play(final Location loc, final float volume, final float pitch) {
 		try {
 			loc.getWorld().playSound(loc, getSound(), volume, pitch);
 		} catch (final Throwable t) {
@@ -313,7 +311,7 @@ public enum CompSound {
 	 * @param soundName
 	 * @return
 	 */
-	public static final Sound convert(String soundName) {
+	public static final Sound convert(final String soundName) {
 		CompSound sound = null;
 
 		// Test if we can convert it directly

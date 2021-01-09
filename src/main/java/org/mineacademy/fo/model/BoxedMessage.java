@@ -1,10 +1,6 @@
 package org.mineacademy.fo.model;
 
-import java.util.Arrays;
-import java.util.Objects;
-
-import javax.annotation.Nullable;
-
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -13,7 +9,9 @@ import org.mineacademy.fo.ChatUtil;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.remain.Remain;
 
-import lombok.RequiredArgsConstructor;
+import javax.annotation.Nullable;
+import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * Represents a chat message surrounded by chat-wide line on the top and bottom:
@@ -27,11 +25,6 @@ import lombok.RequiredArgsConstructor;
 public final class BoxedMessage {
 
 	/**
-	 * The color of the top and bottom line
-	 */
-	public static ChatColor LINE_COLOR = ChatColor.DARK_GRAY;
-
-	/**
 	 * All message recipients
 	 */
 	private final Iterable<? extends CommandSender> recipients;
@@ -40,6 +33,8 @@ public final class BoxedMessage {
 	 * The sender of the message
 	 */
 	private final Player sender;
+
+	private final ChatColor frameColor;
 
 	/**
 	 * The messages to send
@@ -53,7 +48,7 @@ public final class BoxedMessage {
 	 * @param messages
 	 */
 	public BoxedMessage(final String... messages) {
-		this(null, null, messages);
+		this(null, null, ChatColor.DARK_GRAY, messages);
 	}
 
 	/**
@@ -63,10 +58,11 @@ public final class BoxedMessage {
 	 * @param sender
 	 * @param messages
 	 */
-	private BoxedMessage(@Nullable final Iterable<? extends CommandSender> recipients, final Player sender, final String[] messages) {
+	private BoxedMessage(@Nullable final Iterable<? extends CommandSender> recipients, final Player sender, final ChatColor frameColor, final String[] messages) {
 		this.recipients = recipients == null ? null : Common.toList(recipients); // Make a copy to prevent changes in the list on send
 		this.sender = sender;
 		this.messages = messages;
+		this.frameColor = frameColor;
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
@@ -91,57 +87,13 @@ public final class BoxedMessage {
 	}
 
 	private void sendFrameInternals0() {
-		for (int i = 0; i < getTopLines(); i++)
-			send("&r");
-
 		for (final String message : messages)
 			for (final String part : message.split("\n"))
 				send(part);
-
-		for (int i = 0; i < getBottomLines(); i++)
-			send("&r");
-	}
-
-	private int getTopLines() {
-		switch (length()) {
-			case 1:
-				return 2;
-			case 2:
-			case 3:
-			case 4:
-				return 1;
-
-			default:
-				return 0;
-		}
-	}
-
-	private int getBottomLines() {
-		switch (length()) {
-			case 1:
-			case 2:
-				return 2;
-			case 3:
-				return 1;
-
-			default:
-				return 0;
-		}
 	}
 
 	private void sendLine() {
-		send(LINE_COLOR + Common.chatLineSmooth());
-	}
-
-	private int length() {
-		int length = 0;
-
-		for (final String message : messages)
-			for (
-					final String part : message.split("\n"))
-				length++;
-
-		return length;
+		send(frameColor + Common.chatLineSmooth());
 	}
 
 	private void send(String message) {
@@ -213,7 +165,7 @@ public final class BoxedMessage {
 	 * @param sender
 	 */
 	public void broadcastAs(final Player sender) {
-		new BoxedMessage(null, sender, messages).launch();
+		new BoxedMessage(null, sender, frameColor, messages).launch();
 	}
 
 	/**
@@ -222,7 +174,7 @@ public final class BoxedMessage {
 	 * @param recipient
 	 */
 	public void tell(final CommandSender recipient) {
-		tell(null, Arrays.asList(recipient), messages);
+		tell(null, Arrays.asList(recipient), frameColor, messages);
 	}
 
 	/**
@@ -231,7 +183,7 @@ public final class BoxedMessage {
 	 * @param recipients
 	 */
 	public void tell(final Iterable<? extends CommandSender> recipients) {
-		tell(null, recipients, messages);
+		tell(null, recipients, frameColor, messages);
 	}
 
 	/**
@@ -242,7 +194,7 @@ public final class BoxedMessage {
 	 * @param sender
 	 */
 	public void tellAs(final CommandSender receiver, final Player sender) {
-		tell(sender, Arrays.asList(receiver), messages);
+		tell(sender, Arrays.asList(receiver), frameColor, messages);
 	}
 
 	/**
@@ -253,7 +205,7 @@ public final class BoxedMessage {
 	 * @param sender
 	 */
 	public void tellAs(final Iterable<? extends CommandSender> receivers, final Player sender) {
-		new BoxedMessage(receivers, sender, messages).launch();
+		new BoxedMessage(receivers, sender, frameColor, messages).launch();
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
@@ -265,7 +217,7 @@ public final class BoxedMessage {
 	 *
 	 * @param messages
 	 */
-	public static void broadcast(final String... messages) {
+	public static void broadcast(final ChatColor frameColor, final String... messages) {
 		broadcast(null, messages);
 	}
 
@@ -275,8 +227,8 @@ public final class BoxedMessage {
 	 * @param sender
 	 * @param messages
 	 */
-	public static void broadcast(final Player sender, final String... messages) {
-		new BoxedMessage(null, sender, messages).launch();
+	public static void broadcast(final Player sender, final ChatColor frameColor, final String... messages) {
+		new BoxedMessage(null, sender, frameColor, messages).launch();
 	}
 
 	/**
@@ -285,8 +237,8 @@ public final class BoxedMessage {
 	 * @param recipient
 	 * @param messages
 	 */
-	public static void tell(final CommandSender recipient, final String... messages) {
-		tell(null, Arrays.asList(recipient), messages);
+	public static void tell(final CommandSender recipient, final ChatColor frameColor, final String... messages) {
+		tell(null, Arrays.asList(recipient), frameColor, messages);
 	}
 
 	/**
@@ -295,8 +247,8 @@ public final class BoxedMessage {
 	 * @param recipients
 	 * @param messages
 	 */
-	public static void tell(final Iterable<? extends CommandSender> recipients, final String... messages) {
-		tell(null, recipients, messages);
+	public static void tell(final Iterable<? extends CommandSender> recipients, final ChatColor frameColor, final String... messages) {
+		tell(null, recipients, frameColor, messages);
 	}
 
 	/**
@@ -306,8 +258,8 @@ public final class BoxedMessage {
 	 * @param receiver
 	 * @param messages
 	 */
-	public static void tell(final Player sender, final CommandSender receiver, final String... messages) {
-		tell(sender, Arrays.asList(receiver), messages);
+	public static void tell(final Player sender, final CommandSender receiver, final ChatColor frameColor, final String... messages) {
+		tell(sender, Arrays.asList(receiver), frameColor, messages);
 	}
 
 	/**
@@ -317,8 +269,8 @@ public final class BoxedMessage {
 	 * @param receivers
 	 * @param messages
 	 */
-	public static void tell(final Player sender, final Iterable<? extends CommandSender> receivers, final String... messages) {
-		new BoxedMessage(receivers, sender, messages).launch();
+	public static void tell(final Player sender, final Iterable<? extends CommandSender> receivers, final ChatColor frameColor, final String... messages) {
+		new BoxedMessage(receivers, sender, frameColor, messages).launch();
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
@@ -363,7 +315,7 @@ public final class BoxedMessage {
 
 			final String[] copy = message.split("%delimiter%");
 
-			return new BoxedMessage(recipients, sender, copy);
+			return new BoxedMessage(recipients, sender, frameColor, copy);
 		}
 	}
 }

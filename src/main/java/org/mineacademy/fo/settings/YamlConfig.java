@@ -1,28 +1,12 @@
 package org.mineacademy.fo.settings;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.function.Function;
-
-import javax.annotation.Nullable;
-
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -52,12 +36,26 @@ import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.Remain;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
-
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import javax.annotation.Nullable;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.function.Function;
 
 /**
  * The core configuration class. Manages all settings files.
@@ -112,7 +110,6 @@ public class YamlConfig {
 
 	/**
 	 * Internal flag that can be toggled to disable working with default files.
-	 *
 	 */
 	private boolean useDefaults = true;
 
@@ -481,9 +478,9 @@ public class YamlConfig {
 	/**
 	 * Experimental - Shall we attempt to save comments into this yaml config
 	 * and enforce the file to always look like the default one?
-	 *
+	 * <p>
 	 * You can exclude sections you do not want to symlink in {@link #getUncommentedSections()}
-	 *
+	 * <p>
 	 * Defaults to false.
 	 *
 	 * @return
@@ -495,11 +492,11 @@ public class YamlConfig {
 	/**
 	 * If {@link #SAVE_COMMENTS} is on, what sections should we ignore from
 	 * being updated/enforced commands?
-	 *
+	 * <p>
 	 * E.g. In ChatControl people can add their own channels so we make the
 	 * "Channels.List" ignored so that peoples' channels (new sections) won't get
 	 * remove.
-	 *
+	 * <p>
 	 * None by default.
 	 *
 	 * @return
@@ -780,7 +777,6 @@ public class YamlConfig {
 	 *
 	 * @param path
 	 * @return
-	 *
 	 * @deprecated use {@link #getDouble(String)}
 	 */
 	@Deprecated
@@ -986,7 +982,16 @@ public class YamlConfig {
 	 * @return
 	 */
 	protected final BoxedMessage getBoxedMessage(final String path) {
-		return new BoxedMessage(getString(path));
+		final String message = getString(path, "");
+
+		if (message.startsWith("<framed>")) {
+			final String[] split = message.substring(7).split("::");
+			final ChatColor color = ChatColor.getByChar(split[0].charAt(1));
+
+			return new BoxedMessage(color, split[1]);
+		}
+
+		return new BoxedMessage(message);
 	}
 
 	/**
@@ -1115,7 +1120,6 @@ public class YamlConfig {
 	 * @param <T>
 	 * @param path
 	 * @param type
-	 *
 	 * @return
 	 * @deprecated this code is specifically targeted for our plugins only
 	 */
@@ -1496,7 +1500,6 @@ public class YamlConfig {
 	 * @param to
 	 * @param converter
 	 */
-	@SuppressWarnings("rawtypes")
 	protected final <O, N> void convert(final String path, final Class<O> from, final Class<N> to, final Function<O, N> converter) {
 		final Object old = getObject(path);
 
@@ -1755,7 +1758,7 @@ public class YamlConfig {
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		throw new RuntimeException("Please implement your own equals() method for " + getClass());
 	}
 
@@ -1765,21 +1768,21 @@ public class YamlConfig {
 
 	/**
 	 * @deprecated This class has been moved into {@link SimpleTime}.
-	 * 			   To migrate, simply rename TimeHelper into SimpleTime everywhere.
+	 * To migrate, simply rename TimeHelper into SimpleTime everywhere.
 	 */
 	@Deprecated
 	public static final class TimeHelper extends SimpleTime {
 
-		protected TimeHelper(String time) {
+		protected TimeHelper(final String time) {
 			super(time);
 		}
 
 		/**
 		 * Generate new time. Valid examples: 15 ticks 1 second 25 minutes 3 hours etc.
 		 *
-		 * @deprecated use {@link SimpleTime#from(String)} that has now replaced this constructor
 		 * @param time
 		 * @return
+		 * @deprecated use {@link SimpleTime#from(String)} that has now replaced this constructor
 		 */
 		@Deprecated
 		public static TimeHelper from(final String time) {
@@ -1993,7 +1996,7 @@ public class YamlConfig {
 			this.play(player, fadeIn, stay, fadeOut, null);
 		}
 
-		public void play(final Player player, final int fadeIn, final int stay, final int fadeOut, @Nullable Function<String, String> replacer) {
+		public void play(final Player player, final int fadeIn, final int stay, final int fadeOut, @Nullable final Function<String, String> replacer) {
 			Remain.sendTitle(player, fadeIn, stay, fadeOut, replacer != null ? replacer.apply(title) : title, replacer != null ? replacer.apply(subtitle) : subtitle);
 		}
 	}
@@ -2218,7 +2221,7 @@ final class LegacyEnum {
 	 * @param enumName
 	 * @return
 	 */
-	public static <T extends Enum<T>> boolean isIncompatible(Class<T> type, String enumName) {
+	public static <T extends Enum<T>> boolean isIncompatible(final Class<T> type, final String enumName) {
 		final List<String> types = INCOMPATIBLE_TYPES.get(type);
 
 		return types != null && types.contains(enumName.toUpperCase().replace(" ", "_"));

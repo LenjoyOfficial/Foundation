@@ -1,7 +1,8 @@
 package org.mineacademy.fo.conversation;
 
-import java.util.concurrent.TimeUnit;
-
+import lombok.AccessLevel;
+import lombok.Getter;
+import org.bukkit.ChatColor;
 import org.bukkit.conversations.Conversable;
 import org.bukkit.conversations.Conversation;
 import org.bukkit.conversations.ConversationAbandonedEvent;
@@ -21,8 +22,7 @@ import org.mineacademy.fo.model.Variables;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompSound;
 
-import lombok.AccessLevel;
-import lombok.Getter;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A simple way to communicate with the player
@@ -122,11 +122,10 @@ public abstract class SimpleConversation implements ConversationAbandonedListene
 	 * Fired when the user quits this conversation (see {@link #getCanceller()}, or
 	 * simply quits the game)
 	 *
-	 *
 	 * @param event
 	 * @param canceledFromInactivity true if user failed to enter input in the period set in {@link #getTimeout()}
 	 */
-	protected void onConversationEnd(final ConversationAbandonedEvent event, boolean canceledFromInactivity) {
+	protected void onConversationEnd(final ConversationAbandonedEvent event, final boolean canceledFromInactivity) {
 		this.onConversationEnd(event);
 	}
 
@@ -155,7 +154,7 @@ public abstract class SimpleConversation implements ConversationAbandonedListene
 	/*
 	 * Add a space to the prefix if it ends with one
 	 */
-	private final String addLastSpace(final String prefix) {
+	private String addLastSpace(final String prefix) {
 		return prefix.endsWith(" ") ? prefix : prefix + " ";
 	}
 
@@ -227,7 +226,7 @@ public abstract class SimpleConversation implements ConversationAbandonedListene
 	 * @param messages
 	 */
 	protected static final void tellBoxed(final Conversable conversable, final String... messages) {
-		BoxedMessage.tell((Player) conversable, messages);
+		BoxedMessage.tell((Player) conversable, ChatColor.DARK_GRAY, messages);
 	}
 
 	/**
@@ -269,7 +268,7 @@ public abstract class SimpleConversation implements ConversationAbandonedListene
 		 * @see org.bukkit.conversations.InactivityConversationCanceller#cancelling(org.bukkit.conversations.Conversation)
 		 */
 		@Override
-		protected void cancelling(Conversation conversation) {
+		protected void cancelling(final Conversation conversation) {
 			conversation.getContext().setSessionData("FLP#TIMEOUT", true);
 		}
 	}

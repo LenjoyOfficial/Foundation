@@ -1,21 +1,16 @@
 package org.mineacademy.fo.settings;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeMap;
-
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictList;
 import org.mineacademy.fo.constants.FoConstants;
+import org.mineacademy.fo.display.SimpleDisplay;
+import org.mineacademy.fo.display.SimpleProgressDisplay;
 import org.mineacademy.fo.model.BoxedMessage;
+import org.mineacademy.fo.model.InventoryItem;
 import org.mineacademy.fo.model.Replacer;
 import org.mineacademy.fo.model.SimpleSound;
 import org.mineacademy.fo.model.SimpleTime;
@@ -24,6 +19,15 @@ import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.settings.YamlConfig.CasusHelper;
 import org.mineacademy.fo.settings.YamlConfig.TitleHelper;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * A special case {@link YamlConfig} that allows static access to this config. This is unsafe
@@ -150,7 +154,7 @@ public abstract class YamlStaticConfig {
 	/**
 	 * Loads the class via reflection, scanning for "private static void init()" methods to run
 	 */
-	private final void loadViaReflection() {
+	private void loadViaReflection() {
 		Valid.checkNotNull(TEMPORARY_INSTANCE, "Instance cannot be null " + getFileName());
 		Valid.checkNotNull(TEMPORARY_INSTANCE.getConfig(), "Config cannot be null for " + getFileName());
 		Valid.checkNotNull(TEMPORARY_INSTANCE.getDefaults(), "Default config cannot be null for " + getFileName());
@@ -338,7 +342,7 @@ public abstract class YamlStaticConfig {
 		return TEMPORARY_INSTANCE.getStringList(path);
 	}
 
-	protected static final <E> Set<E> getSet(final String path, Class<E> typeOf) {
+	protected static final <E> Set<E> getSet(final String path, final Class<E> typeOf) {
 		return TEMPORARY_INSTANCE.getSet(path, typeOf);
 	}
 
@@ -371,10 +375,9 @@ public abstract class YamlStaticConfig {
 	}
 
 	/**
-	 * @deprecated use {@link #getDouble(String)}
-	 *
 	 * @param path
 	 * @return
+	 * @deprecated use {@link #getDouble(String)}
 	 */
 	@Deprecated
 	protected static final double getDoubleSafe(final String path) {
@@ -387,6 +390,14 @@ public abstract class YamlStaticConfig {
 
 	protected static final SimpleSound getSound(final String path) {
 		return TEMPORARY_INSTANCE.getSound(path);
+	}
+
+	protected static final SimpleDisplay getDisplay(final String path) {
+		return TEMPORARY_INSTANCE.getDisplay(path);
+	}
+
+	protected static final SimpleProgressDisplay getProgressDisplay(final String path) {
+		return TEMPORARY_INSTANCE.getProgressDisplay(path);
 	}
 
 	protected static final CasusHelper getCasus(final String path) {
@@ -405,6 +416,14 @@ public abstract class YamlStaticConfig {
 		return TEMPORARY_INSTANCE.getMaterial(path);
 	}
 
+	protected static final ItemStack getItem(final String path) {
+		return TEMPORARY_INSTANCE.getItem(path);
+	}
+
+	protected static final InventoryItem getInventoryItem(final String path) {
+		return TEMPORARY_INSTANCE.getInventoryItem(path);
+	}
+
 	protected static final BoxedMessage getBoxedMessage(final String path) {
 		return TEMPORARY_INSTANCE.getBoxedMessage(path);
 	}
@@ -413,7 +432,7 @@ public abstract class YamlStaticConfig {
 		return TEMPORARY_INSTANCE.get(path, typeOf);
 	}
 
-	protected static final <E> E getWithData(final String path, final Class<E> typeOf, Object... deserializeArguments) {
+	protected static final <E> E getWithData(final String path, final Class<E> typeOf, final Object... deserializeArguments) {
 		return TEMPORARY_INSTANCE.getWithData(path, typeOf, deserializeArguments);
 	}
 

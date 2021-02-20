@@ -7,6 +7,7 @@ import org.mineacademy.fo.Common;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.model.RangedValue;
 import org.mineacademy.fo.model.Replacer;
+import org.mineacademy.fo.remain.CompColor;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -48,7 +49,7 @@ public class SimpleProgressDisplay extends SimpleDisplay {
 	 * <p>
 	 * For example: 1-2 progressed character -> red color, 3-4 -> orange color etc.
 	 */
-	private final Map<RangedValue, ChatColor> ranges = new HashMap<>();
+	private final Map<RangedValue, CompColor> ranges = new HashMap<>();
 
 	/**
 	 * Creates a new instance from the given serialized map
@@ -70,7 +71,7 @@ public class SimpleProgressDisplay extends SimpleDisplay {
 		final SerializedMap rangeMap = map.getMap("RangeColors");
 
 		for (final String key : rangeMap.keySet())
-			ranges.put(RangedValue.parse(key), ChatColor.getByChar(rangeMap.getString(key)));
+			ranges.put(RangedValue.parse(key), CompColor.fromName(rangeMap.getString(key)));
 	}
 
 	/**
@@ -94,17 +95,17 @@ public class SimpleProgressDisplay extends SimpleDisplay {
 	 */
 	public void showProgress(final Player player, final int percent, final Function<String, String> replacer) {
 		final int progress = size * percent / 100;
-		ChatColor color = ChatColor.GREEN;
+		CompColor color = CompColor.GREEN;
 
-		for (final Map.Entry<RangedValue, ChatColor> range : ranges.entrySet())
+		for (final Map.Entry<RangedValue, CompColor> range : ranges.entrySet())
 			if (range.getKey().isWithin(progress))
 				color = range.getValue();
 
-		final String progressBar = color.toString() + Common.fancyBar(progress, progressChar, size, remainingChar, remainingColor);
+		final String progressBar = color.getChatColor().toString() + Common.fancyBar(progress, progressChar, size, remainingChar, remainingColor);
 
-		final String emptyReplaced = replacer != null ? replacer.apply(emptyMessage) : emptyMessage;
-
-		show(player, message -> percent == 0 && !emptyMessage.isEmpty() ? emptyReplaced :
-				Replacer.replaceArray(replacer != null ? replacer.apply(message) : message, "progressBar", progressBar));
+		show(player, message -> percent == 0 && !emptyMessage.isEmpty() ?
+				replacer != null ? replacer.apply(emptyMessage) : emptyMessage :
+				Replacer.replaceArray(replacer != null ? replacer.apply(message) : message,
+						"progressBar", progressBar));
 	}
 }

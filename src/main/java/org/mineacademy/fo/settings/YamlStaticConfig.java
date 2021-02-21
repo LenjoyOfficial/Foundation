@@ -10,6 +10,7 @@ import org.mineacademy.fo.constants.FoConstants;
 import org.mineacademy.fo.display.SimpleDisplay;
 import org.mineacademy.fo.display.SimpleProgressDisplay;
 import org.mineacademy.fo.model.BoxedMessage;
+import org.mineacademy.fo.model.ColoredRanges;
 import org.mineacademy.fo.model.InventoryItem;
 import org.mineacademy.fo.model.Replacer;
 import org.mineacademy.fo.model.SimpleSound;
@@ -410,6 +411,10 @@ public abstract class YamlStaticConfig {
 
 	protected static final <T extends SimpleTime> T getTime(final String path) {
 		return TEMPORARY_INSTANCE.getTime(path);
+	}
+
+	protected static final ColoredRanges getColoredRanges(final String path) {
+		return TEMPORARY_INSTANCE.getColoredRanges(path);
 	}
 
 	protected static final CompMaterial getMaterial(final String path) {

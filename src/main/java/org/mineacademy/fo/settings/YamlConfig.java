@@ -5,7 +5,6 @@ import com.google.common.io.Files;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.bukkit.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
@@ -13,7 +12,6 @@ import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.FileUtil;
@@ -32,7 +30,7 @@ import org.mineacademy.fo.display.SimpleDisplay;
 import org.mineacademy.fo.display.SimpleProgressDisplay;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.model.BoxedMessage;
-import org.mineacademy.fo.model.InventoryItem;
+import org.mineacademy.fo.model.ColoredRanges;
 import org.mineacademy.fo.model.Replacer;
 import org.mineacademy.fo.model.SimpleSound;
 import org.mineacademy.fo.model.SimpleTime;
@@ -1024,6 +1022,32 @@ public class YamlConfig {
 		forceSingleDefaults(path);
 
 		return isSet(path) ? getMaterial(path) : def;
+	}
+
+	/**
+	 * Get the colored ranges which can store colors for number ranges
+	 *
+	 * @param path
+	 * @param def
+	 * @return
+	 */
+	protected final ColoredRanges getColoredRanges(final String path, final SerializedMap def) {
+		forceSingleDefaults(path);
+
+		return isSet(path) ? getColoredRanges(path) : new ColoredRanges(def);
+	}
+
+	/**
+	 * Get the colored ranges which can store colors for number ranges
+	 * or null if the path isn't set
+	 *
+	 * @param path
+	 * @return
+	 */
+	protected final ColoredRanges getColoredRanges(final String path) {
+		final SerializedMap map = getMap(path);
+
+		return !map.isEmpty() ? new ColoredRanges(map) : null;
 	}
 
 	/**

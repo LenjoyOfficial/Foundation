@@ -5,12 +5,10 @@ import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.collection.SerializedMap;
-import org.mineacademy.fo.model.RangedValue;
+import org.mineacademy.fo.model.ColoredRanges;
 import org.mineacademy.fo.model.Replacer;
-import org.mineacademy.fo.remain.CompColor;
+import org.mineacademy.fo.remain.CompChatColor;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Function;
 
 /**
@@ -45,11 +43,9 @@ public class SimpleProgressDisplay extends SimpleDisplay {
 	private final ChatColor remainingColor;
 
 	/**
-	 * The color of the progressed part for different ranges.
-	 * <p>
-	 * For example: 1-2 progressed character -> red color, 3-4 -> orange color etc.
+	 * The colors of the progressed parts in ranges
 	 */
-	private final Map<RangedValue, CompColor> ranges = new HashMap<>();
+	private final ColoredRanges ranges;
 
 	/**
 	 * Creates a new instance from the given serialized map
@@ -62,16 +58,14 @@ public class SimpleProgressDisplay extends SimpleDisplay {
 		emptyMessage = Common.colorize(map.getString("EmptyMessage"));
 
 		map = map.getMap("ProgressBar");
+
 		this.size = map.getInteger("Size");
 
 		this.progressChar = map.getString("ProgressChar").charAt(0);
 		this.remainingChar = map.getString("RemainingChar").charAt(2);
 		this.remainingColor = ChatColor.getByChar(map.getString("RemainingChar").charAt(1));
 
-		final SerializedMap rangeMap = map.getMap("RangeColors");
-
-		for (final String key : rangeMap.keySet())
-			ranges.put(RangedValue.parse(key), CompColor.fromName(rangeMap.getString(key)));
+		ranges = new ColoredRanges(map.getMap("RangeColors"));
 	}
 
 	/**
@@ -95,13 +89,9 @@ public class SimpleProgressDisplay extends SimpleDisplay {
 	 */
 	public void showProgress(final Player player, final int percent, final Function<String, String> replacer) {
 		final int progress = size * percent / 100;
-		CompColor color = CompColor.GREEN;
+		final CompChatColor color = ranges.getColor(progress);
 
-		for (final Map.Entry<RangedValue, CompColor> range : ranges.entrySet())
-			if (range.getKey().isWithin(progress))
-				color = range.getValue();
-
-		final String progressBar = color.getChatColor().toString() + Common.fancyBar(progress, progressChar, size, remainingChar, remainingColor);
+		final String progressBar = color.toString() + Common.fancyBar(progress, progressChar, size, remainingChar, remainingColor);
 
 		show(player, message -> percent == 0 && !emptyMessage.isEmpty() ?
 				replacer != null ? replacer.apply(emptyMessage) : emptyMessage :

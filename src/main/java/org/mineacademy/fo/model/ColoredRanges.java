@@ -50,6 +50,20 @@ public class ColoredRanges {
 	}
 
 	/**
+	 * Returns true if the given number is within any colored range
+	 *
+	 * @param value
+	 * @return
+	 */
+	public boolean hasColor(final Number value) {
+		for (final RangedValue range : ranges.keySet())
+			if (range.isWithin(value))
+				return true;
+
+		return false;
+	}
+
+	/**
 	 * Returns the chat color for the number range that contains the given value,
 	 * or {@link #defaultColor} if the value is null or isn't in any range
 	 *

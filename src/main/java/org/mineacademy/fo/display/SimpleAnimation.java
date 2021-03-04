@@ -51,8 +51,8 @@ public abstract class SimpleAnimation extends BukkitRunnable {
 	 * Creates a new animation from the given frames
 	 *
 	 * @param name       the name of this animation, used for caching
-	 * @param frames     the raw frames to process
-	 * @param runOnce    if the animation should run only once or forever
+	 * @param frames     the raw frames to process, supports & colors
+	 * @param runOnce    if the animation should run only once
 	 * @param startDelay the delay of starting after {@link #launch(boolean)}
 	 */
 	protected SimpleAnimation(final String name, final List<String> frames, final boolean runOnce, final int startDelay) {
@@ -64,7 +64,7 @@ public abstract class SimpleAnimation extends BukkitRunnable {
 			this.frames.addAll(processedFrameLists.get(name));
 
 		else {
-			for (final String frame : frames) {
+			for (final String frame : Common.colorize(frames)) {
 				final String[] split = frame.split("::");
 				final int frameTime = Integer.parseInt(split[0]);
 

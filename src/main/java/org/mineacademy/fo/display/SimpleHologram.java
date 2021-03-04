@@ -3,6 +3,7 @@ package org.mineacademy.fo.display;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
+import org.apache.commons.lang.StringUtils;
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
@@ -10,14 +11,13 @@ import org.bukkit.entity.Player;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.Valid;
+import org.mineacademy.fo.collection.StrictSet;
 import org.mineacademy.fo.remain.CompProperty;
 import org.mineacademy.fo.remain.Remain;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -36,14 +36,32 @@ public final class SimpleHologram {
 		GET_HANDLE = ReflectionUtil.getMethod(ReflectionUtil.getOBCClass("entity.CraftArmorStand"), "getHandle");
 	}
 
+	/**
+	 * The current location of the lowest armor stand
+	 */
 	@Setter
 	private Location location;
+
+	/**
+	 * The current lines the hologram is showing
+	 */
 	private final String[] lines;
+
+	/**
+	 * The armor stands displaying the lines
+	 */
 	private final ArmorStand[] armorStands;
+
+	/**
+	 * Has this hologram been spawned?
+	 */
 	@Getter
 	private boolean created = false;
 
-	private Set<UUID> hiddenPlayers = new HashSet<>();
+	/**
+	 * The list of players from whom this hologram is hidden
+	 */
+	private final StrictSet<UUID> hiddenPlayers = new StrictSet<>();
 
 	/**
 	 * Creates a new Hologram. & colors are supported for the lines.
@@ -55,8 +73,8 @@ public final class SimpleHologram {
 		Valid.checkBoolean(lines.length > 0, "Lines are null");
 
 		this.location = location;
-		this.lines = lines;
-		this.armorStands = new ArmorStand[lines.length];
+		this.lines = StringUtils.split(Common.colorize(lines), "\n");
+		this.armorStands = new ArmorStand[this.lines.length];
 	}
 
 	/**
@@ -140,6 +158,8 @@ public final class SimpleHologram {
 
 		for (final ArmorStand as : armorStands)
 			Remain.sendPacket(player, ReflectionUtil.instantiate(SPAWN_ENTITY_PACKET, ReflectionUtil.invoke(GET_HANDLE, as)));
+
+		hiddenPlayers.remove(player.getUniqueId());
 	}
 
 	/**
@@ -158,6 +178,7 @@ public final class SimpleHologram {
 			ids[index++] = as.getEntityId();
 
 		Remain.sendPacket(player, ReflectionUtil.instantiate(DESTROY_ENTITY_PACKET, ids));
+		hiddenPlayers.add(player.getUniqueId());
 	}
 
 	/**

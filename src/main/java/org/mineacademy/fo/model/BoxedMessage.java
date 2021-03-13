@@ -231,7 +231,7 @@ public final class BoxedMessage {
 	 * @param messages
 	 */
 	public static void broadcast(final ChatColor frameColor, final String... messages) {
-		broadcast(null, messages);
+		broadcast(null, frameColor, messages);
 	}
 
 	/**

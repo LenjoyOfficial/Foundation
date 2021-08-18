@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.Valid;
@@ -70,7 +71,7 @@ public final class InventoryDrawer {
 		this.inventory = inventory;
 		this.size = inventory.getSize();
 		this.closeInventoryOnDisplay = false;
-		
+
 		this.content = new ItemStack[inventory.getSize()];
 	}
 
@@ -155,26 +156,46 @@ public final class InventoryDrawer {
 	 *
 	 * @param player the player
 	 */
-	public void display(Player player) {
+	public void display(final Player player) {
 
 		// Close player's open inventory if the variable is true
 		if (closeInventoryOnDisplay)
 			player.closeInventory();
 
-		// create new inventory if instance is created with of(int, String)
+		// Create new inventory if not using player's inventory
 		final boolean createNewInventory = inventory == null;
 
-		if (createNewInventory) {
-			// Automatically append the black color in the menu, can be overridden by colors
-			inventory = Bukkit.createInventory(player, size, Common.colorize("&0" + title));
-		}
-
-		inventory.setContents(content);
+		inventory = this.build(player);
 
 		if (createNewInventory)
 			player.openInventory(inventory);
 		else
 			player.updateInventory();
+	}
+
+	/**
+	 * Builds the inventory
+	 *
+	 * @return
+	 */
+	public Inventory build() {
+		return this.build(null);
+	}
+
+	/**
+	 * Builds the inventory for the given holder
+	 *
+	 * @param holder
+	 * @return
+	 */
+	public Inventory build(InventoryHolder holder) {
+		if (inventory == null)
+			// Automatically append the black color in the menu, can be overriden by colors
+			inventory = Bukkit.createInventory(holder, size, Common.colorize("&0" + title));
+
+		inventory.setContents(content);
+
+		return inventory;
 	}
 
 	/**
@@ -208,7 +229,7 @@ public final class InventoryDrawer {
 	 */
 	public static InventoryDrawer of(Player player) {
 		Valid.checkBoolean(player.getOpenInventory().getType() != InventoryType.CRAFTING, "New InventoryDrawer from non-existing inventory!");
-		
+
 		return new InventoryDrawer(player.getOpenInventory().getTopInventory());
 	}
 }

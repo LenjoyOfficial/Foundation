@@ -1,13 +1,19 @@
 package org.mineacademy.fo;
 
+import java.awt.Color;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.regex.Matcher;
 
 import org.apache.commons.lang.StringUtils;
+import org.bukkit.ChatColor;
+import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.model.Whiteblacklist;
+import org.mineacademy.fo.plugin.SimplePlugin;
+import org.mineacademy.fo.remain.CompChatColor;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -77,11 +83,13 @@ public final class ChatUtil {
 			return "";
 
 		int messagePxSize = 0;
+
 		boolean previousCode = false;
 		boolean isBold = false;
 
 		for (final char c : message.toCharArray())
-			if (c == '&') {
+
+			if (c == '&' || c == ChatColor.COLOR_CHAR) {
 				previousCode = true;
 
 				continue;
@@ -109,7 +117,7 @@ public final class ChatUtil {
 
 		final int halvedMessageSize = messagePxSize / 2;
 		final int toCompensate = centerPx - halvedMessageSize;
-		final int spaceLength = DefaultFontInfo.getDefaultFontInfo(space).getLength() + 1;
+		final int spaceLength = DefaultFontInfo.getDefaultFontInfo(space).getLength() + (isBold ? 2 : 1);
 
 		int compensated = 0;
 
@@ -230,6 +238,61 @@ public final class ChatUtil {
 	}
 
 	/**
+	 * An improved version of {@link Matcher#quoteReplacement(String)}
+	 * where we quote additional letters such as ()+
+	 *
+	 * @param message
+	 * @return
+	 */
+	public static String quoteReplacement(String message) {
+
+		final StringBuilder builder = new StringBuilder();
+
+		for (int index = 0; index < message.length(); index++) {
+			final char c = message.charAt(index);
+
+			if (c == ' ' || c == '\\' || c == '$' || c == '(' || c == ')' || c == '+' || c == '.' || c == '-' || c == '_' || c == '^')
+				builder.append('\\');
+
+			builder.append(c);
+		}
+
+		return builder.toString();
+	}
+
+	/**
+	 * Attempts to remove all emojis from the given input
+	 *
+	 * @author https://stackoverflow.com/a/32101331
+	 * @param message
+	 * @return
+	 */
+	public static String removeEmoji(String message) {
+		if (message == null)
+			return "";
+
+		final StringBuilder builder = new StringBuilder();
+
+		for (int i = 0; i < message.length(); i++) {
+
+			// Emojis are two characters long in java, e.g. a rocket emoji is "\uD83D\uDE80";
+			if (i < (message.length() - 1)) {
+
+				if (Character.isSurrogatePair(message.charAt(i), message.charAt(i + 1))) {
+					// also skip the second character of the emoji
+					i += 1;
+
+					continue;
+				}
+			}
+
+			builder.append(message.charAt(i));
+		}
+
+		return builder.toString();
+	}
+
+	/**
 	 * How much big letters the message has, in percentage.
 	 *
 	 * @param message the message to check
@@ -344,7 +407,10 @@ public final class ChatUtil {
 	 * lowercasing it, removing diacritic
 	 */
 	private static String removeSimilarity(String message) {
-		message = replaceDiacritic(message);
+
+		if (SimplePlugin.getInstance().similarityStripAccents())
+			message = replaceDiacritic(message);
+
 		message = Common.stripColors(message);
 		message = message.toLowerCase();
 
@@ -379,6 +445,69 @@ public final class ChatUtil {
 	 */
 	public static boolean isInteractive(String msg) {
 		return msg.startsWith("[JSON]") || msg.startsWith("<toast>") || msg.startsWith("<title>") || msg.startsWith("<actionbar>") || msg.startsWith("<bossbar>");
+	}
+
+	/**
+	 * Automatically add gradient for the given string using the two colors as start/ending colors
+	 *
+	 * @param message
+	 * @param from
+	 * @param to
+	 * @return
+	 */
+	public static String generateGradient(String message, CompChatColor from, CompChatColor to) {
+		if (!MinecraftVersion.atLeast(V.v1_16))
+			return message;
+
+		final Color color1 = from.getColor();
+		final Color color2 = to.getColor();
+
+		final char[] letters = message.toCharArray();
+		String gradient = "";
+
+		ChatColor lastDecoration = null;
+
+		for (int i = 0; i < letters.length; i++) {
+			final char letter = letters[i];
+
+			// Support color decoration and insert it manually after each character
+			if (letter == ChatColor.COLOR_CHAR && i + 1 < letters.length) {
+				final char decoration = letters[i + 1];
+
+				if (decoration == 'k')
+					lastDecoration = ChatColor.MAGIC;
+
+				else if (decoration == 'l')
+					lastDecoration = ChatColor.BOLD;
+
+				else if (decoration == 'm')
+					lastDecoration = ChatColor.STRIKETHROUGH;
+
+				else if (decoration == 'n')
+					lastDecoration = ChatColor.UNDERLINE;
+
+				else if (decoration == 'o')
+					lastDecoration = ChatColor.ITALIC;
+
+				else if (decoration == 'r')
+					lastDecoration = null;
+
+				i++;
+				continue;
+			}
+
+			final float ratio = (float) i / (float) letters.length;
+
+			final int red = (int) (color2.getRed() * ratio + color1.getRed() * (1 - ratio));
+			final int green = (int) (color2.getGreen() * ratio + color1.getGreen() * (1 - ratio));
+			final int blue = (int) (color2.getBlue() * ratio + color1.getBlue() * (1 - ratio));
+
+			final Color stepColor = new Color(red, green, blue);
+
+			gradient += CompChatColor.of(stepColor).toString() + (lastDecoration == null ? "" : lastDecoration.toString()) + letters[i];
+		}
+
+		return gradient;
 	}
 
 	// --------------------------------------------------------------------------------

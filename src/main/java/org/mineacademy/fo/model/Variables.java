@@ -9,8 +9,6 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -51,7 +49,7 @@ public final class Variables {
 	/**
 	 * Player - [Original Message - Translated Message]
 	 */
-	private static final Map<String, Map<String, String>> cache = ExpiringMap.builder().expiration(10, TimeUnit.MILLISECONDS).build();
+	private static final Map<String, Map<String, String>> cache = ExpiringMap.builder().expiration(500, TimeUnit.MILLISECONDS).build();
 
 	/**
 	 * Should we replace javascript placeholders from variables/ folder automatically?
@@ -88,7 +86,7 @@ public final class Variables {
 	 *
 	 * @return
 	 */
-	@Nullable
+
 	public static Function<CommandSender, String> getVariable(String key) {
 		return customVariables.get(key);
 	}
@@ -187,7 +185,7 @@ public final class Variables {
 	 * @param sender
 	 * @return
 	 */
-	public static List<String> replace(Iterable<String> messages, @Nullable CommandSender sender, @Nullable Map<String, Object> replacements) {
+	public static List<String> replace(Iterable<String> messages, CommandSender sender, Map<String, Object> replacements) {
 
 		// Trick: Join the lines to only parse variables at once -- performance++ -- then split again
 		final String deliminer = "%FLVJ%";
@@ -205,7 +203,7 @@ public final class Variables {
 	 * @param sender
 	 * @return
 	 */
-	public static String replace(String message, @Nullable CommandSender sender) {
+	public static String replace(String message, CommandSender sender) {
 		return replace(message, sender, null);
 	}
 
@@ -219,7 +217,22 @@ public final class Variables {
 	 * @param sender
 	 * @return
 	 */
-	public static String replace(String message, @Nullable CommandSender sender, @Nullable Map<String, Object> replacements) {
+	public static String replace(String message, CommandSender sender, Map<String, Object> replacements) {
+		return replace(message, sender, replacements, true);
+	}
+
+	/**
+	 * Replaces variables in the message using the message sender as an object to replace
+	 * player-related placeholders.
+	 *
+	 * We also support PlaceholderAPI and MvdvPlaceholderAPI (only if sender is a Player).
+	 *
+	 * @param message
+	 * @param sender
+	 * @param colorize
+	 * @return
+	 */
+	public static String replace(String message, CommandSender sender, Map<String, Object> replacements, boolean colorize) {
 		if (message == null || message.isEmpty())
 			return "";
 
@@ -231,13 +244,13 @@ public final class Variables {
 			message = Replacer.replaceArray(message, replacements);
 
 		if (senderIsPlayer) {
+
 			// Already cached ? Return.
 			final Map<String, String> cached = cache.get(sender.getName());
 			final String cachedVar = cached != null ? cached.get(message) : null;
 
 			if (cachedVar != null)
 				return cachedVar;
-
 		}
 
 		// Custom placeholders
@@ -262,7 +275,8 @@ public final class Variables {
 		message = replaceHardVariables0(sender, message);
 
 		// Support the & color system
-		message = Common.colorize(message);
+		if (!message.startsWith("[JSON]"))
+			message = Common.colorize(message);
 
 		if (senderIsPlayer) {
 			final Map<String, String> map = cache.get(sender.getName());
@@ -279,7 +293,7 @@ public final class Variables {
 	/*
 	 * Replaces JavaScript variables in the message
 	 */
-	private static String replaceJavascriptVariables0(String message, CommandSender sender, @Nullable Map<String, Object> replacements) {
+	private static String replaceJavascriptVariables0(String message, CommandSender sender, Map<String, Object> replacements) {
 
 		final Matcher matcher = BRACKET_PLACEHOLDER_PATTERN.matcher(message);
 
@@ -294,7 +308,13 @@ public final class Variables {
 
 				// We do not support interact chat elements in format variables,
 				// so we just flatten the variable. Use formatting or chat variables instead.
-				message = message.replace(variableKey, component.getPlainMessage());
+				String plain = component.getPlainMessage();
+
+				// And we remove the white prefix that is by default added in every component
+				if (plain.startsWith(ChatColor.COLOR_CHAR + "f" + ChatColor.COLOR_CHAR + "f"))
+					plain = plain.substring(4);
+
+				message = message.replace(variableKey, plain);
 			}
 		}
 
@@ -304,7 +324,7 @@ public final class Variables {
 	/*
 	 * Replaces our hardcoded variables in the message, using a cache for better performance
 	 */
-	private static String replaceHardVariables0(@Nullable CommandSender sender, String message) {
+	private static String replaceHardVariables0(CommandSender sender, String message) {
 		final Matcher matcher = Variables.BRACKET_PLACEHOLDER_PATTERN.matcher(message);
 		final Player player = sender instanceof Player ? (Player) sender : null;
 
@@ -328,7 +348,8 @@ public final class Variables {
 			String value = lookupVariable0(player, sender, variable);
 
 			if (value != null) {
-				value = value.isEmpty() ? "" : (frontSpace ? " " : "") + Common.colorize(value) + (backSpace ? " " : "");
+				final boolean emptyColorless = Common.stripColors(value).isEmpty();
+				value = value.isEmpty() ? "" : (frontSpace && !emptyColorless ? " " : "") + Common.colorize(value) + (backSpace && !emptyColorless ? " " : "");
 
 				message = message.replace(matcher.group(), value);
 			}

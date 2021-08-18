@@ -74,6 +74,7 @@ public final class YamlComments {
 	 * @throws IOException If an IOException occurs
 	 */
 	public static void writeComments(@NonNull String jarPath, @NonNull File diskFile, @NonNull List<String> ignoredSections) throws IOException {
+
 		final InputStream internalResource = FileUtil.getInternalResource(jarPath);
 		Valid.checkNotNull(internalResource, "Failed getting internal resource: " + jarPath);
 
@@ -83,6 +84,7 @@ public final class YamlComments {
 
 		final FileConfiguration oldConfig = YamlConfiguration.loadConfiguration(diskFile);
 		final FileConfiguration newConfig = Remain.loadConfiguration(FileUtil.getInternalResource(jarPath));
+
 		final BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(diskFile), StandardCharsets.UTF_8));
 
 		// ignoredSections can ONLY contain configurations sections
@@ -117,7 +119,7 @@ public final class YamlComments {
 
 			backupConfig.save(backupFile);
 
-			Common.log("&cWarning: The following entries in " + diskFile.getName() + " are unused and were moved into " + backupFile.getName() + ": " + removedKeys.keySet());
+			Common.log("&cWarning: &fThe following entries in " + diskFile.getName() + " are unused and were moved into " + backupFile.getName() + ": " + removedKeys.keySet());
 		}
 
 		final DumperOptions dumperOptions = new DumperOptions();

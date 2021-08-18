@@ -98,7 +98,7 @@ public final class DiscordSender implements CommandSender {
 	}
 
 	@Override
-	public void sendMessage(String[] messages) {
+	public void sendMessage(String... messages) {
 		for (final String message : messages)
 			sendMessage(message);
 	}
@@ -110,8 +110,16 @@ public final class DiscordSender implements CommandSender {
 		Common.runAsync(() -> {
 			final Message sentMessage = channel.sendMessage(finalMessage).complete();
 
-			// Automatically remove after a short while
-			channel.deleteMessageById(sentMessage.getIdLong()).completeAfter(4, TimeUnit.SECONDS);
+			try {
+				// Automatically remove after a short while
+				channel.deleteMessageById(sentMessage.getIdLong()).completeAfter(4, TimeUnit.SECONDS);
+
+			} catch (final Throwable t) {
+
+				// Ignore already deleted messages
+				if (!t.toString().contains("Unknown Message"))
+					t.printStackTrace();
+			}
 		});
 	}
 
@@ -148,7 +156,7 @@ public final class DiscordSender implements CommandSender {
 	 */
 	//@Override - Disable to prevent errors in older MC
 	@Override
-	public void sendMessage(UUID uuid, String[] messages) {
+	public void sendMessage(UUID uuid, String... messages) {
 		this.sendMessage(messages);
 	}
 }

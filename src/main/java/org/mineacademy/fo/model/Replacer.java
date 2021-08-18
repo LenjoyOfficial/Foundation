@@ -6,8 +6,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 
-import javax.annotation.Nullable;
-
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.command.CommandSender;
 import org.mineacademy.fo.Common;
@@ -253,7 +251,7 @@ public final class Replacer {
 	 * @param variables
 	 * @return
 	 */
-	public static String replaceVariables(@Nullable String message, SerializedMap variables) {
+	public static String replaceVariables(String message, SerializedMap variables) {
 		if (message == null)
 			return null;
 
@@ -293,7 +291,8 @@ public final class Replacer {
 			}
 
 			if (value != null) {
-				value = value.isEmpty() ? "" : (frontSpace ? " " : "") + Common.colorize(value) + (backSpace ? " " : "");
+				final boolean emptyColorless = Common.stripColors(value).isEmpty();
+				value = value.isEmpty() ? "" : (frontSpace && !emptyColorless ? " " : "") + Common.colorize(value) + (backSpace && !emptyColorless ? " " : "");
 
 				message = message.replace(matcher.group(), value);
 			}

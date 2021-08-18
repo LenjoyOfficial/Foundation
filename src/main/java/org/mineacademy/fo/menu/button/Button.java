@@ -106,10 +106,20 @@ public abstract class Button {
 	 * Creates a dummy button that does nothing when clicked
 	 *
 	 * @param creator the icon creator
-	 * @return the buttpn
+	 * @return the button
 	 */
 	public static final DummyButton makeDummy(final ItemCreator creator) {
-		return new DummyButton(creator.makeMenuTool());
+		return makeDummy(creator.makeMenuTool());
+	}
+
+	/**
+	 * Creates a dummy button that does nothing when clicked
+	 *
+	 * @param item the item
+	 * @return the button
+	 */
+	public static final DummyButton makeDummy(final ItemStack item) {
+		return new DummyButton(item);
 	}
 
 	/**
@@ -207,7 +217,9 @@ public abstract class Button {
 
 	@Override
 	public final String toString() {
-		return getClass().getSimpleName() + "{" + (getItem() != null ? getItem().getType() : "null") + "}";
+		final ItemStack item = getItem();
+
+		return getClass().getSimpleName() + "{" + (item != null ? item.getType() : "null") + "}";
 	}
 
 	// ----------------------------------------------------------------

@@ -135,6 +135,22 @@ final @Builder public class ItemCreator {
 	private final Map<String, String> tags;
 
 	/**
+	 * If this is a book, you can set its new pages here
+	 */
+	@Singular
+	private final List<String> bookPages;
+
+	/**
+	 * If this a book, you can set its author here
+	 */
+	private final String bookAuthor;
+
+	/**
+	 * If this a book, you can set its title here
+	 */
+	private final String bookTitle;
+
+	/**
 	 * The item meta, overriden by other fields
 	 */
 	private final ItemMeta meta;
@@ -223,6 +239,9 @@ final @Builder public class ItemCreator {
 		// First, make sure the ItemStack is not null (it can be null if you create this class only using material)
 		//
 		Valid.checkBoolean(material != null || item != null, "Material or item must be set!");
+
+		if (material != null)
+			Valid.checkNotNull(material.getMaterial(), "Material#getMaterial cannot be null for " + material);
 
 		ItemStack is = item != null ? item.clone() : new ItemStack(material.getMaterial(), amount);
 		final ItemMeta itemMeta = meta != null ? meta.clone() : is.getItemMeta();
@@ -320,6 +339,18 @@ final @Builder public class ItemCreator {
 
 		if (skullOwner != null && itemMeta instanceof SkullMeta)
 			((SkullMeta) itemMeta).setOwner(skullOwner);
+
+		if (bookPages != null && itemMeta instanceof BookMeta) {
+			final BookMeta bookMeta = (BookMeta) itemMeta;
+
+			bookMeta.setPages(Common.colorize(bookPages));
+
+			if (bookMeta.getAuthor() == null)
+				bookMeta.setAuthor(Common.getOrEmpty(bookAuthor));
+
+			if (bookMeta.getTitle() == null)
+				bookMeta.setAuthor(Common.getOrEmpty(bookTitle));
+		}
 
 		if (glow) {
 			itemMeta.addEnchant(Enchantment.DURABILITY, 1, true);

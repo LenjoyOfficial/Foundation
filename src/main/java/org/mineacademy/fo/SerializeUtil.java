@@ -1,13 +1,17 @@
 package org.mineacademy.fo;
 
 import java.awt.Color;
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
@@ -21,6 +25,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.mineacademy.fo.MinecraftVersion.V;
+import org.mineacademy.fo.ReflectionUtil.ReflectionException;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictCollection;
 import org.mineacademy.fo.collection.StrictMap;
@@ -49,6 +54,22 @@ import net.md_5.bungee.api.chat.HoverEvent;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SerializeUtil {
 
+	/**
+	 * A list of custom serializers
+	 */
+	private static Map<Class<Object>, Function<Object, String>> serializers = new HashMap<>();
+
+	/**
+	 * Add a custom serializer to the list
+	 *
+	 * @param <T>
+	 * @param fromClass
+	 * @param serializer
+	 */
+	public static <T> void addSerializer(Class<T> fromClass, Function<T, String> serializer) {
+		serializers.put((Class<Object>) fromClass, (Function<Object, String>) serializer);
+	}
+
 	// ------------------------------------------------------------------------------------------------------------
 	// Converting objects into strings so you can save them in your files
 	// ------------------------------------------------------------------------------------------------------------
@@ -62,6 +83,9 @@ public final class SerializeUtil {
 	public static Object serialize(final Object obj) {
 		if (obj == null)
 			return null;
+
+		if (serializers.containsKey(obj.getClass()))
+			return serializers.get(obj.getClass()).apply(obj);
 
 		if (obj instanceof ConfigSerializable)
 			return serialize(((ConfigSerializable) obj).serialize().serialize());
@@ -135,17 +159,22 @@ public final class SerializeUtil {
 			return SerializedMap.ofArray("Action", event.getAction(), "Value", event.getValue()).serialize();
 		}
 
+		else if (obj instanceof Path)
+			throw new FoException("Cannot serialize Path " + obj + ", did you mean to convert it into a name?");
+
 		else if (obj instanceof Iterable || obj.getClass().isArray() || obj instanceof IsInList) {
 			final List<Object> serialized = new ArrayList<>();
 
 			if (obj instanceof Iterable || obj instanceof IsInList)
 				for (final Object element : obj instanceof IsInList ? ((IsInList<?>) obj).getList() : (Iterable<?>) obj)
 					serialized.add(serialize(element));
+
 			else
 				for (final Object element : (Object[]) obj)
 					serialized.add(serialize(element));
 
 			return serialized;
+
 		} else if (obj instanceof StrictMap) {
 			final StrictMap<Object, Object> oldMap = (StrictMap<Object, Object>) obj;
 			final StrictMap<Object, Object> newMap = new StrictMap<>();
@@ -154,6 +183,7 @@ public final class SerializeUtil {
 				newMap.put(serialize(entry.getKey()), serialize(entry.getValue()));
 
 			return newMap;
+
 		} else if (obj instanceof Map) {
 			final Map<Object, Object> oldMap = (Map<Object, Object>) obj;
 			final Map<Object, Object> newMap = new LinkedHashMap<>();
@@ -162,8 +192,10 @@ public final class SerializeUtil {
 				newMap.put(serialize(entry.getKey()), serialize(entry.getValue()));
 
 			return newMap;
+
 		} else if (obj instanceof YamlConfig)
-			throw new SerializeFailedException("To save your YamlConfig " + obj.getClass().getSimpleName() + " make it implement ConfigSerializable!");
+			throw new SerializeFailedException("Called serialize for YamlConfig's '" + obj.getClass().getSimpleName()
+					+ "' but failed, if you're trying to save it make it implement ConfigSerializable!");
 
 		else if (obj instanceof Integer || obj instanceof Double || obj instanceof Float || obj instanceof Long || obj instanceof Short
 				|| obj instanceof String || obj instanceof Boolean || obj instanceof Map
@@ -180,12 +212,24 @@ public final class SerializeUtil {
 
 	/**
 	 * Converts a {@link Location} into "world x y z yaw pitch" string
+	 * Decimals not supported, use {@link #deserializeLocationD(Object)} for them
 	 *
 	 * @param loc
 	 * @return
 	 */
 	public static String serializeLoc(final Location loc) {
-		return loc.getWorld().getName() + " " + loc.getX() + " " + loc.getY() + " " + loc.getZ() + (loc.getPitch() != 0F || loc.getYaw() != 0F ? " " + Math.round(loc.getYaw()) + " " + Math.round(loc.getPitch()) : "");
+		return loc.getWorld().getName() + " " + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ() + (loc.getPitch() != 0F || loc.getYaw() != 0F ? " " + Math.round(loc.getYaw()) + " " + Math.round(loc.getPitch()) : "");
+	}
+
+	/**
+	 * Converts a {@link Location} into "world x y z yaw pitch" string with decimal support
+	 * Unused, you have to call this in your save() method otherwise we remove decimals and use the above method
+	 *
+	 * @param loc
+	 * @return
+	 */
+	public static String serializeLocD(final Location loc) {
+		return loc.getWorld().getName() + " " + loc.getX() + " " + loc.getY() + " " + loc.getZ() + (loc.getPitch() != 0F || loc.getYaw() != 0F ? " " + loc.getYaw() + " " + loc.getPitch() : "");
 	}
 
 	/**
@@ -233,8 +277,14 @@ public final class SerializeUtil {
 		// Step 1 - Search for basic deserialize(SerializedMap) method
 		Method deserializeMethod = ReflectionUtil.getMethod(classOf, "deserialize", SerializedMap.class);
 
-		if (deserializeMethod != null)
-			return ReflectionUtil.invokeStatic(deserializeMethod, map);
+		if (deserializeMethod != null) {
+			try {
+				return ReflectionUtil.invokeStatic(deserializeMethod, map);
+
+			} catch (final ReflectionException ex) {
+				Common.throwError(ex, "Could not deserialize " + classOf + " from data: " + map);
+			}
+		}
 
 		// Step 2 - Search for our deserialize(Params[], SerializedMap) method
 		if (deserializeParameters != null) {
@@ -275,6 +325,7 @@ public final class SerializeUtil {
 
 		// Step 4 - If there is no deserialize method, just deserialize the given object
 		if (object != null)
+
 			if (classOf == String.class)
 				object = object.toString();
 
@@ -361,6 +412,31 @@ public final class SerializeUtil {
 			} else if (ConfigurationSerializable.class.isAssignableFrom(classOf) && object instanceof ConfigurationSerializable) {
 				// Good
 
+			} else if (classOf.isArray()) {
+				final Class<?> arrayType = classOf.getComponentType();
+				T[] array;
+
+				if (object instanceof List) {
+					final List<?> rawList = (List<?>) object;
+					array = (T[]) Array.newInstance(classOf.getComponentType(), rawList.size());
+
+					for (int i = 0; i < rawList.size(); i++) {
+						final Object element = rawList.get(i);
+
+						array[i] = element == null ? null : (T) deserialize(arrayType, element, (Object[]) null);
+					}
+				}
+
+				else {
+					final Object[] rawArray = (Object[]) object;
+					array = (T[]) Array.newInstance(classOf.getComponentType(), rawArray.length);
+
+					for (int i = 0; i < array.length; i++)
+						array[i] = rawArray[i] == null ? null : (T) deserialize(classOf.getComponentType(), rawArray[i], (Object[]) null);
+				}
+
+				return (T) array;
+
 			} else if (classOf == Object.class) {
 				// pass through
 
@@ -373,6 +449,7 @@ public final class SerializeUtil {
 
 	/**
 	 * Converts a string into location, see {@link #deserializeLocation(Object)} for how strings are saved
+	 * Decimals not supported, use {@link #deserializeLocationD(Object)} to use them
 	 *
 	 * @param raw
 	 * @return
@@ -391,6 +468,37 @@ public final class SerializeUtil {
 
 		final String world = parts[0];
 		final World bukkitWorld = Bukkit.getWorld(world);
+		if (bukkitWorld == null)
+			throw new InvalidWorldException("Location with invalid world '" + world + "': " + raw + " (Doesn't exist)", world);
+
+		final int x = Integer.parseInt(parts[1]), y = Integer.parseInt(parts[2]), z = Integer.parseInt(parts[3]);
+		final float yaw = Float.parseFloat(parts.length == 6 ? parts[4] : "0"), pitch = Float.parseFloat(parts.length == 6 ? parts[5] : "0");
+
+		return new Location(bukkitWorld, x, y, z, yaw, pitch);
+	}
+
+	/**
+	 * Converts a string into a location with decimal support
+	 * Unused but you can use this for your own parser storing exact decimals
+	 *
+	 * @param raw
+	 * @return
+	 */
+	public static Location deserializeLocationD(Object raw) {
+		if (raw == null)
+			return null;
+
+		if (raw instanceof Location)
+			return (Location) raw;
+
+		raw = raw.toString().replace("\"", "");
+
+		final String[] parts = raw.toString().contains(", ") ? raw.toString().split(", ") : raw.toString().split(" ");
+		Valid.checkBoolean(parts.length == 4 || parts.length == 6, "Expected location (String) but got " + raw.getClass().getSimpleName() + ": " + raw);
+
+		final String world = parts[0];
+		final World bukkitWorld = Bukkit.getWorld(world);
+
 		if (bukkitWorld == null)
 			throw new InvalidWorldException("Location with invalid world '" + world + "': " + raw + " (Doesn't exist)", world);
 

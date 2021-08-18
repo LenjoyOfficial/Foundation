@@ -12,16 +12,17 @@ import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.event.RocketExplosionEvent;
-import org.mineacademy.fo.remain.CompRunnable;
 import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.settings.SimpleLocalization;
 
@@ -87,7 +88,37 @@ public final class ToolsListener implements Listener {
 
 				Common.tell(player, SimpleLocalization.Tool.ERROR);
 				Common.error(t,
-						"Failed to handle " + event.getAction() + " using Tool: " + tool.getClass());
+						"Failed to handle " + event.getAction() + " using tool: " + tool.getClass());
+			}
+	}
+
+	/**
+	 * Handles block placing
+	 *
+	 * @param event
+	 */
+	@EventHandler(priority = EventPriority.HIGH)
+	public void onToolPlaceBlock(final BlockPlaceEvent event) {
+
+		final Player player = event.getPlayer();
+		final Tool tool = ToolRegistry.getTool(player.getItemInHand());
+
+		if (tool != null)
+			try {
+				if (event.isCancelled() && tool.ignoreCancelled())
+					return;
+
+				tool.onBlockPlace(event);
+
+				if (tool.autoCancel())
+					event.setCancelled(true);
+
+			} catch (final Throwable t) {
+				event.setCancelled(true);
+
+				Common.tell(player, SimpleLocalization.Tool.ERROR);
+				Common.error(t,
+						"Failed to handle placing " + event.getBlock() + " using tool: " + tool.getClass());
 			}
 	}
 
@@ -152,7 +183,7 @@ public final class ToolsListener implements Listener {
 		final Player player = (Player) shooter;
 		final Tool tool = ToolRegistry.getTool(player.getItemInHand());
 
-		if (tool != null && tool instanceof Rocket)
+		if (tool instanceof Rocket)
 			try {
 				final Rocket rocket = (Rocket) tool;
 
@@ -184,7 +215,7 @@ public final class ToolsListener implements Listener {
 						shotRockets.put(copy.getUniqueId(), new ShotRocket(player, rocket));
 						rocket.onLaunch(copy, player);
 
-						Common.runTimer(1, new CompRunnable() {
+						Common.runTimer(1, new BukkitRunnable() {
 
 							private long elapsedTicks = 0;
 

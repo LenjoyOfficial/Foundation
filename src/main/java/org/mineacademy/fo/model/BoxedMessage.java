@@ -1,6 +1,8 @@
 package org.mineacademy.fo.model;
 
-import lombok.RequiredArgsConstructor;
+import java.util.Arrays;
+import java.util.Objects;
+
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -9,9 +11,7 @@ import org.mineacademy.fo.ChatUtil;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.remain.Remain;
 
-import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.Objects;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Represents a chat message surrounded by chat-wide line on the top and bottom:
@@ -58,7 +58,7 @@ public final class BoxedMessage {
 	 * @param sender
 	 * @param messages
 	 */
-	private BoxedMessage(@Nullable final Iterable<? extends CommandSender> recipients, final Player sender, final ChatColor frameColor, final String[] messages) {
+	private BoxedMessage(final Iterable<? extends CommandSender> recipients, final Player sender, final ChatColor frameColor, final String[] messages) {
 		this.recipients = recipients == null ? null : Common.toList(recipients); // Make a copy to prevent changes in the list on send
 		this.sender = sender;
 		this.messages = messages;
@@ -87,9 +87,42 @@ public final class BoxedMessage {
 	}
 
 	private void sendFrameInternals0() {
+		for (int i = 0; i < getTopLines(); i++)
+			send("&r");
+
 		for (final String message : messages)
 			for (final String part : message.split("\n"))
 				send(part);
+
+		for (int i = 0; i < getBottomLines(); i++)
+			send("&r");
+	}
+
+	private int getTopLines() {
+		switch (length()) {
+			case 1:
+				return 2;
+			case 2:
+			case 3:
+			case 4:
+				return 1;
+
+			default:
+				return 0;
+		}
+	}
+
+	private int getBottomLines() {
+		switch (length()) {
+			case 1:
+			case 2:
+				return 2;
+			case 3:
+				return 1;
+
+			default:
+				return 0;
+		}
 	}
 
 	private void sendLine() {
@@ -106,14 +139,14 @@ public final class BoxedMessage {
 			tell0(message);
 	}
 
-	private String centerMessage0(final String message) {
+	private String centerMessage0(String message) {
 		if (message.startsWith("<center>"))
 			return ChatUtil.center(message.replaceFirst("\\<center\\>(\\s|)", ""));
 
 		return message;
 	}
 
-	private void broadcast0(final String message) {
+	private void broadcast0(String message) {
 		if (sender != null)
 			Common.broadcast(message, sender);
 		else
@@ -274,7 +307,7 @@ public final class BoxedMessage {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
-	// Replacor
+	// Replacer
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
@@ -294,7 +327,7 @@ public final class BoxedMessage {
 		 * @param replacements
 		 * @return
 		 */
-		public final BoxedMessage replace(final Object... replacements) {
+		public final BoxedMessage replace(Object... replacements) {
 			String message = StringUtils.join(messages, "%delimiter%");
 
 			for (int i = 0; i < variables.length; i++) {

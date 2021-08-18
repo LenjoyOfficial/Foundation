@@ -356,7 +356,7 @@ public abstract class Menu {
 	// --------------------------------------------------------------------------------
 	// Rendering the menu
 	// --------------------------------------------------------------------------------
-	
+
 	/**
 	 * Display this menu to the player, automatically closing their already open inventory.
 	 *
@@ -365,7 +365,7 @@ public abstract class Menu {
 	public final void displayTo(final Player player) {
 		displayTo(player, true);
 	}
-	
+
 	/**
 	 * Display this menu to the player.
 	 *
@@ -484,7 +484,7 @@ public abstract class Menu {
 	protected final void redraw() {
 		final Inventory inv = getViewer().getOpenInventory().getTopInventory();
 		final InventoryDrawer drawer = InventoryDrawer.of(getViewer());
-		
+
 		Valid.checkBoolean(inv.getType() == InventoryType.CHEST, getViewer().getName() + "'s inventory closed in the meanwhile (now == " + inv.getType() + ").");
 
 		for (int i = 0; i < size; i++) {
@@ -495,9 +495,9 @@ public abstract class Menu {
 		}
 
 		compileBottomBar0().forEach((slot, item) -> drawer.setItem(slot, item));
-		
+
 		onDisplay(drawer);
-		
+
 		drawer.display(getViewer());
 	}
 

@@ -15,38 +15,56 @@ import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConstructor;
 import org.bukkit.configuration.file.YamlRepresenter;
-import org.jetbrains.annotations.NotNull;
 import org.mineacademy.fo.ReflectionUtil;
 import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.error.YAMLException;
 import org.yaml.snakeyaml.representer.Representer;
-
-import lombok.Getter;
 
 /**
  * A frustration-free implementation of {@link Configuration} which saves all files in Yaml.
  * Note that this implementation is not synchronized.
  */
-public class SimpleYaml extends FileConfiguration {
+public final class SimpleYaml extends FileConfiguration {
 
-	protected static final String COMMENT_PREFIX = "# ";
-	protected static final String BLANK_CONFIG = "{}\n";
+	private static final String COMMENT_PREFIX = "# ";
+	private static final String BLANK_CONFIG = "{}\n";
 
-	@Getter
 	private final DumperOptions yamlOptions = new DumperOptions();
-
-	//@Getter
-	//private final LoaderOptions loaderOptions = new LoaderOptions();
-
-	@Getter
 	private final Representer yamlRepresenter = new YamlRepresenter();
 
-	private final Yaml yaml = new Yaml(new YamlConstructor(), yamlRepresenter, yamlOptions);
+	private final Yaml yaml;
 
-	@NotNull
+	public SimpleYaml() {
+
+		// Load options only if available
+		if (ReflectionUtil.isClassAvailable("org.yaml.snakeyaml.LoaderOptions")) {
+			Yaml yaml;
+
+			try {
+				final LoaderOptions loaderOptions = new LoaderOptions();
+				loaderOptions.setMaxAliasesForCollections(512);
+
+				yaml = new Yaml(new YamlConstructor(), yamlRepresenter, yamlOptions, loaderOptions);
+
+			} catch (final NoSuchMethodError ex) {
+				yaml = new Yaml(new YamlConstructor(), yamlRepresenter, yamlOptions);
+			}
+
+			this.yaml = yaml;
+		}
+
+		else
+			this.yaml = new Yaml(new YamlConstructor(), yamlRepresenter, yamlOptions);
+	}
+
 	@Override
 	public String saveToString() {
+		return this.saveToString(getValues(false));
+	}
+
+	public String saveToString(Map<String, Object> values) {
 		yamlOptions.setIndent(2);
 		yamlOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
 		yamlOptions.setWidth(4096); // Foundation: Do not wrap long lines
@@ -54,7 +72,7 @@ public class SimpleYaml extends FileConfiguration {
 		yamlRepresenter.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
 
 		final String header = buildHeader();
-		String dump = yaml.dump(getValues(false));
+		String dump = yaml.dump(values);
 
 		if (dump.equals(BLANK_CONFIG)) {
 			dump = "";
@@ -64,7 +82,7 @@ public class SimpleYaml extends FileConfiguration {
 	}
 
 	@Override
-	public void loadFromString(@NotNull String contents) throws InvalidConfigurationException {
+	public void loadFromString(String contents) throws InvalidConfigurationException {
 		Validate.notNull(contents, "Contents cannot be null");
 
 		Map<?, ?> input;
@@ -88,7 +106,7 @@ public class SimpleYaml extends FileConfiguration {
 		}
 	}
 
-	protected void convertMapsToSections(@NotNull Map<?, ?> input, @NotNull ConfigurationSection section) {
+	protected void convertMapsToSections(Map<?, ?> input, ConfigurationSection section) {
 		for (final Map.Entry<?, ?> entry : input.entrySet()) {
 			final String key = entry.getKey().toString();
 			final Object value = entry.getValue();
@@ -101,8 +119,7 @@ public class SimpleYaml extends FileConfiguration {
 		}
 	}
 
-	@NotNull
-	protected String parseHeader(@NotNull String input) {
+	protected String parseHeader(String input) {
 		final String[] lines = input.split("\r?\n", -1);
 		final StringBuilder result = new StringBuilder();
 		boolean readingHeader = true;
@@ -131,7 +148,6 @@ public class SimpleYaml extends FileConfiguration {
 		return result.toString();
 	}
 
-	@NotNull
 	@Override
 	protected String buildHeader() {
 		final String header = options().header();
@@ -183,8 +199,8 @@ public class SimpleYaml extends FileConfiguration {
 	 * @return Resulting configuration
 	 * @throws IllegalArgumentException Thrown if file is null
 	 */
-	@NotNull
-	public static SimpleYaml loadConfiguration(@NotNull File file) {
+
+	public static SimpleYaml loadConfiguration(File file) {
 		Validate.notNull(file, "File cannot be null");
 
 		final SimpleYaml config = new SimpleYaml();
@@ -212,8 +228,8 @@ public class SimpleYaml extends FileConfiguration {
 	 * @return resulting configuration
 	 * @throws IllegalArgumentException Thrown if stream is null
 	 */
-	@NotNull
-	public static SimpleYaml loadConfiguration(@NotNull Reader reader) {
+
+	public static SimpleYaml loadConfiguration(Reader reader) {
 		Validate.notNull(reader, "Stream cannot be null");
 
 		final SimpleYaml config = new SimpleYaml();

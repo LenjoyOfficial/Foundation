@@ -9,10 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-
-import javax.annotation.Nullable;
 
 import org.bukkit.Location;
 import org.bukkit.configuration.MemorySection;
@@ -32,7 +31,6 @@ import org.mineacademy.fo.remain.CompMaterial;
 import com.google.gson.Gson;
 
 import lombok.NonNull;
-import lombok.Setter;
 
 /**
  * Serialized map enables you to save and retain values from your
@@ -54,7 +52,6 @@ public final class SerializedMap extends StrictCollection {
 	/**
 	 * Should we remove entries on get for this map instance,
 	 */
-	@Setter
 	private boolean removeOnGet = false;
 
 	/**
@@ -138,7 +135,7 @@ public final class SerializedMap extends StrictCollection {
 	 * @param key
 	 * @param value
 	 */
-	public void putIfTrue(final String key, @Nullable final boolean value) {
+	public void putIfTrue(final String key, final boolean value) {
 		if (value)
 			put(key, value);
 	}
@@ -149,7 +146,7 @@ public final class SerializedMap extends StrictCollection {
 	 * @param key
 	 * @param value
 	 */
-	public void putIfExist(final String key, @Nullable final Object value) {
+	public void putIfExist(final String key, final Object value) {
 		if (value != null)
 			put(key, value);
 	}
@@ -162,7 +159,7 @@ public final class SerializedMap extends StrictCollection {
 	 * @param key
 	 * @param value
 	 */
-	public void putIf(final String key, @Nullable final Map<?, ?> value) {
+	public void putIf(final String key, final Map<?, ?> value) {
 		if (value != null && !value.isEmpty())
 			put(key, value);
 
@@ -180,7 +177,7 @@ public final class SerializedMap extends StrictCollection {
 	 * @param key
 	 * @param value
 	 */
-	public void putIf(final String key, @Nullable final Collection<?> value) {
+	public void putIf(final String key, final Collection<?> value) {
 		if (value != null && !value.isEmpty())
 			put(key, value);
 
@@ -216,7 +213,7 @@ public final class SerializedMap extends StrictCollection {
 	 * @param key
 	 * @param value
 	 */
-	public void putIf(final String key, @Nullable final Object value) {
+	public void putIf(final String key, final Object value) {
 		if (value != null)
 			put(key, value);
 
@@ -300,6 +297,27 @@ public final class SerializedMap extends StrictCollection {
 	 */
 	public String getString(final String key, final String def) {
 		return get(key, String.class, def);
+	}
+
+	/**
+	 * Returns a UUID from the map, or null if does not exist
+	 *
+	 * @param key
+	 * @return
+	 */
+	public UUID getUUID(final String key) {
+		return getUUID(key, null);
+	}
+
+	/**
+	 * Returns a UUID from the map, with an optional default
+	 *
+	 * @param key
+	 * @param def
+	 * @return
+	 */
+	public UUID getUUID(final String key, final UUID def) {
+		return get(key, UUID.class, def);
 	}
 
 	/**
@@ -987,6 +1005,13 @@ public final class SerializedMap extends StrictCollection {
 		lines.add("}");
 
 		return String.join("\n", lines);
+	}
+
+	/**
+	 * @param removeOnGet the removeOnGet to set
+	 */
+	public void setRemoveOnGet(boolean removeOnGet) {
+		this.removeOnGet = removeOnGet;
 	}
 
 	@Override

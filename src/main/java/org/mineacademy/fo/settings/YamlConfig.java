@@ -1,10 +1,25 @@
 package org.mineacademy.fo.settings;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.function.Function;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -13,7 +28,6 @@ import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
-import org.bukkit.scheduler.BukkitTask;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.ItemUtil;
@@ -36,26 +50,12 @@ import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.Remain;
 
-import javax.annotation.Nullable;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.function.Function;
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
+
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 
 /**
  * The core configuration class. Manages all settings files.
@@ -283,10 +283,9 @@ public class YamlConfig {
 
 		synchronized (loadedFiles) {
 
+			Valid.checkBoolean(!loading, "Duplicate call to loadConfiguration (already loading)");
 			Valid.checkNotNull(to, "File to path cannot be null!");
 			Valid.checkBoolean(to.contains("."), "To path must contain file extension: " + to);
-
-			Valid.checkBoolean(!loading, "Duplicate call to loadConfiguration");
 
 			if (from != null)
 				Valid.checkBoolean(from.contains("."), "From path must contain file extension: " + from);
@@ -380,7 +379,7 @@ public class YamlConfig {
 	 *
 	 * @return
 	 */
-	@Nullable
+
 	protected final SimpleYaml getDefaults() {
 		Valid.checkNotNull(instance, "Cannot call getDefaults when no instance is set!");
 
@@ -441,6 +440,15 @@ public class YamlConfig {
 		}
 
 		onSave();
+
+		{ // Save automatically
+			final SerializedMap map = serialize();
+
+			if (map != null)
+				for (final Map.Entry<String, Object> entry : map.entrySet())
+					setNoSave(entry.getKey(), entry.getValue());
+		}
+
 		instance.save(header != null ? header : getFileName().equals(FoConstants.File.DATA) ? FoConstants.Header.DATA_FILE : FoConstants.Header.UPDATED_FILE);
 	}
 
@@ -448,6 +456,17 @@ public class YamlConfig {
 	 * Called automatically when the file is saved
 	 */
 	protected void onSave() {
+	}
+
+	/**
+	 * Called automatically on save, use this to put
+	 * things you want saved in your file and they will then be automatically
+	 * saved when call save() method
+	 *
+	 * @return
+	 */
+	protected SerializedMap serialize() {
+		return null;
 	}
 
 	/**
@@ -476,7 +495,7 @@ public class YamlConfig {
 	}
 
 	/**
-	 * Experimental - Shall we attempt to save comments into this yaml config
+	 * Shall we attempt to save comments into this yaml config
 	 * and enforce the file to always look like the default one?
 	 * <p>
 	 * You can exclude sections you do not want to symlink in {@link #getUncommentedSections()}
@@ -527,10 +546,14 @@ public class YamlConfig {
 	 * @return
 	 */
 	private <T> T getT(String path, final Class<T> type) {
+
+		Debugger.debug("config", "Called get() '" + path + "' = '" + this.getConfig().get(path) + "' " + (this.getDefaults() != null ? "vs def = '" + this.getDefaults().get(path) + "'" : "no defaults") + ". Disk config contains: " + this.getConfig().getValues(true));
+
 		Valid.checkNotNull(path, "Path cannot be null");
 		path = formPathPrefix(path);
 
-		Valid.checkBoolean(!path.contains(".."), "Path must not contain '..' or more: " + path);
+		// Commented out : players with their names starting with a dot will cause plugins malfunction
+		//Valid.checkBoolean(!path.contains(".."), "Path must not contain '..' or more: " + path);
 		Valid.checkBoolean(!path.endsWith("."), "Path must not end with '.': " + path);
 
 		// Copy defaults if not set
@@ -669,6 +692,9 @@ public class YamlConfig {
 	protected final Boolean getBoolean(final String path, final boolean def) {
 		forceSingleDefaults(path);
 
+		final boolean set = isSet(path);
+		Debugger.debug("config", "\tGetting Boolean at '" + path + "', " + (set ? "set to = " + getBoolean(path) : "not set, returning default " + def));
+
 		return isSet(path) ? getBoolean(path) : def;
 	}
 
@@ -758,6 +784,9 @@ public class YamlConfig {
 	 */
 	protected final Integer getInteger(final String path, final Integer def) {
 		forceSingleDefaults(path);
+
+		final boolean set = isSet(path);
+		Debugger.debug("config", "\tGetting Integer at '" + path + "', " + (set ? "set to = " + getInteger(path) : "not set, returning default " + def));
 
 		return isSet(path) ? getInteger(path) : def;
 	}
@@ -1185,14 +1214,19 @@ public class YamlConfig {
 	protected final List<String> getStringList(final String path) {
 		final Object raw = getObject(path);
 
+		if (raw == null)
+			return new ArrayList<>();
+
 		if (raw instanceof String) {
 			final String output = (String) raw;
 
 			return "'[]'".equals(output) || "[]".equals(output) ? new ArrayList<>() : Arrays.asList(output);
 		}
 
-		final List<Object> list = getList(path);
-		return list != null ? fixYamlBooleansInList(list) : new ArrayList<>();
+		if (raw instanceof List)
+			return fixYamlBooleansInList((List<Object>) raw);
+
+		throw new FoException("Excepted a list at '" + path + "' in " + getFileName() + ", got (" + raw.getClass() + "): " + raw);
 	}
 
 	/**
@@ -1996,7 +2030,7 @@ public class YamlConfig {
 			this.play(player, fadeIn, stay, fadeOut, null);
 		}
 
-		public void play(final Player player, final int fadeIn, final int stay, final int fadeOut, @Nullable final Function<String, String> replacer) {
+		public void play(final Player player, final int fadeIn, final int stay, final int fadeOut, Function<String, String> replacer) {
 			Remain.sendTitle(player, fadeIn, stay, fadeOut, replacer != null ? replacer.apply(title) : title, replacer != null ? replacer.apply(subtitle) : subtitle);
 		}
 	}
@@ -2010,7 +2044,7 @@ public class YamlConfig {
  */
 //@Getter(value = AccessLevel.PROTECTED)
 @RequiredArgsConstructor
-class ConfigInstance {
+final class ConfigInstance {
 
 	/**
 	 * The file this configuration belongs to.
@@ -2053,11 +2087,6 @@ class ConfigInstance {
 	private final String commentsFilePath;
 
 	/**
-	 * The pending save task to avoid concurrency issues
-	 */
-	private BukkitTask pendingTask = null;
-
-	/**
 	 * Saves the config instance with the given header, can be null
 	 *
 	 * @param header
@@ -2086,40 +2115,24 @@ class ConfigInstance {
 				// Pull the data on the main thread
 				final Map<String, Object> values = config.getValues(false);
 
-				// If this code is called within the next 5 ticks, get the latest data, cancel save
-				// and reschedule to maximize performance
-				if (pendingTask != null)
-					pendingTask.cancel();
+				try {
 
-				pendingTask = Common.runLaterAsync(5, () -> {
+					// Yaml#dump should be save async... note that this also builds header
+					final String data = config.saveToString(values);
+					Files.createParentDirs(file);
+
+					final Writer writer = new OutputStreamWriter(new FileOutputStream(file), Charsets.UTF_8);
 
 					try {
-
-						// Yaml#dump should be save async... note that this also builds header
-						final String data = config.saveToString(values);
-
-						Files.createParentDirs(file);
-
-						final Writer writer = new OutputStreamWriter(new FileOutputStream(file), Charsets.UTF_8);
-
-						try {
-							writer.write(data);
-						} finally {
-							writer.close();
-						}
-
-						pendingTask = null;
-
-					} catch (final Throwable t) {
-						Common.error(t);
+						writer.write(data);
+					} finally {
+						writer.close();
 					}
-				});
-			}
 
-			// Workaround: When saving maps, the config stops recognizing them as sections so we must reload in order
-			// for all maps to be turned back into MemorySection to be reachable by get()
-			//reload();
-			//config.loadFromString(config.saveToString());
+				} catch (final Throwable t) {
+					Common.error(t);
+				}
+			}
 
 		} catch (final Exception ex) {
 			Common.error(ex, "Failed to save " + file.getName());

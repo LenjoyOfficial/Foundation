@@ -27,6 +27,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.exception.FoException;
+import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompMaterial;
 
 import lombok.AccessLevel;
@@ -55,7 +56,7 @@ public final class ReflectionUtil {
 	 * plugin loads even on old MC versions where those types are non existent
 	 * but are present in plugin's default configuration files
 	 */
-	private static final Map<String, MinecraftVersion.V> legacyEntityTypes;
+	private static final Map<String, V> legacyEntityTypes;
 
 	/**
 	 * Reflection utilizes a simple cache for fastest performance
@@ -65,12 +66,29 @@ public final class ReflectionUtil {
 	private static final Collection<String> classNameGuard = ConcurrentHashMap.newKeySet();
 
 	/**
+	 * Find a class automatically for older MC version (such as type EntityPlayer for oldName
+	 * and we automatically find the proper NMS import) or if MC 1.17+ is used then type
+	 * the full class path such as net.minecraft.server.level.EntityPlayer and we use that instead.
+	 *
+	 * @param oldName
+	 * @param fullName1_17
+	 * @return
+	 */
+	public static Class<?> getNMSClass(String oldName, String fullName1_17) {
+		return MinecraftVersion.atLeast(V.v1_17) ? lookupClass(fullName1_17) : getNMSClass(oldName);
+	}
+
+	/**
 	 * Find a class in net.minecraft.server package, adding the version
 	 * automatically
+	 *
+	 * @deprecated Minecraft 1.17 has a different path name,
+	 *             use {@link #getNMSClass(String, String)} instead
 	 *
 	 * @param name
 	 * @return
 	 */
+	@Deprecated
 	public static Class<?> getNMSClass(final String name) {
 		String version = MinecraftVersion.getServerVersion();
 
@@ -94,6 +112,17 @@ public final class ReflectionUtil {
 			version += ".";
 
 		return ReflectionUtil.lookupClass(CRAFTBUKKIT + "." + version + name);
+	}
+
+	/**
+	 * Return a constructor for the given NMS class name (such as EntityZombie)
+	 *
+	 * @param nmsClassPath
+	 * @param params
+	 * @return
+	 */
+	public static Constructor<?> getConstructorNMS(@NonNull final String nmsClassPath, final Class<?>... params) {
+		return getConstructor(getNMSClass(nmsClassPath), params);
 	}
 
 	/**
@@ -364,7 +393,7 @@ public final class ReflectionUtil {
 			return (T) method.invoke(null, params);
 
 		} catch (final ReflectiveOperationException ex) {
-			throw new ReflectionException("Could not invoke static method " + method + " with params " + StringUtils.join(params), ex);
+			throw new ReflectionException(ex, "Could not invoke static method " + method + " with params " + StringUtils.join(params));
 		}
 	}
 
@@ -397,7 +426,7 @@ public final class ReflectionUtil {
 			return (T) method.invoke(instance, params);
 
 		} catch (final ReflectiveOperationException ex) {
-			throw new ReflectionException("Could not invoke method " + method + " on instance " + instance + " with params " + StringUtils.join(params), ex);
+			throw new ReflectionException(ex, "Could not invoke method " + method + " on instance " + instance + " with params " + StringUtils.join(params));
 		}
 	}
 
@@ -421,9 +450,21 @@ public final class ReflectionUtil {
 
 			return constructor.newInstance();
 
-		} catch (final ReflectiveOperationException e) {
-			throw new ReflectionException("Could not make instance of: " + clazz, e);
+		} catch (final ReflectiveOperationException ex) {
+			throw new ReflectionException(ex, "Could not make instance of: " + clazz);
 		}
+	}
+
+	/**
+	 * Makes a new instanceo of the given NMS class with arguments,
+	 * NB: Does not work on Minecraft 1.17+
+	 *
+	 * @param nmsPath
+	 * @param params
+	 * @return
+	 */
+	public static <T> T instantiateNMS(final String nmsPath, final Object... params) {
+		return (T) instantiate(getNMSClass(nmsPath), params);
 	}
 
 	/**
@@ -460,8 +501,8 @@ public final class ReflectionUtil {
 
 			return constructor.newInstance(params);
 
-		} catch (final ReflectiveOperationException e) {
-			throw new ReflectionException("Could not make instance of: " + clazz, e);
+		} catch (final ReflectiveOperationException ex) {
+			throw new ReflectionException(ex, "Could not make instance of: " + clazz);
 		}
 	}
 
@@ -563,7 +604,7 @@ public final class ReflectionUtil {
 
 		} catch (final MissingEnumException ex) {
 			if (enumType == EntityType.class) {
-				final MinecraftVersion.V since = legacyEntityTypes.get(name.toUpperCase().replace(" ", "_"));
+				final V since = legacyEntityTypes.get(name.toUpperCase().replace(" ", "_"));
 
 				if (since != null && MinecraftVersion.olderThan(since))
 					return null;
@@ -732,6 +773,17 @@ public final class ReflectionUtil {
 			} catch (final Throwable t) {
 			}
 
+			// Only invoke fromName from non-Bukkit API since this gives unexpected results
+			if (method == null && !enumType.getName().contains("org.bukkit"))
+				try {
+					method = enumType.getDeclaredMethod("fromName", String.class);
+
+					if (Modifier.isPublic(method.getModifiers()) && Modifier.isStatic(method.getModifiers()))
+						hasKey = true;
+
+				} catch (final Throwable t) {
+				}
+
 			if (hasKey)
 				return (E) method.invoke(null, name);
 
@@ -787,12 +839,11 @@ public final class ReflectionUtil {
 	 * @param extendingClass
 	 * @return
 	 */
-	public static <T> List<Class<? extends T>> getClasses(final Plugin plugin, @NonNull final Class<T> extendingClass) {
-		final List<Class<? extends T>> found = new ArrayList<>();
+	public static List<Class<?>> getClasses(final Plugin plugin) {
+		final List<Class<?>> found = new ArrayList<>();
 
-		for (final Class<?> clazz : getClasses(plugin))
-			if (extendingClass.isAssignableFrom(clazz) && clazz != extendingClass)
-				found.add((Class<? extends T>) clazz);
+		for (final Class<?> clazz : getClasses(plugin, null))
+			found.add(clazz);
 
 		return found;
 	}
@@ -804,7 +855,7 @@ public final class ReflectionUtil {
 	 * @return
 	 */
 	@SneakyThrows
-	public static TreeSet<Class<?>> getClasses(final Plugin plugin) {
+	public static <T> TreeSet<Class<T>> getClasses(final Plugin plugin, Class<T> extendingClass) {
 		Valid.checkNotNull(plugin, "Plugin is null!");
 		Valid.checkBoolean(JavaPlugin.class.isAssignableFrom(plugin.getClass()), "Plugin must be a JavaPlugin");
 
@@ -814,7 +865,7 @@ public final class ReflectionUtil {
 
 		final File pluginFile = (File) getFileMethod.invoke(plugin);
 
-		final TreeSet<Class<?>> classes = new TreeSet<>(Comparator.comparing(Class::toString));
+		final TreeSet<Class<T>> classes = new TreeSet<>(Comparator.comparing(Class::toString));
 
 		try (final JarFile jarFile = new JarFile(pluginFile)) {
 			final Enumeration<JarEntry> entries = jarFile.entries();
@@ -825,21 +876,21 @@ public final class ReflectionUtil {
 				if (name.endsWith(".class")) {
 					name = name.replace("/", ".").replaceFirst(".class", "");
 
-					final Class<?> clazz;
+					Class<?> clazz = null;
 
 					try {
-						//YamlConfig.INVOKE_SAVE = false;
+						clazz = Class.forName(name, false, SimplePlugin.class.getClassLoader());
 
-						clazz = Class.forName(name);
+						if (extendingClass == null || (extendingClass.isAssignableFrom(clazz) && clazz != extendingClass))
+							classes.add((Class<T>) clazz);
 
 					} catch (final Throwable throwable) {
+
+						if (extendingClass != null && (clazz != null && extendingClass.isAssignableFrom(clazz)) && clazz != extendingClass)
+							Common.log("Unable to load class '" + name + "' due to error: " + throwable);
+
 						continue;
-
-					} finally {
-						//YamlConfig.INVOKE_SAVE = true;
 					}
-
-					classes.add(clazz);
 				}
 			}
 		}
@@ -848,50 +899,55 @@ public final class ReflectionUtil {
 	}
 
 	static {
-		final Map<String, MinecraftVersion.V> map = new HashMap<>();
+		final Map<String, V> map = new HashMap<>();
 
-		map.put("TIPPED_ARROW", MinecraftVersion.V.v1_9);
-		map.put("SPECTRAL_ARROW", MinecraftVersion.V.v1_9);
-		map.put("SHULKER_BULLET", MinecraftVersion.V.v1_9);
-		map.put("DRAGON_FIREBALL", MinecraftVersion.V.v1_9);
-		map.put("SHULKER", MinecraftVersion.V.v1_9);
-		map.put("AREA_EFFECT_CLOUD", MinecraftVersion.V.v1_9);
-		map.put("LINGERING_POTION", MinecraftVersion.V.v1_9);
-		map.put("POLAR_BEAR", MinecraftVersion.V.v1_10);
-		map.put("HUSK", MinecraftVersion.V.v1_10);
-		map.put("ELDER_GUARDIAN", MinecraftVersion.V.v1_11);
-		map.put("WITHER_SKELETON", MinecraftVersion.V.v1_11);
-		map.put("STRAY", MinecraftVersion.V.v1_11);
-		map.put("DONKEY", MinecraftVersion.V.v1_11);
-		map.put("MULE", MinecraftVersion.V.v1_11);
-		map.put("EVOKER_FANGS", MinecraftVersion.V.v1_11);
-		map.put("EVOKER", MinecraftVersion.V.v1_11);
-		map.put("VEX", MinecraftVersion.V.v1_11);
-		map.put("VINDICATOR", MinecraftVersion.V.v1_11);
-		map.put("ILLUSIONER", MinecraftVersion.V.v1_12);
-		map.put("PARROT", MinecraftVersion.V.v1_12);
-		map.put("TURTLE", MinecraftVersion.V.v1_13);
-		map.put("PHANTOM", MinecraftVersion.V.v1_13);
-		map.put("TRIDENT", MinecraftVersion.V.v1_13);
-		map.put("COD", MinecraftVersion.V.v1_13);
-		map.put("SALMON", MinecraftVersion.V.v1_13);
-		map.put("PUFFERFISH", MinecraftVersion.V.v1_13);
-		map.put("TROPICAL_FISH", MinecraftVersion.V.v1_13);
-		map.put("DROWNED", MinecraftVersion.V.v1_13);
-		map.put("DOLPHIN", MinecraftVersion.V.v1_13);
-		map.put("CAT", MinecraftVersion.V.v1_14);
-		map.put("PANDA", MinecraftVersion.V.v1_14);
-		map.put("PILLAGER", MinecraftVersion.V.v1_14);
-		map.put("RAVAGER", MinecraftVersion.V.v1_14);
-		map.put("TRADER_LLAMA", MinecraftVersion.V.v1_14);
-		map.put("WANDERING_TRADER", MinecraftVersion.V.v1_14);
-		map.put("FOX", MinecraftVersion.V.v1_14);
-		map.put("BEE", MinecraftVersion.V.v1_15);
-		map.put("HOGLIN", MinecraftVersion.V.v1_16);
-		map.put("PIGLIN", MinecraftVersion.V.v1_16);
-		map.put("STRIDER", MinecraftVersion.V.v1_16);
-		map.put("ZOGLIN", MinecraftVersion.V.v1_16);
-		map.put("PIGLIN_BRUTE", MinecraftVersion.V.v1_16);
+		map.put("TIPPED_ARROW", V.v1_9);
+		map.put("SPECTRAL_ARROW", V.v1_9);
+		map.put("SHULKER_BULLET", V.v1_9);
+		map.put("DRAGON_FIREBALL", V.v1_9);
+		map.put("SHULKER", V.v1_9);
+		map.put("AREA_EFFECT_CLOUD", V.v1_9);
+		map.put("LINGERING_POTION", V.v1_9);
+		map.put("POLAR_BEAR", V.v1_10);
+		map.put("HUSK", V.v1_10);
+		map.put("ELDER_GUARDIAN", V.v1_11);
+		map.put("WITHER_SKELETON", V.v1_11);
+		map.put("STRAY", V.v1_11);
+		map.put("DONKEY", V.v1_11);
+		map.put("MULE", V.v1_11);
+		map.put("EVOKER_FANGS", V.v1_11);
+		map.put("EVOKER", V.v1_11);
+		map.put("VEX", V.v1_11);
+		map.put("VINDICATOR", V.v1_11);
+		map.put("ILLUSIONER", V.v1_12);
+		map.put("PARROT", V.v1_12);
+		map.put("TURTLE", V.v1_13);
+		map.put("PHANTOM", V.v1_13);
+		map.put("TRIDENT", V.v1_13);
+		map.put("COD", V.v1_13);
+		map.put("SALMON", V.v1_13);
+		map.put("PUFFERFISH", V.v1_13);
+		map.put("TROPICAL_FISH", V.v1_13);
+		map.put("DROWNED", V.v1_13);
+		map.put("DOLPHIN", V.v1_13);
+		map.put("CAT", V.v1_14);
+		map.put("PANDA", V.v1_14);
+		map.put("PILLAGER", V.v1_14);
+		map.put("RAVAGER", V.v1_14);
+		map.put("TRADER_LLAMA", V.v1_14);
+		map.put("WANDERING_TRADER", V.v1_14);
+		map.put("FOX", V.v1_14);
+		map.put("BEE", V.v1_15);
+		map.put("HOGLIN", V.v1_16);
+		map.put("PIGLIN", V.v1_16);
+		map.put("STRIDER", V.v1_16);
+		map.put("ZOGLIN", V.v1_16);
+		map.put("PIGLIN_BRUTE", V.v1_16);
+		map.put("AXOLOTL", V.v1_17);
+		map.put("GLOW_ITEM_FRAME", V.v1_17);
+		map.put("GLOW_SQUID", V.v1_17);
+		map.put("GOAT", V.v1_17);
+		map.put("MARKER", V.v1_17);
 
 		legacyEntityTypes = map;
 	}
@@ -1034,15 +1090,15 @@ public final class ReflectionUtil {
 	/**
 	 * Represents an exception during reflection operation
 	 */
-	public static final class ReflectionException extends RuntimeException {
+	public static final class ReflectionException extends FoException {
 		private static final long serialVersionUID = 1L;
 
-		public ReflectionException(final String msg) {
-			super(msg);
+		public ReflectionException(final String message) {
+			super(message);
 		}
 
-		public ReflectionException(final String msg, final Exception ex) {
-			super(msg, ex);
+		public ReflectionException(final Exception ex, final String message) {
+			super(ex, message);
 		}
 	}
 

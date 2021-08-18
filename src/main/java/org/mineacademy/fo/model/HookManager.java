@@ -76,10 +76,12 @@ import com.massivecraft.factions.entity.MPlayer;
 import com.massivecraft.massivecore.ps.PS;
 import com.onarandombox.MultiverseCore.MultiverseCore;
 import com.onarandombox.MultiverseCore.api.MultiverseWorld;
+import com.palmergames.bukkit.towny.TownyUniverse;
 import com.palmergames.bukkit.towny.object.Nation;
 import com.palmergames.bukkit.towny.object.Resident;
 import com.palmergames.bukkit.towny.object.Town;
-import com.palmergames.bukkit.towny.object.TownyUniverse;
+import com.palmergames.bukkit.towny.object.TownBlock;
+import com.palmergames.bukkit.towny.object.WorldCoord;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
 import fr.xephi.authme.api.v3.AuthMeApi;
@@ -120,6 +122,7 @@ public final class HookManager {
 	private static DiscordSRVHook discordSRVHook;
 	private static EssentialsHook essentialsHook;
 	private static FactionsHook factionsHook;
+	private static ItemsAdderHook itemsAdderHook;
 	private static LandsHook landsHook;
 	private static LiteBansHook liteBansHook;
 	private static LocketteProHook locketteProHook;
@@ -203,10 +206,13 @@ public final class HookManager {
 					factionsHook = new FactionsMassive();
 
 				} else
-					Common.log("&cWarning: Recognized MCore Factions, but not hooked! Check if you have the latest version!");
+					Common.log("&cWarning: &fRecognized MCore Factions, but not hooked! Check if you have the latest version!");
 
 			}
 		}
+
+		if (Common.doesPluginExist("ItemsAdder"))
+			itemsAdderHook = new ItemsAdderHook();
 
 		if (Common.doesPluginExist("Lands"))
 			landsHook = new LandsHook();
@@ -226,7 +232,7 @@ public final class HookManager {
 			if (ver.startsWith("2."))
 				mcmmoHook = new McMMOHook();
 			else
-				Common.log("&cWarning: Could not hook into mcMMO, version 2.x required, you have " + ver);
+				Common.log("&cWarning: &fCould not hook into mcMMO, version 2.x required, you have " + ver);
 		}
 
 		if (Common.doesPluginExist("Multiverse-Core"))
@@ -247,10 +253,10 @@ public final class HookManager {
 		if (Common.doesPluginExist("PlotSquared")) {
 			final String ver = Bukkit.getPluginManager().getPlugin("PlotSquared").getDescription().getVersion();
 
-			if (ver.startsWith("5.") || ver.startsWith("3."))
+			if (ver.startsWith("6.") || ver.startsWith("5.") || ver.startsWith("3."))
 				plotSquaredHook = new PlotSquaredHook();
 			else
-				Common.log("&cWarning: Could not hook into PlotSquared, version 3.x or 5.x required, you have " + ver);
+				Common.log("&cWarning: &fCould not hook into PlotSquared, version 3.x, 5.x or 6.x required, you have " + ver);
 		}
 
 		if (Common.doesPluginExist("ProtocolLib")) {
@@ -406,6 +412,15 @@ public final class HookManager {
 			return true;
 
 		return false;
+	}
+
+	/**
+	 * Is ItemsAdder loaded as a plugin?
+	 *
+	 * @return
+	 */
+	public static boolean isItemsAdderLoaded() {
+		return itemsAdderHook != null;
 	}
 
 	/**
@@ -884,6 +899,31 @@ public final class HookManager {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
+	// ItemsAdder
+	// ------------------------------------------------------------------------------------------------------------
+
+	/**
+	 * Use ItemsAdder to replace font images in the message
+	 *
+	 * @param message
+	 * @return
+	 */
+	public static String replaceFontImages(final String message) {
+		return replaceFontImages(null, message);
+	}
+
+	/**
+	 * Use ItemsAdder to replace font images in the message based on the player's permission
+	 *
+	 * @param player
+	 * @param message
+	 * @return
+	 */
+	public static String replaceFontImages(@Nullable Player player, final String message) {
+		return isItemsAdderLoaded() ? itemsAdderHook.replaceFontImages(player, message) : message;
+	}
+
+	// ------------------------------------------------------------------------------------------------------------
 	// Multiverse-Core
 	// ------------------------------------------------------------------------------------------------------------
 
@@ -942,6 +982,16 @@ public final class HookManager {
 	}
 
 	/**
+	 * Return the online nation players in players ally (Towny), or an empty list
+	 *
+	 * @param player
+	 * @return
+	 */
+	public static Collection<? extends Player> getAllyPlayersOnline(final Player player) {
+		return isTownyLoaded() ? townyHook.getAllyPlayersOnline(player) : new ArrayList<>();
+	}
+
+	/**
 	 * Return the town owner name at the given location or null if none
 	 *
 	 * @param location
@@ -958,7 +1008,7 @@ public final class HookManager {
 	 * @return
 	 */
 	public static String getTown(final Location location) {
-		return isTownyLoaded() ? townyHook.getTown(location) : null;
+		return isTownyLoaded() ? townyHook.getTownName(location) : null;
 	}
 
 	/**
@@ -1172,13 +1222,12 @@ public final class HookManager {
 	 * 		The value will be called against the given player
 	 * <p>
 	 *
+	 * 	 * ATTENTION: We now have a new system where you register variables through {@link Variables#addExpansion(SimpleExpansion)}
+	 * 			   instead. It gives you better flexibility and, like PlaceholderAPI, you can replace different variables on the fly.
+	 *
 	 * @param variable
 	 * @param value
-	 *
-	 * @deprecated It still works, but we now have a new system where you register variables through {@link Variables#addExpansion(SimpleExpansion)}
-	 * 			   instead. It gives you better flexibility and, like PlaceholderAPI, you can replace different variables on the fly.
 	 */
-	@Deprecated
 	public static void addPlaceholder(final String variable, final Function<Player, String> value) {
 		Variables.addExpansion(new SimpleExpansion() {
 
@@ -1616,8 +1665,11 @@ class EssentialsHook {
 	void setNick(final UUID uniqueId, String nick) {
 		final User user = getUser(uniqueId);
 
-		if (user != null)
-			user.setNickname(nick);
+		if (user != null) {
+			final boolean isEmpty = nick == null || Common.stripColors(nick).replace(" ", "").isEmpty();
+
+			user.setNickname(isEmpty ? null : Common.colorize(nick));
+		}
 	}
 
 	String getNameFromNick(final String maybeNick) {
@@ -1732,6 +1784,21 @@ class TownyHook {
 		return recipients;
 	}
 
+	Collection<? extends Player> getAllyPlayersOnline(final Player pl) {
+		final List<Player> recipients = new ArrayList<>();
+		final Resident resident = getResident(pl);
+
+		if (resident != null)
+			for (final Player online : Remain.getOnlinePlayers()) {
+				final Resident otherResident = getResident(online);
+
+				if (otherResident != null && otherResident.isAlliedWith(resident))
+					recipients.add(online);
+			}
+
+		return recipients;
+	}
+
 	String getTownName(final Player pl) {
 		final Town t = getTown(pl);
 
@@ -1746,16 +1813,27 @@ class TownyHook {
 
 	List<String> getTowns() {
 		try {
-			return Common.convert(TownyUniverse.getDataSource().getTowns(), Town::getName);
+			//import com.palmergames.bukkit.towny.object.TownyUniverse;
+
+			return Common.convert(TownyUniverse.getInstance().getTowns(), Town::getName);
 
 		} catch (final Throwable e) {
 			return new ArrayList<>();
 		}
 	}
 
-	String getTown(final Location loc) {
+	String getTownName(final Location loc) {
+		final Town town = getTown(loc);
+
+		return town != null ? town.getName() : null;
+	}
+
+	private Town getTown(final Location loc) {
 		try {
-			return TownyUniverse.getTownName(loc);
+			final WorldCoord worldCoord = WorldCoord.parseWorldCoord(loc);
+			final TownBlock townBlock = TownyUniverse.getInstance().getTownBlock(worldCoord);
+
+			return townBlock != null ? townBlock.getTown() : null;
 
 		} catch (final Throwable e) {
 			return null;
@@ -1764,7 +1842,9 @@ class TownyHook {
 
 	String getTownOwner(final Location loc) {
 		try {
-			return TownyUniverse.getDataSource().getTown(TownyUniverse.getTownName(loc)).getMayor().getName();
+			final Town town = getTown(loc);
+
+			return town != null ? town.getMayor().getName() : null;
 
 		} catch (final Throwable e) {
 			return null;
@@ -1793,9 +1873,9 @@ class TownyHook {
 		}
 	}
 
-	private Resident getResident(final Player pl) {
+	private Resident getResident(final Player player) {
 		try {
-			return TownyUniverse.getDataSource().getResident(pl.getName());
+			return TownyUniverse.getInstance().getResident(player.getName());
 
 		} catch (final Throwable e) {
 			return null;
@@ -2758,7 +2838,7 @@ class McMMOHook {
 
 		} catch (final Throwable throwable) {
 			if (!errorLogged) {
-				Common.log("&cWarning: Failed getting mcMMO party chat for " + player.getName() + " due to error. Returning null."
+				Common.log("&cWarning: &fFailed getting mcMMO party chat for " + player.getName() + " due to error. Returning null."
 						+ " Ensure you have the latest mcMMO version, if so, contact plugin authors to update the integration. Error was: " + throwable);
 
 				errorLogged = true;
@@ -2781,7 +2861,7 @@ class McMMOHook {
 
 		} catch (final Throwable throwable) {
 			if (!errorLogged) {
-				Common.log("&cWarning: Failed getting mcMMO party recipients for " + bukkitPlayer.getName() + " due to error. Returning null."
+				Common.log("&cWarning: &fFailed getting mcMMO party recipients for " + bukkitPlayer.getName() + " due to error. Returning null."
 						+ " Ensure you have the latest mcMMO version, if so, contact plugin authors to update the integration. Error was: " + throwable);
 
 				errorLogged = true;
@@ -2814,12 +2894,20 @@ class PlotSquaredHook {
 
 		try {
 			wrap = plotPlayerClass.getMethod("wrap", Player.class);
+
 		} catch (final ReflectiveOperationException ex) {
+
 			try {
 				wrap = plotPlayerClass.getMethod("wrap", Object.class);
 
 			} catch (final ReflectiveOperationException ex2) {
-				throw new NullPointerException("PlotSquared could not convert " + player.getName() + " into PlotPlayer! Is the integration outdated?");
+
+				try {
+					wrap = plotPlayerClass.getMethod("from", Object.class);
+
+				} catch (final ReflectiveOperationException ex3) {
+					throw new FoException(ex3, "PlotSquared could not convert " + player.getName() + " into PlotPlayer! Is the integration outdated?");
+				}
 			}
 		}
 
@@ -2914,7 +3002,9 @@ class CMIHook {
 		final TabListManager tabManager = CMI.getInstance().getTabListManager();
 
 		if (user != null) {
-			user.setNickName(nick, true);
+			final boolean isEmpty = nick == null || Common.stripColors(nick).replace(" ", "").isEmpty();
+
+			user.setNickName(isEmpty ? null : Common.colorize(nick), true);
 			user.updateDisplayName();
 
 			if (tabManager.isUpdatesOnNickChange())
@@ -3124,5 +3214,28 @@ class LiteBansHook {
 
 			return false;
 		}*/
+	}
+}
+
+class ItemsAdderHook {
+
+	private final Class<?> itemsAdder;
+	private final Method replaceFontImagesMethod;
+	private final Method replaceFontImagesMethodNoPlayer;
+
+	ItemsAdderHook() {
+		this.itemsAdder = ReflectionUtil.lookupClass("dev.lone.itemsadder.api.FontImages.FontImageWrapper");
+		this.replaceFontImagesMethod = ReflectionUtil.getDeclaredMethod(itemsAdder, "replaceFontImages", Player.class, String.class);
+		this.replaceFontImagesMethodNoPlayer = ReflectionUtil.getDeclaredMethod(itemsAdder, "replaceFontImages", String.class);
+	}
+
+	/*
+	 * Return true if the given player is muted
+	 */
+	String replaceFontImages(@Nullable final Player player, final String message) {
+		if (player == null)
+			return ReflectionUtil.invokeStatic(replaceFontImagesMethodNoPlayer, message);
+
+		return ReflectionUtil.invokeStatic(replaceFontImagesMethod, player, message);
 	}
 }

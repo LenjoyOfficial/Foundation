@@ -12,8 +12,11 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.RandomUtil;
+import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.SerializeUtil;
+import org.mineacademy.fo.TimeUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictMap;
@@ -41,7 +44,7 @@ public class SimpleDatabase {
 	 * The established connection, or null if none
 	 */
 	@Getter(value = AccessLevel.PROTECTED)
-	private Connection connection;
+	private volatile Connection connection;
 
 	/**
 	 * The last credentials from the connect function, or null if never called
@@ -132,7 +135,8 @@ public class SimpleDatabase {
 		close();
 
 		try {
-			Class.forName("com.mysql.jdbc.Driver");
+			if (!ReflectionUtil.isClassAvailable("com.mysql.cj.jdbc.Driver"))
+				Class.forName("com.mysql.jdbc.Driver");
 
 			this.lastCredentials = new LastCredentials(url, user, password, table);
 			this.connection = DriverManager.getConnection(url, user, password);
@@ -186,13 +190,11 @@ public class SimpleDatabase {
 	 */
 	public final void close() {
 		if (connection != null)
-			synchronized (connection) {
-				try {
-					connection.close();
+			try {
+				connection.close();
 
-				} catch (final SQLException e) {
-					Common.error(e, "Error closing MySQL connection!");
-				}
+			} catch (final SQLException e) {
+				Common.error(e, "Error closing MySQL connection!");
 			}
 	}
 
@@ -243,7 +245,7 @@ public class SimpleDatabase {
 
 		for (final SerializedMap map : maps) {
 			final String columns = Common.join(map.keySet());
-			final String values = Common.join(map.values(), ", ", value -> parseValue(value));
+			final String values = Common.join(map.values(), ", ", this::parseValue);
 			final String duplicateUpdate = Common.join(map.entrySet(), ", ", entry -> entry.getKey() + "=VALUES(" + entry.getKey() + ")");
 
 			sqls.add("INSERT INTO " + table + " (" + columns + ") VALUES (" + values + ") ON DUPLICATE KEY UPDATE " + duplicateUpdate + ";");
@@ -269,24 +271,22 @@ public class SimpleDatabase {
 	protected final void update(String sql) {
 		checkEstablished();
 
-		synchronized (connection) {
-			if (!isConnected())
-				connectUsingLastCredentials();
+		if (!isConnected())
+			connectUsingLastCredentials();
 
-			sql = replaceVariables(sql);
-			Valid.checkBoolean(!sql.contains("{table}"), "Table not set! Either use connect() method that specifies it or call addVariable(table, 'yourtablename') in your constructor!");
+		sql = replaceVariables(sql);
+		Valid.checkBoolean(!sql.contains("{table}"), "Table not set! Either use connect() method that specifies it or call addVariable(table, 'yourtablename') in your constructor!");
 
-			Debugger.debug("mysql", "Updating MySQL with: " + sql);
+		Debugger.debug("mysql", "Updating MySQL with: " + sql);
 
-			try {
-				final Statement statement = connection.createStatement();
+		try {
+			final Statement statement = connection.createStatement();
 
-				statement.executeUpdate(sql);
-				statement.close();
+			statement.executeUpdate(sql);
+			statement.close();
 
-			} catch (final SQLException e) {
-				Common.error(e, "Error on updating MySQL with: " + sql);
-			}
+		} catch (final SQLException e) {
+			handleError(e, "Error on updating MySQL with: " + sql);
 		}
 	}
 
@@ -301,25 +301,21 @@ public class SimpleDatabase {
 	protected final ResultSet query(String sql) {
 		checkEstablished();
 
-		synchronized (connection) {
-			if (!isConnected())
-				connectUsingLastCredentials();
+		if (!isConnected())
+			connectUsingLastCredentials();
 
-			sql = replaceVariables(sql);
+		sql = replaceVariables(sql);
 
-			Debugger.debug("mysql", "Querying MySQL with: " + sql);
+		Debugger.debug("mysql", "Querying MySQL with: " + sql);
 
-			try {
-				final Statement statement = connection.createStatement();
-				final ResultSet resultSet = statement.executeQuery(sql);
+		try {
+			final Statement statement = connection.createStatement();
+			final ResultSet resultSet = statement.executeQuery(sql);
 
-				return resultSet;
+			return resultSet;
 
-			} catch (final SQLException ex) {
-				ex.printStackTrace();
-
-				Common.throwError(ex, "Error on querying MySQL with: " + sql);
-			}
+		} catch (final SQLException ex) {
+			handleError(ex, "Error on querying MySQL with: " + sql);
 		}
 
 		return null;
@@ -372,6 +368,17 @@ public class SimpleDatabase {
 			//Common.log("Updated " + processedCount + " database entries.");
 
 		} catch (final Throwable t) {
+			final List<String> errorLog = new ArrayList<>();
+
+			errorLog.add(Common.consoleLine());
+			errorLog.add(" [" + TimeUtil.getFormattedDateShort() + "] Failed to save batch sql, please contact the plugin author with this file content: " + t);
+			errorLog.add(Common.consoleLine());
+
+			for (final String statement : sqls)
+				errorLog.add(replaceVariables(statement));
+
+			FileUtil.write("sql-error.log", sqls);
+
 			t.printStackTrace();
 
 		} finally {
@@ -399,16 +406,14 @@ public class SimpleDatabase {
 	protected final java.sql.PreparedStatement prepareStatement(String sql) throws SQLException {
 		checkEstablished();
 
-		synchronized (connection) {
-			if (!isConnected())
-				connectUsingLastCredentials();
+		if (!isConnected())
+			connectUsingLastCredentials();
 
-			sql = replaceVariables(sql);
+		sql = replaceVariables(sql);
 
-			Debugger.debug("mysql", "Preparing statement: " + sql);
+		Debugger.debug("mysql", "Preparing statement: " + sql);
 
-			return connection.prepareStatement(sql);
-		}
+		return connection.prepareStatement(sql);
 	}
 
 	/**
@@ -421,14 +426,26 @@ public class SimpleDatabase {
 		if (!isLoaded())
 			return false;
 
-		synchronized (connection) {
-			try {
-				return connection != null && !connection.isClosed() && connection.isValid(0);
+		try {
+			return !connection.isClosed() && connection.isValid(0);
 
-			} catch (final SQLException ex) {
-				return false;
-			}
+		} catch (final SQLException ex) {
+			return false;
 		}
+	}
+
+	/*
+	 * Checks if there's a collation-related error and prints warning message for the user to
+	 * update his database.
+	 */
+	private void handleError(Throwable t, String fallbackMessage) {
+		if (t.toString().contains("Unknown collation")) {
+			Common.log("You need to update your MySQL provider driver. We switched to support unicode using 4 bits length because the previous system only supported 3 bits.");
+			Common.log("Some characters such as smiley or Chinese are stored in 4 bits so they would crash the 3-bit database leading to more problems. Most hosting providers have now widely adopted the utf8mb4_unicode_520_ci encoding you seem lacking. Disable MySQL connection or update your driver to fix this.");
+		}
+
+		else
+			Common.throwError(t, fallbackMessage);
 	}
 
 	// --------------------------------------------------------------------

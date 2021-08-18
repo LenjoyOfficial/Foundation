@@ -8,18 +8,19 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
-
-import javax.annotation.Nullable;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.Messenger;
 import org.mineacademy.fo.PlayerUtil;
@@ -270,6 +271,9 @@ public abstract class SimpleCommand extends Command {
 		Valid.checkBoolean(!(this instanceof SimpleSubCommand), "Sub commands cannot be registered!");
 		Valid.checkBoolean(!registered, "The command /" + getLabel() + " has already been registered!");
 
+		if (!canRegister())
+			return;
+
 		final PluginCommand oldCommand = Bukkit.getPluginCommand(getLabel());
 
 		if (oldCommand != null && unregisterOldCommand) {
@@ -296,6 +300,16 @@ public abstract class SimpleCommand extends Command {
 
 		Remain.unregisterCommand(getLabel());
 		registered = false;
+	}
+
+	/**
+	 * Return true if this command can be registered through {@link #register()} methods.
+	 * By default true.
+	 *
+	 * @return
+	 */
+	protected boolean canRegister() {
+		return true;
 	}
 
 	// ----------------------------------------------------------------------
@@ -562,6 +576,25 @@ public abstract class SimpleCommand extends Command {
 	}
 
 	/**
+	 * Attempts to find the offline player by name, sends an error message to sender if he did not play before
+	 * or runs the specified callback.
+	 *
+	 * The offline player lookup is done async, the callback is synchronized.
+	 *
+	 * @param name
+	 * @param callback
+	 * @throws CommandException
+	 */
+	protected final void findOfflinePlayer(final String name, Consumer<OfflinePlayer> callback) throws CommandException {
+		runAsync(() -> {
+			final OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(name);
+			checkBoolean(targetPlayer != null && (targetPlayer.isOnline() || targetPlayer.hasPlayedBefore()), SimpleLocalization.Player.NOT_PLAYED_BEFORE.replace("{player}", name));
+
+			runLater(() -> callback.accept(targetPlayer));
+		});
+	}
+
+	/**
 	 * Attempts to find a non-vanished online player, failing with the message
 	 * found at {@link SimpleLocalization.Player#NOT_ONLINE}
 	 *
@@ -595,7 +628,7 @@ public abstract class SimpleCommand extends Command {
 	 * @return
 	 * @throws CommandException
 	 */
-	protected final Player findPlayerOrSelf(@Nullable final String name) throws CommandException {
+	protected final Player findPlayerOrSelf(final String name) throws CommandException {
 		if (name == null) {
 			checkBoolean(isPlayer(), SimpleLocalization.Commands.CONSOLE_MISSING_PLAYER_NAME);
 
@@ -697,9 +730,10 @@ public abstract class SimpleCommand extends Command {
 				found = null;
 
 		} catch (final Throwable t) {
+			// Not found, pass through below to error out
 		}
 
-		checkNotNull(found, falseMessage.replace("{enum}", name));
+		checkNotNull(found, falseMessage.replace("{enum}", name).replace("{available}", Common.join(enumType.getEnumConstants())));
 		return found;
 	}
 
@@ -812,7 +846,7 @@ public abstract class SimpleCommand extends Command {
 	 * @param permission
 	 * @return
 	 */
-	protected final boolean hasPerm(@Nullable String permission) {
+	protected final boolean hasPerm(String permission) {
 		return this.hasPerm(sender, permission);
 	}
 
@@ -827,7 +861,7 @@ public abstract class SimpleCommand extends Command {
 	 * @param permission
 	 * @return
 	 */
-	protected final boolean hasPerm(CommandSender sender, @Nullable String permission) {
+	protected final boolean hasPerm(CommandSender sender, String permission) {
 		return permission == null ? true : PlayerUtil.hasPerm(sender, permission.replace("{label}", getLabel()));
 	}
 
@@ -836,13 +870,25 @@ public abstract class SimpleCommand extends Command {
 	// ----------------------------------------------------------------------
 
 	/**
+	 * Sends a message to the player
+	 *
+	 * @see Replacer#replaceArray
+	 *
+	 * @param message
+	 * @param replacements
+	 */
+	protected final void tellReplaced(final String message, final Object... replacements) {
+		tell(Replacer.replaceArray(message, replacements));
+	}
+
+	/**
 	 * Sends a interactive chat component to the sender, not replacing any special
 	 * variables just executing the {@link SimpleComponent#send(CommandSender...)} method
 	 * as a shortcut
 	 *
 	 * @param components
 	 */
-	protected final void tell(@Nullable List<SimpleComponent> components) {
+	protected final void tell(List<SimpleComponent> components) {
 		if (components != null)
 			tell(components.toArray(new SimpleComponent[components.size()]));
 	}
@@ -854,7 +900,7 @@ public abstract class SimpleCommand extends Command {
 	 *
 	 * @param components
 	 */
-	protected final void tell(@Nullable SimpleComponent... components) {
+	protected final void tell(SimpleComponent... components) {
 		if (components != null)
 			for (final SimpleComponent component : components)
 				component.send(sender);
@@ -865,7 +911,7 @@ public abstract class SimpleCommand extends Command {
 	 *
 	 * @param replacer
 	 */
-	protected final void tell(@Nullable Replacer replacer) {
+	protected final void tell(Replacer replacer) {
 		if (replacer != null)
 			tell(replacer.getReplacedMessage());
 	}
@@ -875,7 +921,7 @@ public abstract class SimpleCommand extends Command {
 	 *
 	 * @param messages
 	 */
-	protected final void tell(@Nullable Collection<String> messages) {
+	protected final void tell(Collection<String> messages) {
 		if (messages != null)
 			tell(messages.toArray(new String[messages.size()]));
 	}
@@ -885,7 +931,7 @@ public abstract class SimpleCommand extends Command {
 	 *
 	 * @param replacer
 	 */
-	protected final void tellNoPrefix(@Nullable Replacer replacer) {
+	protected final void tellNoPrefix(Replacer replacer) {
 		if (replacer != null)
 			tellNoPrefix(replacer.getReplacedMessage());
 	}
@@ -904,7 +950,7 @@ public abstract class SimpleCommand extends Command {
 	 *
 	 * @param messages
 	 */
-	protected final void tellNoPrefix(@Nullable String... messages) {
+	protected final void tellNoPrefix(String... messages) {
 		final boolean tellPrefix = Common.ADD_TELL_PREFIX;
 		final boolean localPrefix = addTellPrefix;
 
@@ -922,7 +968,7 @@ public abstract class SimpleCommand extends Command {
 	 *
 	 * @param messages
 	 */
-	protected final void tell(@Nullable String... messages) {
+	protected final void tell(String... messages) {
 		if (messages != null) {
 			messages = replacePlaceholders(messages);
 
@@ -1522,6 +1568,75 @@ public abstract class SimpleCommand extends Command {
 	 */
 	protected final void setAutoHandleHelp(final boolean autoHandleHelp) {
 		this.autoHandleHelp = autoHandleHelp;
+	}
+
+	// ----------------------------------------------------------------------
+	// Scheduling
+	// ----------------------------------------------------------------------
+
+	/**
+	 * Runs the given task later, this supports checkX methods
+	 * where we handle sending messages to player automatically
+	 *
+	 * @param runnable
+	 * @return
+	 */
+	protected final BukkitTask runLater(Runnable runnable) {
+		return Common.runLater(() -> this.delegateTask(runnable));
+	}
+
+	/**
+	 * Runs the given task later, this supports checkX methods
+	 * where we handle sending messages to player automatically
+	 *
+	 * @param delayTicks
+	 * @param runnable
+	 * @return
+	 */
+	protected final BukkitTask runLater(int delayTicks, Runnable runnable) {
+		return Common.runLater(delayTicks, () -> this.delegateTask(runnable));
+	}
+
+	/**
+	 * Runs the given task asynchronously, this supports checkX methods
+	 * where we handle sending messages to player automatically
+	 *
+	 * @param runnable
+	 * @return
+	 */
+	protected final BukkitTask runAsync(Runnable runnable) {
+		return Common.runAsync(() -> this.delegateTask(runnable));
+	}
+
+	/**
+	 * Runs the given task asynchronously, this supports checkX methods
+	 * where we handle sending messages to player automatically
+	 *
+	 * @param delayTicks
+	 * @param runnable
+	 * @return
+	 */
+	protected final BukkitTask runAsync(int delayTicks, Runnable runnable) {
+		return Common.runLaterAsync(delayTicks, () -> this.delegateTask(runnable));
+	}
+
+	/*
+	 * A helper method to catch command-related exceptions from runnables
+	 */
+	private void delegateTask(Runnable runnable) {
+		try {
+			runnable.run();
+
+		} catch (final CommandException ex) {
+			if (ex.getMessages() != null)
+				for (final String message : ex.getMessages())
+					Messenger.error(sender, message);
+
+		} catch (final Throwable t) {
+			Messenger.error(sender, SimpleLocalization.Commands.ERROR.replace("{error}", t.toString()));
+
+			throw t;
+		}
 	}
 
 	@Override

@@ -1,5 +1,8 @@
 package org.mineacademy.fo;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -22,11 +25,11 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.mineacademy.fo.EntityUtil.HitListener;
 import org.mineacademy.fo.collection.expiringmap.ExpiringMap;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.model.HookManager;
-import org.mineacademy.fo.remain.CompRunnable;
 import org.mineacademy.fo.remain.Remain;
 
 import lombok.AccessLevel;
@@ -40,6 +43,28 @@ public final class EntityUtil {
 
 	static {
 		Common.registerEvents(new HitTracking());
+	}
+
+	/**
+	 * Returns the closest entity to the center location within the given 3-dimensional range
+	 * that matches the given entity class, or null if not found.
+	 *
+	 * @param <T>
+	 * @param center
+	 * @param range3D
+	 * @param entityClass
+	 * @return
+	 */
+	public static <T extends LivingEntity> T findNearestEntity(Location center, double range3D, Class<T> entityClass) {
+		final List<T> found = new ArrayList<>();
+
+		for (final Entity nearby : center.getWorld().getNearbyEntities(center, range3D, range3D, range3D))
+			if (nearby instanceof LivingEntity && entityClass.isAssignableFrom(nearby.getClass()))
+				found.add((T) nearby);
+
+		Collections.sort(found, (first, second) -> Double.compare(first.getLocation().distance(center), second.getLocation().distance(center)));
+
+		return found.isEmpty() ? null : found.get(0);
 	}
 
 	/**
@@ -71,10 +96,16 @@ public final class EntityUtil {
 	 * @return
 	 */
 	public static boolean isAggressive(Entity entity) {
-		return entity instanceof Ghast ||
-				entity instanceof Slime ||
-				entity instanceof Wolf && ((Wolf) entity).isAngry() ||
-				entity instanceof Creature && !(entity instanceof Animals);
+		if (entity instanceof Ghast || entity instanceof Slime)
+			return true;
+
+		if (entity instanceof Wolf && ((Wolf) entity).isAngry())
+			return true;
+
+		if (entity instanceof Animals)
+			return false;
+
+		return entity instanceof Creature;
 	}
 
 	/**
@@ -167,12 +198,7 @@ public final class EntityUtil {
 		if (flyListener == null && hitGroundListener == null)
 			throw new FoException("Cannot track entity with fly and hit listeners on null!");
 
-		final boolean isProjectile = entity instanceof Projectile;
-
-		if (isProjectile && hitGroundListener != null)
-			HitTracking.addFlyingProjectile((Projectile) entity, event -> hitGroundListener.run());
-
-		Common.runTimer(1, new CompRunnable() {
+		Common.runTimer(1, new BukkitRunnable() {
 
 			private int elapsedTicks = 0;
 
@@ -188,17 +214,16 @@ public final class EntityUtil {
 
 				// Cancel when invalid
 				if (entity == null || entity.isDead() || !entity.isValid()) {
-					if (entity instanceof FallingBlock && !isProjectile && hitGroundListener != null)
+					if (entity instanceof FallingBlock && hitGroundListener != null)
 						hitGroundListener.run();
 
 					cancel();
-
 					return;
 				}
 
 				// Run the hit listener
 				if (entity.isOnGround()) {
-					if (!isProjectile && hitGroundListener != null)
+					if (hitGroundListener != null)
 						hitGroundListener.run();
 
 					cancel();
@@ -244,7 +269,7 @@ class HitTracking implements Listener {
 	 * List of flying projectiles with code to run on impact,
 	 * stop tracking after 30 seconds to prevent overloading the map
 	 */
-	private static final ExpiringMap<UUID, HitListener> flyingProjectiles = ExpiringMap.builder().expiration(30, TimeUnit.SECONDS).build();
+	private static volatile ExpiringMap<UUID, List<HitListener>> flyingProjectiles = ExpiringMap.builder().expiration(30, TimeUnit.SECONDS).build();
 
 	/**
 	 * Invoke the hit listener when the registered projectile hits something
@@ -253,10 +278,14 @@ class HitTracking implements Listener {
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onHit(ProjectileHitEvent event) {
-		final HitListener hitListener = flyingProjectiles.remove(event.getEntity().getUniqueId());
 
-		if (hitListener != null)
-			hitListener.onHit(event);
+		synchronized (flyingProjectiles) {
+			final List<HitListener> hitListeners = flyingProjectiles.remove(event.getEntity().getUniqueId());
+
+			if (hitListeners != null)
+				for (final HitListener listener : hitListeners)
+					listener.onHit(event);
+		}
 	}
 
 	/**
@@ -266,6 +295,12 @@ class HitTracking implements Listener {
 	 * @param hitTask
 	 */
 	static void addFlyingProjectile(Projectile projectile, HitListener hitTask) {
-		flyingProjectiles.put(projectile.getUniqueId(), hitTask);
+		synchronized (flyingProjectiles) {
+			final UUID uniqueId = projectile.getUniqueId();
+			final List<HitListener> listeners = flyingProjectiles.getOrDefault(uniqueId, new ArrayList<>());
+
+			listeners.add(hitTask);
+			flyingProjectiles.put(uniqueId, listeners);
+		}
 	}
 }

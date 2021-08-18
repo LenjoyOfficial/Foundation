@@ -15,8 +15,10 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -35,11 +37,13 @@ import org.bukkit.plugin.messaging.Messenger;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
+import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.bungee.SimpleBungee;
 import org.mineacademy.fo.collection.StrictList;
 import org.mineacademy.fo.command.SimpleCommand;
 import org.mineacademy.fo.command.SimpleCommandGroup;
+import org.mineacademy.fo.command.SimpleSubCommand;
 import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.event.SimpleListener;
 import org.mineacademy.fo.exception.FoException;
@@ -55,10 +59,12 @@ import org.mineacademy.fo.model.FolderWatcher;
 import org.mineacademy.fo.model.HookManager;
 import org.mineacademy.fo.model.JavaScriptExecutor;
 import org.mineacademy.fo.model.SimpleEnchantment;
+import org.mineacademy.fo.model.SimpleHologram;
 import org.mineacademy.fo.model.SimpleScoreboard;
 import org.mineacademy.fo.model.SpigotUpdater;
 import org.mineacademy.fo.remain.CompMetadata;
 import org.mineacademy.fo.remain.Remain;
+import org.mineacademy.fo.settings.Lang;
 import org.mineacademy.fo.settings.SimpleLocalization;
 import org.mineacademy.fo.settings.SimpleSettings;
 import org.mineacademy.fo.settings.YamlConfig;
@@ -200,6 +206,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		source = instance.getFile();
 		data = instance.getDataFolder();
 
+		// Add console filters early - no reload support
+		FoundationFilter.inject();
+
 		// Call parent
 		onPluginLoad();
 	}
@@ -210,7 +219,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		// Solve reloading issues with PlugMan
 		for (final StackTraceElement element : new Throwable().getStackTrace()) {
 			if (element.toString().contains("com.rylinaux.plugman.util.PluginUtil.load")) {
-				Common.log("&cWarning: Detected PlugMan reload, which is poorly designed. "
+				Common.log("&cWarning: &fDetected PlugMan reload, which is poorly designed. "
 						+ "It causes Bukkit not able to get our plugin from a static initializer."
 						+ " It may or may not run. Use our own reload command or do a clean restart!");
 
@@ -264,11 +273,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		try {
 
 			// Load our main static settings classes
-			if (getSettings() != null) {
-				YamlStaticConfig.load(getSettings());
-
-				Valid.checkBoolean(SimpleSettings.isSettingsCalled() != null && SimpleLocalization.isLocalizationCalled() != null, "Developer forgot to call Settings or Localization");
-			}
+			YamlStaticConfig.load(getSettings());
 
 			if (!isEnabled || !isEnabled())
 				return;
@@ -290,6 +295,8 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			// Load legacy permanent metadata store
 			CompMetadata.MetadataFile.getInstance();
 
+			SimpleHologram.init();
+
 			// Register main command if it is set
 			if (getMainCommand() != null) {
 				Valid.checkBoolean(!SimpleSettings.MAIN_COMMAND_ALIASES.isEmpty(), "Please make a settings class extending SimpleSettings and specify Command_Aliases in your settings file.");
@@ -302,6 +309,10 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			// --------------------------------------------
 			if (!isEnabled || !isEnabled())
 				return;
+
+			// Hide plugin name before console messages
+			final boolean hadLogPrefix = Common.ADD_LOG_PREFIX;
+			Common.ADD_LOG_PREFIX = false;
 
 			startingReloadables = true;
 			onReloadablesStart();
@@ -325,21 +336,26 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			registerEvents(this); // For convenience
 			registerEvents(new MenuListener());
 			registerEvents(new FoundationListener());
-			registerEvents(new ToolsListener());
 			registerEvents(new EnchantmentListener());
 
+			if (areToolsEnabled())
+				registerEvents(new ToolsListener());
+
 			// Register our packet listener
-			FoundationPacketListener.addPacketListener();
+			FoundationPacketListener.addNativeListener();
 
 			// Register DiscordSRV listener
 			if (HookManager.isDiscordSRVLoaded()) {
-				DiscordListener.DiscordListenerImpl.getInstance().resubscribe();
+				final DiscordListener.DiscordListenerImpl discord = DiscordListener.DiscordListenerImpl.getInstance();
+
+				discord.resubscribe();
+				discord.registerHook();
 
 				reloadables.registerEvents(DiscordListener.DiscordListenerImpl.getInstance());
 			}
 
-			// Set the logging and tell prefix
-			Common.setTellPrefix(SimpleSettings.PLUGIN_PREFIX);
+			// Prepare Nashorn engine
+			JavaScriptExecutor.run("");
 
 			// Finish off by starting metrics (currently bStats)
 			final int pluginId = getMetricsPluginId();
@@ -347,8 +363,11 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			if (pluginId != -1)
 				new Metrics(this, pluginId);
 
-			// Prepare Nashorn engine
-			JavaScriptExecutor.run("");
+			// Set the logging and tell prefix
+			Common.setTellPrefix(SimpleSettings.PLUGIN_PREFIX);
+
+			// Finally, place plugin name before console messages after plugin has (re)loaded
+			Common.runLater(() -> Common.ADD_LOG_PREFIX = hadLogPrefix);
 
 		} catch (final Throwable t) {
 			displayError0(t);
@@ -433,7 +452,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 										Common.registerEvents((Listener) instance);
 								}
 
-							} catch (final NoSuchFieldError ex) {
+							} catch (final NoClassDefFoundError | NoSuchFieldError ex) {
+								Bukkit.getLogger().warning("Failed to auto register " + (isTool ? "tool" : "enchant") + " class " + clazz + " due to it requesting missing fields/classes: " + ex.getMessage());
+
 								// Ignore if no field is present
 
 							} catch (final Throwable t) {
@@ -766,13 +787,15 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			reloadables.reload();
 
 			YamlConfig.clearLoadedFiles();
-
-			if (getSettings() != null)
-				YamlStaticConfig.load(getSettings());
+			YamlStaticConfig.load(getSettings());
 
 			CompMetadata.MetadataFile.onReload();
 
-			FoundationPacketListener.addPacketListener();
+			FoundationPacketListener.addNativeListener();
+
+			SimpleHologram.init();
+
+			Lang.reloadFile();
 
 			Common.setTellPrefix(SimpleSettings.PLUGIN_PREFIX);
 			onPluginReload();
@@ -815,7 +838,8 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		BlockVisualizer.stopAll();
 		FolderWatcher.stopThreads();
 
-		DiscordListener.clearRegisteredListeners();
+		if (HookManager.isDiscordSRVLoaded())
+			DiscordListener.clearRegisteredListeners();
 
 		try {
 			HookManager.unloadDependencies(this);
@@ -831,6 +855,38 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	// ----------------------------------------------------------------------------------------
 	// Methods
 	// ----------------------------------------------------------------------------------------
+
+	/**
+	 * Convenience method for quickly registering events in all classes in your plugin that
+	 * extend the given class.
+	 *
+	 * NB: You must have a no arguments constructor otherwise it will not be registered
+	 *
+	 * TIP: Set your Debug key in your settings.yml to ["auto-register"] to see what is registered.
+	 *
+	 * @param extendingClass
+	 */
+	protected final <T extends Listener> void registerAllEvents(final Class<T> extendingClass) {
+
+		Valid.checkBoolean(!extendingClass.equals(Listener.class), "registerAllEvents does not support Listener.class due to conflicts, create your own middle class instead");
+		Valid.checkBoolean(!extendingClass.equals(SimpleListener.class), "registerAllEvents does not support SimpleListener.class due to conflicts, create your own middle class instead");
+
+		classLookup:
+		for (final Class<? extends T> pluginClass : ReflectionUtil.getClasses(instance, extendingClass)) {
+			for (final Constructor<?> con : pluginClass.getConstructors()) {
+				if (con.getParameterCount() == 0) {
+					final T instance = (T) ReflectionUtil.instantiate(con);
+
+					Debugger.debug("auto-register", "Auto-registering events in " + pluginClass);
+					registerEvents(instance);
+
+					continue classLookup;
+				}
+			}
+
+			Debugger.debug("auto-register", "Skipping auto-registering events in " + pluginClass + " because it lacks at least one no arguments constructor");
+		}
+	}
 
 	/**
 	 * Convenience method for quickly registering events if the condition is met
@@ -883,8 +939,58 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	protected final void registerEvents(final SimpleListener<? extends Event> listener) {
 		if (startingReloadables)
 			reloadables.registerEvents(listener);
+
 		else
 			listener.register();
+	}
+
+	/**
+	 * Convenience method for quickly registering all command classes in your plugin that
+	 * extend the given class.
+	 *
+	 * NB: You must have a no arguments constructor otherwise it will not be registered
+	 *
+	 * TIP: Set your Debug key in your settings.yml to ["auto-register"] to see what is registered.
+	 *
+	 * @param extendingClass
+	 */
+	protected final <T extends Command> void registerAllCommands(final Class<T> extendingClass) {
+		Valid.checkBoolean(!extendingClass.equals(Command.class), "registerAllCommands does not support Command.class due to conflicts, create your own middle class instead");
+		Valid.checkBoolean(!extendingClass.equals(SimpleCommand.class), "registerAllCommands does not support SimpleCommand.class due to conflicts, create your own middle class instead");
+		Valid.checkBoolean(!extendingClass.equals(SimpleSubCommand.class), "registerAllCommands does not support SubCommand.class");
+
+		classLookup:
+		for (final Class<? extends T> pluginClass : ReflectionUtil.getClasses(instance, extendingClass)) {
+
+			if (SimpleSubCommand.class.isAssignableFrom(pluginClass)) {
+				Debugger.debug("auto-register", "Skipping auto-registering command " + pluginClass + " because sub-commands cannot be registered");
+
+				continue;
+			}
+
+			try {
+				for (final Constructor<?> con : pluginClass.getConstructors()) {
+					if (con.getParameterCount() == 0) {
+						final T instance = (T) ReflectionUtil.instantiate(con);
+
+						Debugger.debug("auto-register", "Auto-registering command " + pluginClass);
+
+						if (instance instanceof SimpleCommand)
+							registerCommand((SimpleCommand) instance);
+
+						else
+							registerCommand(instance);
+
+						continue classLookup;
+					}
+				}
+
+			} catch (final LinkageError ex) {
+				Common.log("Unable to register commands in '" + pluginClass.getSimpleName() + "' due to error: " + ex);
+			}
+
+			Debugger.debug("auto-register", "Skipping auto-registering command " + pluginClass + " because it lacks at least one no arguments constructor");
+		}
 	}
 
 	/**
@@ -1019,6 +1125,19 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	}
 
 	/**
+	 * Foundation automatically can filter console commands for you, including
+	 * messages from other plugins or the server itself, preventing unnecessary console spam.
+	 *
+	 * You can return a list of messages that will be matched using "startsWith OR contains" method
+	 * and will be filtered.
+	 *
+	 * @return
+	 */
+	public Set<String> getConsoleFilter() {
+		return new HashSet<>();
+	}
+
+	/**
 	 * When processing regular expressions, limit executing to the specified time.
 	 * This prevents server freeze/crash on malformed regex (loops).
 	 *
@@ -1070,6 +1189,16 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	}
 
 	/**
+	 * Should we replace accents with their non accented friends when
+	 * checking two strings for similarity in ChatUtil?
+	 *
+	 * @return defaults to true
+	 */
+	public boolean similarityStripAccents() {
+		return true;
+	}
+
+	/**
 	 * Return the BungeeCord suite if you want this plugin
 	 * to send and receive messages from BungeeCord
 	 *
@@ -1087,6 +1216,17 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 */
 	public boolean enforeNewLine() {
 		return false;
+	}
+
+	/**
+	 * Should we listen for {@link Tool} in this plugin and
+	 * handle clicking events automatically? Disable to increase performance
+	 * if you do not want to use our tool system. Enabled by default.
+	 *
+	 * @return
+	 */
+	public boolean areToolsEnabled() {
+		return true;
 	}
 
 	/**

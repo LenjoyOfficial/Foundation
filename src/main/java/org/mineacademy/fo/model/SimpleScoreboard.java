@@ -5,12 +5,11 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
@@ -22,7 +21,6 @@ import org.mineacademy.fo.RandomUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.StrictList;
 import org.mineacademy.fo.plugin.SimplePlugin;
-import org.mineacademy.fo.remain.CompRunnable;
 import org.mineacademy.fo.remain.Remain;
 
 import lombok.AccessLevel;
@@ -88,14 +86,12 @@ public class SimpleScoreboard {
 	 * The title of this scoreboard
 	 */
 	@Getter
-	@Setter
 	private String title;
 
 	/**
 	 * The update tick delay
 	 */
 	@Getter
-	@Setter
 	private int updateDelayTicks;
 
 	// ------------------------------------------------------------------------------------------------------------
@@ -209,7 +205,7 @@ public class SimpleScoreboard {
 	private final void start() {
 		Valid.checkBoolean(updateTask == null, "Scoreboard " + this + " already running");
 
-		updateTask = new CompRunnable() {
+		updateTask = new BukkitRunnable() {
 			@Override
 			public void run() {
 
@@ -317,7 +313,7 @@ public class SimpleScoreboard {
 	 * @param primary
 	 * @param secondary
 	 */
-	public final void setTheme(@NonNull final ChatColor primary, @Nullable final ChatColor secondary) {
+	public final void setTheme(@NonNull final ChatColor primary, final ChatColor secondary) {
 		if (secondary != null) {
 			this.theme[0] = "&" + primary.getChar();
 			this.theme[1] = "&" + secondary.getChar();
@@ -400,6 +396,20 @@ public class SimpleScoreboard {
 	 */
 	public final boolean isRunning() {
 		return updateTask != null;
+	}
+
+	/**
+	 * @param updateDelayTicks the updateDelayTicks to set
+	 */
+	public final void setUpdateDelayTicks(int updateDelayTicks) {
+		this.updateDelayTicks = updateDelayTicks;
+	}
+
+	/**
+	 * @param title the title to set
+	 */
+	public final void setTitle(String title) {
+		this.title = title;
 	}
 
 	// ------------------------------------------------------------------------------------------------------------

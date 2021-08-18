@@ -19,8 +19,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import javax.annotation.Nullable;
-
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -40,6 +38,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
+import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictList;
 import org.mineacademy.fo.collection.StrictMap;
@@ -51,7 +50,6 @@ import org.mineacademy.fo.model.HookManager;
 import org.mineacademy.fo.model.Replacer;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompChatColor;
-import org.mineacademy.fo.remain.CompRunnable;
 import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.settings.SimpleLocalization;
 import org.mineacademy.fo.settings.SimpleSettings;
@@ -80,7 +78,7 @@ public final class Common {
 	/**
 	 * Pattern used to match colors with #HEX code for MC 1.16+
 	 */
-	public static final Pattern RGB_HEX_COLOR_REGEX = Pattern.compile("(?<!\\\\)#((?:[0-9a-fA-F]{3}){1,2})");
+	public static final Pattern RGB_HEX_COLOR_REGEX = Pattern.compile("(?<!\\\\)(&|)#((?:[0-9a-fA-F]{3}){1,2})");
 
 	/**
 	 * Pattern used to match colors with {#HEX} code for MC 1.16+
@@ -165,6 +163,17 @@ public final class Common {
 	// ------------------------------------------------------------------------------------------------------------
 	// Broadcasting
 	// ------------------------------------------------------------------------------------------------------------
+
+	/**
+	 * Broadcast the message as per {@link Replacer#replaceArray(String, Object...)} mechanics
+	 * such as broadcastReplaced("Hello {world} from {player}", "world", "survival_world", "player", "kangarko")
+	 *
+	 * @param message
+	 * @param replacements
+	 */
+	public static void broadcastReplaced(final String message, final Object... replacements) {
+		broadcast(Replacer.replaceArray(message, replacements));
+	}
 
 	/**
 	 * Broadcast the message replacing {player} variable with the given command sender
@@ -415,15 +424,20 @@ public final class Common {
 
 		// Has prefix already? This is replaced when colorizing
 		final boolean hasPrefix = message.contains("{prefix}");
+		final boolean hasJSON = message.startsWith("[JSON]");
 
-		// Add colors and replace player
-		message = colorize(message.replace("{player}", resolveSenderName(sender)));
+		// Replace player
+		message = message.replace("{player}", resolveSenderName(sender));
+
+		// Replace colors
+		if (!hasJSON)
+			message = colorize(message);
 
 		// Used for matching
 		final String colorlessMessage = stripColors(message);
 
 		// Send [JSON] prefixed messages as json component
-		if (message.startsWith("[JSON]")) {
+		if (hasJSON) {
 			final String stripped = message.substring(6).trim();
 
 			if (!stripped.isEmpty())
@@ -480,14 +494,20 @@ public final class Common {
 		} else
 			for (final String part : splitNewline(message)) {
 				final String prefixStripped = removeSurroundingSpaces(tellPrefix);
-				final String prefix = (ADD_TELL_PREFIX && !hasPrefix && !prefixStripped.isEmpty() ? prefixStripped + " " : "");
+				final String prefix = ADD_TELL_PREFIX && !hasPrefix && !prefixStripped.isEmpty() ? prefixStripped + " " : "";
 
-				final String toSend;
+				String toSend;
 
 				if (Common.stripColors(part).startsWith("<center>"))
 					toSend = ChatUtil.center(prefix + part.replace("<center>", ""));
 				else
 					toSend = prefix + part;
+
+				if (MinecraftVersion.olderThan(V.v1_9) && toSend.length() + 1 >= Short.MAX_VALUE) {
+					toSend = toSend.substring(0, Short.MAX_VALUE / 2);
+
+					Common.log("Warning: Message to " + sender.getName() + " was too large, sending the first 16,000 letters: " + toSend);
+				}
 
 				// Make player engaged in a server conversation still receive the message
 				if (sender instanceof Conversable && ((Conversable) sender).isConversing())
@@ -555,6 +575,20 @@ public final class Common {
 
 	/**
 	 * Replace the & letter with the {@link org.bukkit.CompChatColor.COLOR_CHAR} in the message.
+	 *
+	 * @param messages the messages to replace color codes with '&'
+	 * @return the colored message
+	 */
+	public static String[] colorizeArray(final String... messages) {
+
+		for (int i = 0; i < messages.length; i++)
+			messages[i] = colorize(messages[i]);
+
+		return messages;
+	}
+
+	/**
+	 * Replace the & letter with the {@link org.bukkit.CompChatColor.COLOR_CHAR} in the message.
 	 * <p>
 	 * Also replaces {prefix} with {@link #getTellPrefix()} and {server} with {@link SimplePlugin#getServerPrefix()}
 	 *
@@ -593,7 +627,7 @@ public final class Common {
 			match = RGB_HEX_COLOR_REGEX.matcher(result);
 
 			while (match.find()) {
-				final String colorCode = match.group(1);
+				final String colorCode = match.group(2);
 				String replacement = "";
 
 				try {
@@ -602,7 +636,7 @@ public final class Common {
 				} catch (final IllegalArgumentException ex) {
 				}
 
-				result = result.replaceAll("#" + colorCode, replacement);
+				result = result.replaceAll("(&|)#" + colorCode, replacement);
 			}
 
 			result = result.replace("\\#", "#");
@@ -718,7 +752,7 @@ public final class Common {
 				lastColor = match.group(0);
 
 			if (lastColor != null)
-				if ((c == -1 || c < (message.lastIndexOf(lastColor) + lastColor.length())))
+				if (c == -1 || c < message.lastIndexOf(lastColor) + lastColor.length())
 					return lastColor;
 		}
 
@@ -1038,7 +1072,7 @@ public final class Common {
 	/**
 	 * @see #doesPluginExist(String)
 	 *
-	 * @deprecated subject for removal, this simply calls {@link #doesPluginExist(String)}
+	 * @deprecated subject for removal, please use {@link #doesPluginExist(String)} because it now works the same
 	 *
 	 * @param pluginName
 	 * @return
@@ -1084,15 +1118,46 @@ public final class Common {
 	/**
 	 * Runs the given command (without /) as the console, replacing {player} with sender
 	 *
+	 * You can prefix the command with @(announce|warn|error|info|question|success) to send a formatted
+	 * message to playerReplacement directly.
+	 *
 	 * @param playerReplacement
 	 * @param command
 	 */
-	public static void dispatchCommand(@Nullable final CommandSender playerReplacement, @NonNull final String command) {
+	public static void dispatchCommand(final CommandSender playerReplacement, @NonNull String command) {
 		if (command.isEmpty() || command.equalsIgnoreCase("none"))
 			return;
 
-		final String finalCommand = command.startsWith("/") ? command.substring(1) : command;
-		runLater(() -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), colorize(finalCommand.replace("{player}", playerReplacement == null ? "" : resolveSenderName(playerReplacement)))));
+		if (command.startsWith("@announce "))
+			Messenger.announce(playerReplacement, command.replace("@announce ", ""));
+
+		else if (command.startsWith("@warn "))
+			Messenger.warn(playerReplacement, command.replace("@warn ", ""));
+
+		else if (command.startsWith("@error "))
+			Messenger.error(playerReplacement, command.replace("@error ", ""));
+
+		else if (command.startsWith("@info "))
+			Messenger.info(playerReplacement, command.replace("@info ", ""));
+
+		else if (command.startsWith("@question "))
+			Messenger.question(playerReplacement, command.replace("@question ", ""));
+
+		else if (command.startsWith("@success "))
+			Messenger.success(playerReplacement, command.replace("@success ", ""));
+
+		else {
+			command = command.startsWith("/") ? command.substring(1) : command;
+			command = command.replace("{player}", playerReplacement == null ? "" : resolveSenderName(playerReplacement));
+
+			// Workaround for JSON in tellraw getting HEX colors replaced
+			if (!command.startsWith("tellraw"))
+				command = colorize(command);
+
+			final String finalCommand = command;
+
+			runLater(() -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand));
+		}
 	}
 
 	/**
@@ -1205,7 +1270,7 @@ public final class Common {
 			return;
 
 		for (String message : messages) {
-			if (message.equals("none") || message.isEmpty())
+			if (message.equals("none"))
 				continue;
 
 			if (stripColors(message).replace(" ", "").isEmpty()) {
@@ -1786,7 +1851,7 @@ public final class Common {
 	 *
 	 * @return
 	 */
-	public static List<String> getPlayerNames(final boolean includeVanished, @Nullable Player otherPlayer) {
+	public static List<String> getPlayerNames(final boolean includeVanished, Player otherPlayer) {
 		final List<String> found = new ArrayList<>();
 
 		for (final Player online : Remain.getOnlinePlayers()) {
@@ -1816,7 +1881,7 @@ public final class Common {
 	 * @param otherPlayer
 	 * @return
 	 */
-	public static List<String> getPlayerNicknames(final boolean includeVanished, @Nullable Player otherPlayer) {
+	public static List<String> getPlayerNicknames(final boolean includeVanished, Player otherPlayer) {
 		final List<String> found = new ArrayList<>();
 
 		for (final Player online : Remain.getOnlinePlayers()) {
@@ -2231,7 +2296,7 @@ public final class Common {
 	 * @param it the iterable
 	 * @return the new list
 	 */
-	public static <T> List<T> toList(@Nullable final Iterable<T> it) {
+	public static <T> List<T> toList(final Iterable<T> it) {
 		final List<T> list = new ArrayList<>();
 
 		if (it != null)
@@ -2297,6 +2362,22 @@ public final class Common {
 		return new HashSet<>(Arrays.asList(keys));
 	}
 
+	/**
+	 * Create a new array list that is mutable
+	 *
+	 * @param <T>
+	 * @param keys
+	 * @return
+	 */
+	public static <T> List<T> newList(final T... keys) {
+		final List<T> list = new ArrayList<>();
+
+		for (final T key : keys)
+			list.add(key);
+
+		return list;
+	}
+
 	// ------------------------------------------------------------------------------------------------------------
 	// Scheduling
 	// ------------------------------------------------------------------------------------------------------------
@@ -2321,8 +2402,6 @@ public final class Common {
 	public static BukkitTask runLater(final int delayTicks, Runnable task) {
 		final BukkitScheduler scheduler = Bukkit.getScheduler();
 		final JavaPlugin instance = SimplePlugin.getInstance();
-
-		task = new CompRunnable.SafeRunnable(task);
 
 		try {
 			return runIfDisabled(task) ? null : delayTicks == 0 ? task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTask(instance) : scheduler.runTask(instance, task) : task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskLater(instance, delayTicks) : scheduler.runTaskLater(instance, task, delayTicks);
@@ -2374,16 +2453,14 @@ public final class Common {
 		final BukkitScheduler scheduler = Bukkit.getScheduler();
 		final JavaPlugin instance = SimplePlugin.getInstance();
 
-		task = new CompRunnable.SafeRunnable(task);
-
 		try {
 			return runIfDisabled(task) ? null : delayTicks == 0 ? task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskAsynchronously(instance) : scheduler.runTaskAsynchronously(instance, task) : task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskLaterAsynchronously(instance, delayTicks) : scheduler.runTaskLaterAsynchronously(instance, task, delayTicks);
 
 		} catch (final NoSuchMethodError err) {
 			return runIfDisabled(task) ? null
 					: delayTicks == 0
-							? task instanceof CompRunnable ? ((CompRunnable) task).runTaskAsynchronously(instance) : getTaskFromId(scheduler.scheduleAsyncDelayedTask(instance, task))
-							: task instanceof CompRunnable ? ((CompRunnable) task).runTaskLaterAsynchronously(instance, delayTicks) : getTaskFromId(scheduler.scheduleAsyncDelayedTask(instance, task, delayTicks));
+							? getTaskFromId(scheduler.scheduleAsyncDelayedTask(instance, task))
+							: getTaskFromId(scheduler.scheduleAsyncDelayedTask(instance, task, delayTicks));
 		}
 	}
 
@@ -2408,16 +2485,12 @@ public final class Common {
 	 */
 	public static BukkitTask runTimer(final int delayTicks, final int repeatTicks, Runnable task) {
 
-		task = new CompRunnable.SafeRunnable(task);
-
 		try {
 			return runIfDisabled(task) ? null : task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskTimer(SimplePlugin.getInstance(), delayTicks, repeatTicks) : Bukkit.getScheduler().runTaskTimer(SimplePlugin.getInstance(), task, delayTicks, repeatTicks);
 
 		} catch (final NoSuchMethodError err) {
 			return runIfDisabled(task) ? null
-					: task instanceof CompRunnable
-							? ((CompRunnable) task).runTaskTimer(SimplePlugin.getInstance(), delayTicks, repeatTicks)
-							: getTaskFromId(Bukkit.getScheduler().scheduleSyncRepeatingTask(SimplePlugin.getInstance(), task, delayTicks, repeatTicks));
+					: getTaskFromId(Bukkit.getScheduler().scheduleSyncRepeatingTask(SimplePlugin.getInstance(), task, delayTicks, repeatTicks));
 		}
 	}
 
@@ -2442,16 +2515,12 @@ public final class Common {
 	 */
 	public static BukkitTask runTimerAsync(final int delayTicks, final int repeatTicks, Runnable task) {
 
-		task = new CompRunnable.SafeRunnable(task);
-
 		try {
 			return runIfDisabled(task) ? null : task instanceof BukkitRunnable ? ((BukkitRunnable) task).runTaskTimerAsynchronously(SimplePlugin.getInstance(), delayTicks, repeatTicks) : Bukkit.getScheduler().runTaskTimerAsynchronously(SimplePlugin.getInstance(), task, delayTicks, repeatTicks);
 
 		} catch (final NoSuchMethodError err) {
 			return runIfDisabled(task) ? null
-					: task instanceof CompRunnable
-							? ((CompRunnable) task).runTaskTimerAsynchronously(SimplePlugin.getInstance(), delayTicks, repeatTicks)
-							: getTaskFromId(Bukkit.getScheduler().scheduleAsyncRepeatingTask(SimplePlugin.getInstance(), task, delayTicks, repeatTicks));
+					: getTaskFromId(Bukkit.getScheduler().scheduleAsyncRepeatingTask(SimplePlugin.getInstance(), task, delayTicks, repeatTicks));
 		}
 	}
 
@@ -2474,7 +2543,7 @@ public final class Common {
 	// This is fail-safe to critical save-on-exit operations in case our plugin is improperly reloaded (PlugMan) or malfunctions
 	private static boolean runIfDisabled(final Runnable run) {
 		if (!SimplePlugin.getInstance().isEnabled()) {
-			new CompRunnable.SafeRunnable(run).run();
+			run.run();
 
 			return true;
 		}
@@ -2597,10 +2666,6 @@ public final class Common {
 		New convert(Old value);
 	}
 
-	// ------------------------------------------------------------------------------------------------------------
-	// Connecting to the internet
-	// ------------------------------------------------------------------------------------------------------------
-
 	/**
 	 * Convenience class for converting map to a list
 	 *
@@ -2608,6 +2673,7 @@ public final class Common {
 	 * @param <K>
 	 * @param <V>
 	 */
+	@SuppressWarnings("hiding")
 	public interface MapToListConverter<O, K, V> {
 
 		/**
@@ -2619,10 +2685,6 @@ public final class Common {
 		 */
 		O convert(K key, V value);
 	}
-
-	// ------------------------------------------------------------------------------------------------------------
-	// Java convenience methods
-	// ------------------------------------------------------------------------------------------------------------
 
 	/**
 	 * Convenience class for converting between maps
@@ -2684,8 +2746,11 @@ final class TimedCharSequence implements CharSequence {
 	@Override
 	public char charAt(final int index) {
 
-		if (System.currentTimeMillis() > futureTimestampLimit)
-			throw new RegexTimeoutException(message, futureTimestampLimit);
+		// Temporarily disabled due to a rare condition upstream when we take this message
+		// and run it in a runnable, then this is still being evaluated past limit and it fails
+		//
+		//if (System.currentTimeMillis() > futureTimestampLimit)
+		//	throw new RegexTimeoutException(message, futureTimestampLimit);
 
 		return message.charAt(index);
 	}

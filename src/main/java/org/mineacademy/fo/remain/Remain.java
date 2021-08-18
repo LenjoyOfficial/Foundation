@@ -24,10 +24,9 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.annotation.Nullable;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -43,6 +42,7 @@ import org.bukkit.advancement.Advancement;
 import org.bukkit.advancement.AdvancementProgress;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
@@ -77,6 +77,7 @@ import org.mineacademy.fo.Common;
 import org.mineacademy.fo.EntityUtil;
 import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.ItemUtil;
+import org.mineacademy.fo.MathUtil;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.PlayerUtil;
@@ -90,7 +91,6 @@ import org.mineacademy.fo.model.UUIDToNameConverter;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.internal.BossBarInternals;
 import org.mineacademy.fo.remain.internal.ChatInternals;
-import org.mineacademy.fo.remain.internal.ParticleInternals;
 import org.mineacademy.fo.remain.nbt.NBTInternals;
 import org.mineacademy.fo.settings.SimpleYaml;
 
@@ -245,7 +245,7 @@ public final class Remain {
 			if (MinecraftVersion.newerThan(V.v1_7))
 				NBTInternals.checkCompatible();
 
-			ParticleInternals.ANGRY_VILLAGER.getClass();
+			CompParticle.CRIT.getClass();
 
 			for (final Material bukkitMaterial : Material.values())
 				CompMaterial.fromString(bukkitMaterial.toString());
@@ -253,7 +253,7 @@ public final class Remain {
 			for (final CompMaterial compMaterial : CompMaterial.values())
 				compMaterial.getMaterial();
 
-			getNMSClass("Entity");
+			getNMSClass("Entity", "net.minecraft.world.entity.Entity");
 
 		} catch (final Throwable t) {
 			Bukkit.getLogger().severe("** COMPATIBILITY TEST FAILED - THIS PLUGIN WILL NOT FUNCTION PROPERLY **");
@@ -270,14 +270,19 @@ public final class Remain {
 
 			// Load optional parts
 			try {
+
 				getHandle = getOBCClass("entity.CraftPlayer").getMethod("getHandle");
-				fieldPlayerConnection = getNMSClass("EntityPlayer").getField(hasNMS ? "playerConnection" : "netServerHandler");
-				sendPacket = getNMSClass(hasNMS ? "PlayerConnection" : "NetServerHandler").getMethod("sendPacket", getNMSClass("Packet"));
+
+				fieldPlayerConnection = getNMSClass("EntityPlayer", "net.minecraft.server.level.EntityPlayer")
+						.getField(MinecraftVersion.atLeast(V.v1_17) ? "b" : hasNMS ? "playerConnection" : "netServerHandler");
+
+				sendPacket = getNMSClass(hasNMS ? "PlayerConnection" : "NetServerHandler", "net.minecraft.server.network.PlayerConnection")
+						.getMethod("sendPacket", getNMSClass("Packet", "net.minecraft.network.protocol.Packet"));
 
 			} catch (final Throwable t) {
 				Bukkit.getLogger().warning("Unable to find setup some parts of reflection. Plugin will still function.");
 				Bukkit.getLogger().warning("Error: " + t.getClass().getSimpleName() + ": " + t.getMessage());
-				Bukkit.getLogger().warning("Ignore this if using Cauldron. Otherwise check if your server is compatibible.");
+				Bukkit.getLogger().warning("Ignore this if using Cauldron. Otherwise check if your server is compatibble.");
 
 				fieldPlayerConnection = null;
 				sendPacket = null;
@@ -422,8 +427,12 @@ public final class Remain {
 	 * @return
 	 */
 	public static boolean isProtocol18Hack() {
+		if (MinecraftVersion.newerThan(V.v1_9))
+			return false;
+
 		try {
-			getNMSClass("PacketPlayOutEntityTeleport").getConstructor(int.class, int.class, int.class, int.class, byte.class, byte.class, boolean.class, boolean.class);
+			getNMSClass("PacketPlayOutEntityTeleport", "N/A").getConstructor(int.class, int.class, int.class, int.class, byte.class, byte.class, boolean.class, boolean.class);
+
 		} catch (final Throwable t) {
 			return false;
 		}
@@ -451,7 +460,7 @@ public final class Remain {
 			sendPacket.invoke(playerConnection, packet);
 
 		} catch (final ReflectiveOperationException ex) {
-			throw new ReflectionException("Could not send " + packet.getClass().getSimpleName() + " to " + player.getName(), ex);
+			throw new ReflectionException(ex, "Error sending packet " + packet.getClass() + " to player " + player.getName());
 		}
 	}
 
@@ -563,10 +572,11 @@ public final class Remain {
 	@Deprecated
 	public static Item spawnItem(final Location location, final ItemStack item, final Consumer<Item> modifier) {
 		try {
-			final Class<?> nmsWorldClass = getNMSClass("World");
-			final Class<?> nmsStackClass = getNMSClass("ItemStack");
-			final Class<?> nmsEntityClass = getNMSClass("Entity");
-			final Class<?> nmsItemClass = getNMSClass("EntityItem");
+
+			final Class<?> nmsWorldClass = getNMSClass("World", "net.minecraft.world.level.World");
+			final Class<?> nmsStackClass = getNMSClass("ItemStack", "net.minecraft.world.item.ItemStack");
+			final Class<?> nmsEntityClass = getNMSClass("Entity", "net.minecraft.world.entity.Entity");
+			final Class<?> nmsItemClass = getNMSClass("EntityItem", "net.minecraft.world.entity.item.EntityItem");
 
 			final Constructor<?> entityConstructor = nmsItemClass.getConstructor(nmsWorldClass, double.class, double.class, double.class, nmsStackClass);
 
@@ -794,8 +804,8 @@ public final class Remain {
 		final Method asNMSCopyMethod = ReflectionUtil.getMethod(craftItemstack, "asNMSCopy", ItemStack.class);
 
 		// NMS Method to serialize a net.minecraft.server.ItemStack to a valid Json string
-		final Class<?> nmsItemStack = ReflectionUtil.getNMSClass("ItemStack");
-		final Class<?> nbtTagCompound = ReflectionUtil.getNMSClass("NBTTagCompound");
+		final Class<?> nmsItemStack = ReflectionUtil.getNMSClass("ItemStack", "net.minecraft.world.item.ItemStack");
+		final Class<?> nbtTagCompound = ReflectionUtil.getNMSClass("NBTTagCompound", "net.minecraft.nbt.NBTTagCompound");
 		final Method saveItemstackMethod = ReflectionUtil.getMethod(nmsItemStack, "save", nbtTagCompound);
 
 		final Object nmsNbtTagCompoundObj = ReflectionUtil.instantiate(nbtTagCompound);
@@ -1067,6 +1077,55 @@ public final class Remain {
 	}
 
 	/**
+	 * Broadcast a chest open animation at the given block,
+	 * the block must be a chest!
+	 *
+	 * @param block
+	 */
+	public static void sendChestClose(Block block) {
+		sendChestAction(block, 0);
+	}
+
+	/**
+	 * Broadcast a chest open animation at the given block,
+	 * the block must be a chest!
+	 *
+	 * @param location
+	 */
+	public static void sendChestOpen(Block block) {
+		sendChestAction(block, 1);
+	}
+
+	/*
+	 * A helper method
+	 */
+	private static void sendChestAction(Block block, int action) {
+
+		final BlockState state = block.getState();
+		Valid.checkBoolean(state instanceof Chest, "You can only send chest action packet for chests not " + block);
+
+		try {
+			if (action == 1)
+				((Chest) state).open();
+			else
+				((Chest) state).close();
+
+		} catch (final NoSuchMethodError t) {
+			final Location location = block.getLocation();
+
+			final Class<?> blockClass = getNMSClass("Block");
+			final Class<?> blocks = getNMSClass("Blocks");
+
+			final Object position = ReflectionUtil.instantiate(ReflectionUtil.getConstructorNMS("BlockPosition", double.class, double.class, double.class), location.getX(), location.getY(), location.getZ());
+			final Object packet = ReflectionUtil.instantiate(ReflectionUtil.getConstructorNMS("PacketPlayOutBlockAction",
+					ReflectionUtil.getNMSClass("BlockPosition"), blockClass, int.class, int.class), position, ReflectionUtil.getStaticFieldContent(blocks, "CHEST"), 1, action);
+
+			for (final Player player : getOnlinePlayers())
+				sendPacket(player, packet);
+		}
+	}
+
+	/**
 	 * Creates new plugin command from given label
 	 *
 	 * @param label
@@ -1255,7 +1314,7 @@ public final class Remain {
 	 * @param en
 	 * @return
 	 */
-	public static String getNMSStatisticName(final Statistic stat, @Nullable final Material mat, @Nullable final EntityType en) {
+	public static String getNMSStatisticName(final Statistic stat, final Material mat, final EntityType en) {
 		final Class<?> craftStatistic = getOBCClass("CraftStatistic");
 		Object nmsStatistic = null;
 
@@ -1305,13 +1364,13 @@ public final class Remain {
 
 			} catch (final NoSuchMethodError err) {
 				try {
-					final Object respawnEnum = getNMSClass("EnumClientCommand").getEnumConstants()[0];
-					final Constructor<?>[] constructors = getNMSClass("PacketPlayInClientCommand").getConstructors();
+					final Object respawnEnum = getNMSClass("EnumClientCommand", "N/A").getEnumConstants()[0];
+					final Constructor<?>[] constructors = getNMSClass("PacketPlayInClientCommand", "N/A").getConstructors();
 
 					for (final Constructor<?> constructor : constructors) {
 						final Class<?>[] args = constructor.getParameterTypes();
 						if (args.length == 1 && args[0] == respawnEnum.getClass()) {
-							final Object packet = getNMSClass("PacketPlayInClientCommand").getConstructor(args).newInstance(respawnEnum);
+							final Object packet = getNMSClass("PacketPlayInClientCommand", "N/A").getConstructor(args).newInstance(respawnEnum);
 
 							sendPacket(player, packet);
 							break;
@@ -1333,8 +1392,21 @@ public final class Remain {
 	 */
 	public static void openBook(Player player, ItemStack book) {
 		Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_8), "Opening books is only supported on MC 1.8 and greater");
+		Valid.checkBoolean(book.getItemMeta() instanceof BookMeta, "openBook method called for not a book item: " + book);
+
+		// Fix "Invalid book tag" error when author/title is empty
+		final BookMeta meta = (BookMeta) book.getItemMeta();
+
+		if (meta.getAuthor() == null)
+			meta.setAuthor("");
+
+		if (meta.getTitle() == null)
+			meta.setTitle("");
+
+		book.setItemMeta(meta);
 
 		try {
+
 			player.openBook(book);
 
 		} catch (final NoSuchMethodError ex) {
@@ -1365,19 +1437,63 @@ public final class Remain {
 	 */
 	@Deprecated
 	public static void updateInventoryTitle(final Player player, String title) {
+
 		try {
+			if (MinecraftVersion.atLeast(V.v1_17)) {
+				final Object nmsPlayer = Remain.getHandleEntity(player);
+				final Object chatComponent = toIChatBaseComponentPlain(ChatColor.translateAlternateColorCodes('&', title));
+
+				final int inventorySize = player.getOpenInventory().getTopInventory().getSize() / 9;
+				String containerName;
+
+				if (inventorySize == 1)
+					containerName = "a";
+
+				else if (inventorySize == 2)
+					containerName = "b";
+
+				else if (inventorySize == 3)
+					containerName = "c";
+
+				else if (inventorySize == 4)
+					containerName = "d";
+
+				else if (inventorySize == 5)
+					containerName = "e";
+
+				else if (inventorySize == 6)
+					containerName = "f";
+				else
+					throw new FoException("Cannot generate NMS container class to update inventory of size " + inventorySize);
+
+				final Object container = ReflectionUtil.getStaticFieldContent(ReflectionUtil.lookupClass("net.minecraft.world.inventory.Containers"), containerName);
+
+				final Constructor<?> packetConstructor = ReflectionUtil.getConstructor(
+						"net.minecraft.network.protocol.game.PacketPlayOutOpenWindow",
+						int.class,
+						container.getClass(),
+						ReflectionUtil.lookupClass("net.minecraft.network.chat.IChatBaseComponent"));
+
+				final Object activeContainer = ReflectionUtil.getFieldContent(nmsPlayer, "bV");
+				final int windowId = ReflectionUtil.getFieldContent(activeContainer, "j");
+
+				Remain.sendPacket(player, ReflectionUtil.instantiate(packetConstructor, windowId, container, chatComponent));
+				ReflectionUtil.invoke("initMenu", nmsPlayer, activeContainer);
+
+				return;
+			}
+
 			if (MinecraftVersion.olderThan(V.v1_9) && title.length() > 32)
 				title = title.substring(0, 32);
 
-			final Object entityPlayer = player.getClass().getMethod("getHandle").invoke(player);
-
+			final Object entityPlayer = getHandleEntity(player);
 			final Object activeContainer = entityPlayer.getClass().getField("activeContainer").get(entityPlayer);
 			final Object windowId = activeContainer.getClass().getField("windowId").get(activeContainer);
 
-			final Object packet;
+			final Object packetOpenWindow;
 
 			if (MinecraftVersion.atLeast(V.v1_8)) {
-				final Constructor<?> chatMessageConst = getNMSClass("ChatMessage").getConstructor(String.class, Object[].class);
+				final Constructor<?> chatMessageConst = getNMSClass("ChatMessage", "net.minecraft.network.chat.ChatMessage").getConstructor(String.class, Object[].class);
 				final Object chatMessage = chatMessageConst.newInstance(ChatColor.translateAlternateColorCodes('&', title), new Object[0]);
 
 				if (MinecraftVersion.newerThan(V.v1_13)) {
@@ -1389,27 +1505,30 @@ public final class Remain {
 						return;
 					}
 
-					final Class<?> containersClass = getNMSClass("Containers");
-					final Constructor<?> packetConst = getNMSClass("PacketPlayOutOpenWindow").getConstructor(/*windowID*/int.class, /*containers*/containersClass, /*msg*/getNMSClass("IChatBaseComponent"));
-					final Object container = containersClass.getField("GENERIC_9X" + inventorySize).get(null);
+					final Class<?> containersClass = getNMSClass("Containers", "net.minecraft.world.inventory.Containers");
+					final Constructor<?> packetConst = getNMSClass("PacketPlayOutOpenWindow", "net.minecraft.network.protocol.game.PacketPlayOutOpenWindow")
+							.getConstructor(/*windowID*/int.class, /*containers*/containersClass, /*msg*/getNMSClass("IChatBaseComponent", "net.minecraft.network.chat.IChatBaseComponent"));
 
-					packet = packetConst.newInstance(windowId, container, chatMessage);
+					final String containerName = "GENERIC_9X" + inventorySize;
+
+					final Object container = containersClass.getField(containerName).get(null);
+
+					packetOpenWindow = packetConst.newInstance(windowId, container, chatMessage);
 
 				} else {
-					final Constructor<?> packetConst = getNMSClass("PacketPlayOutOpenWindow").getConstructor(int.class, String.class, getNMSClass("IChatBaseComponent"), int.class);
+					final Constructor<?> packetConst = getNMSClass("PacketPlayOutOpenWindow", "N/A").getConstructor(int.class, String.class, getNMSClass("IChatBaseComponent", "net.minecraft.network.chat.IChatBaseComponent"), int.class);
 
-					packet = packetConst.newInstance(windowId, "minecraft:chest", chatMessage, player.getOpenInventory().getTopInventory().getSize());
+					packetOpenWindow = packetConst.newInstance(windowId, "minecraft:chest", chatMessage, player.getOpenInventory().getTopInventory().getSize());
 				}
 			} else {
 				final Constructor<?> openWindow = ReflectionUtil.getConstructor(
-						getNMSClass(MinecraftVersion.atLeast(V.v1_7) ? "PacketPlayOutOpenWindow" : "Packet100OpenWindow"), int.class, int.class, String.class, int.class, boolean.class);
+						getNMSClass(MinecraftVersion.atLeast(V.v1_7) ? "PacketPlayOutOpenWindow" : "Packet100OpenWindow", "N/A"), int.class, int.class, String.class, int.class, boolean.class);
 
-				packet = ReflectionUtil.instantiate(openWindow, windowId, 0, ChatColor.translateAlternateColorCodes('&', title), player.getOpenInventory().getTopInventory().getSize(), true);
+				packetOpenWindow = ReflectionUtil.instantiate(openWindow, windowId, 0, ChatColor.translateAlternateColorCodes('&', title), player.getOpenInventory().getTopInventory().getSize(), true);
 			}
 
-			sendPacket(player, packet);
-
-			entityPlayer.getClass().getMethod("updateInventory", getNMSClass("Container")).invoke(entityPlayer, activeContainer);
+			sendPacket(player, packetOpenWindow);
+			entityPlayer.getClass().getMethod("updateInventory", getNMSClass("Container", "net.minecraft.world.inventory.Container")).invoke(entityPlayer, activeContainer);
 
 		} catch (final ReflectiveOperationException ex) {
 			Common.error(ex, "Error updating " + player.getName() + " inventory title to '" + title + "'");
@@ -1436,7 +1555,7 @@ public final class Remain {
 		try {
 			player.sendBlockChange(location, material.getMaterial().createBlockData());
 		} catch (final NoSuchMethodError ex) {
-			player.sendBlockChange(location, material.getMaterial(), (byte) material.getData());
+			player.sendBlockChange(location, material.getMaterial(), material.getData());
 		}
 	}
 
@@ -1673,7 +1792,17 @@ public final class Remain {
 	}
 
 	/**
-	 * Return IChatBaseComponent from the given JSON
+	 * Return IChatBaseComponent from the given plain text
+	 *
+	 * @param text
+	 * @return
+	 */
+	public static Object toIChatBaseComponentPlain(String text) {
+		return toIChatBaseComponent(TextComponent.fromLegacyText(text));
+	}
+
+	/**
+	 * Return IChatBaseComponent from the given component list
 	 *
 	 * @param baseComponents
 	 * @return
@@ -1691,7 +1820,7 @@ public final class Remain {
 	public static Object toIChatBaseComponent(String json) {
 		Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_7), "Serializing chat components requires Minecraft 1.7.10 and greater");
 
-		final Class<?> chatSerializer = ReflectionUtil.getNMSClass((MinecraftVersion.equals(V.v1_7) ? "" : "IChatBaseComponent$") + "ChatSerializer");
+		final Class<?> chatSerializer = ReflectionUtil.getNMSClass((MinecraftVersion.equals(V.v1_7) ? "" : "IChatBaseComponent$") + "ChatSerializer", "net.minecraft.network.chat.IChatBaseComponent$ChatSerializer");
 		final Method a = ReflectionUtil.getMethod(chatSerializer, "a", String.class);
 
 		return ReflectionUtil.invoke(a, null, json);
@@ -1723,6 +1852,61 @@ public final class Remain {
 			en.setCustomNameVisible(true);
 			en.setCustomName(Common.colorize(name));
 		} catch (final NoSuchMethodError er) {
+		}
+	}
+
+	/**
+	 * Calls NMS to find out if the entity is invisible, works for any entity,
+	 * better than Bukkit since it has extreme downwards compatibility and does not require LivingEntity
+	 *
+	 * @param entity
+	 * @return
+	 */
+	public static boolean isInvisible(Entity entity) {
+		Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_4), "Entity#isInvisible requires Minecraft 1.4.7 or greater");
+
+		if (entity instanceof LivingEntity && MinecraftVersion.atLeast(V.v1_16))
+			return ((LivingEntity) entity).isInvisible();
+
+		else {
+			final Object nmsEntity = getHandleEntity(entity);
+
+			return (boolean) ReflectionUtil.invoke("isInvisible", nmsEntity);
+		}
+	}
+
+	/**
+	 * Calls NMS to set invisibility status of any entity,
+	 * better than Bukkit since it has extreme downwards compatibility and does not require LivingEntity
+	 *
+	 * @param entity
+	 * @param invisible
+	 */
+	public static void setInvisible(Entity entity, boolean invisible) {
+		Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_4), "Entity#setInvisible requires Minecraft 1.4.7 or greater");
+
+		if (entity instanceof LivingEntity && MinecraftVersion.atLeast(V.v1_16))
+			((LivingEntity) entity).setInvisible(invisible);
+
+		else {
+
+			// Minimize entity flicker when hiding two ticks later
+			// NOT USED : Potentially expensive for performance and hides the entity equipment which may be used purposefully
+			/*if (entity instanceof LivingEntity && MinecraftVersion.atLeast(V.v1_7)) {
+				final Class<?> destroyPacketClass = ReflectionUtil.getNMSClass("PacketPlayOutEntityDestroy");
+				final Object destroyPacket = ReflectionUtil.instantiate(ReflectionUtil.getConstructor(destroyPacketClass, int[].class), new int[] { entity.getEntityId() });
+			
+				final double range = 64;
+			
+				for (final Entity nearby : entity.getWorld().getNearbyEntities(entity.getLocation(), range, range, range))
+					if (nearby instanceof Player)
+						Remain.sendPacket((Player) nearby, destroyPacket);
+			}*/
+
+			final Object nmsEntity = getHandleEntity(entity);
+
+			// https://www.spigotmc.org/threads/how-do-i-make-an-entity-go-invisible-without-using-potioneffects.321227/
+			Common.runLater(2, () -> ReflectionUtil.invoke("setInvisible", nmsEntity, invisible));
 		}
 	}
 
@@ -1812,10 +1996,53 @@ public final class Remain {
 
 				if (hasAdvancements)
 					new AdvancementAccessor(colorized, icon.toString().toLowerCase()).show(receiver);
+
 				else
 					receiver.sendMessage(colorized);
 			}
 		}
+	}
+
+	/**
+	 * Send a "toast" notification to the given receivers. This is an advancement notification that cannot
+	 * be modified that much. It imposes a slight performance penalty the more players to send to.
+	 *
+	 * Each player sending is delayed by 0.1s
+	 *
+	 * @param receiver
+	 * @param message you can replace player-specific variables in the message here
+	 * @param icon
+	 */
+	public static void sendToast(final List<Player> receivers, final Function<Player, String> message, final CompMaterial icon) {
+
+		if (hasAdvancements) {
+			Common.runLaterAsync(() -> {
+				for (final Player receiver : receivers) {
+
+					// Sleep to mitigate sending not working at once
+					Common.sleep(100);
+
+					Common.runLater(() -> {
+						final String colorized = Common.colorize(message.apply(receiver));
+
+						if (!colorized.isEmpty()) {
+							final AdvancementAccessor accessor = new AdvancementAccessor(colorized, icon.toString().toLowerCase());
+
+							if (receiver.isOnline())
+								accessor.show(receiver);
+						}
+					});
+				}
+			});
+
+		} else
+			for (final Player receiver : receivers) {
+				final String colorized = Common.colorize(message.apply(receiver));
+
+				if (!colorized.isEmpty())
+					receiver.sendMessage(colorized);
+			}
+
 	}
 
 	/**
@@ -2075,7 +2302,7 @@ public final class Remain {
 		Valid.checkNotNull(stream, "Stream cannot be null");
 
 		final StringBuilder builder = new StringBuilder();
-		final InputStreamReader reader = new InputStreamReader(stream);
+		final InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8);
 
 		try (final BufferedReader input = new BufferedReader(reader)) {
 			String line;
@@ -2227,6 +2454,48 @@ public final class Remain {
 		return !"see mineacademy.org/server-properties to configure".contains(serverName) && !"undefined".equals(serverName) && !"Unknown Server".equals(serverName);
 	}
 
+	/**
+	 * Return the corresponding major Java version such as 8 for Java 1.8, or 11 for Java 11.
+	 *
+	 * @return
+	 */
+	public static int getJavaVersion() {
+		String version = System.getProperty("java.version");
+
+		if (version.startsWith("1."))
+			version = version.substring(2, 3);
+
+		else {
+			final int dot = version.indexOf(".");
+
+			if (dot != -1)
+				version = version.substring(0, dot);
+		}
+
+		if (version.contains("-"))
+			version = version.split("\\-")[0];
+
+		return Integer.parseInt(version);
+	}
+
+	/**
+	 * Return the server's ticks per second (requires Paper otherwise we return 20)
+	 *
+	 * @return
+	 */
+	public static int getTPS() {
+
+		try {
+			final Method getTPS = Bukkit.class.getDeclaredMethod("getTPS", double[].class);
+
+			return (int) MathUtil.floor(getTPS == null ? 20 : ((double[]) getTPS.invoke(null))[0]);
+		} catch (final ReflectiveOperationException ex) {
+
+			// Unsupported
+			return 20;
+		}
+	}
+
 	// ----------------------------------------------------------------------------------------------------
 	// Getters for various server functions
 	// ----------------------------------------------------------------------------------------------------
@@ -2361,7 +2630,7 @@ public final class Remain {
 			if (number instanceof Double)
 				return ((Double) number).intValue();
 			if (number instanceof Integer)
-				return ((Integer) number);
+				return (Integer) number;
 
 			return (int) Double.parseDouble(number.toString());
 
@@ -2427,8 +2696,8 @@ class BungeeChatProvider {
 
 		try {
 			if (MinecraftVersion.equals(V.v1_7)) {
-				final Class<?> chatBaseComponentClass = ReflectionUtil.getNMSClass("IChatBaseComponent");
-				final Class<?> packetClass = ReflectionUtil.getNMSClass("PacketPlayOutChat");
+				final Class<?> chatBaseComponentClass = getNMSClass("IChatBaseComponent", "N/A");
+				final Class<?> packetClass = getNMSClass("PacketPlayOutChat", "N/A");
 
 				final Object chatBaseComponent = Remain.toIChatBaseComponent(comps);
 				final Object packet = ReflectionUtil.instantiate(ReflectionUtil.getConstructor(packetClass, chatBaseComponentClass), chatBaseComponent);
@@ -2555,6 +2824,8 @@ class PotionSetter {
 	 * @param level
 	 */
 	public static void setPotion(final ItemStack item, final PotionEffectType type, final int level) {
+		Valid.checkBoolean(item.getItemMeta() instanceof org.bukkit.inventory.meta.PotionMeta, "Can only use setPotion for items with PotionMeta not: " + item.getItemMeta());
+
 		final PotionType wrapped = PotionType.getByEffect(type);
 		final org.bukkit.inventory.meta.PotionMeta meta = (org.bukkit.inventory.meta.PotionMeta) item.getItemMeta();
 

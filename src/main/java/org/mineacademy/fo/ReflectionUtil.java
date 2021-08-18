@@ -22,6 +22,7 @@ import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.mineacademy.fo.MinecraftVersion.V;
@@ -42,21 +43,6 @@ import org.mineacademy.fo.remain.Remain;
 public final class ReflectionUtil {
 
 	/**
-	 * The full package name for NMS
-	 */
-	public static final String NMS = "net.minecraft.server";
-
-	/**
-	 * The package name for Craftbukkit
-	 */
-	public static final String CRAFTBUKKIT = "org.bukkit.craftbukkit";
-
-	/**
-	 * The chat component class
-	 */
-	public static final Class<?> CHAT_COMPONENT_CLASS = ReflectionUtil.getNMSClass("IChatBaseComponent");
-
-	/**
 	 * Compatible {@link EntityType} classes that fail gracefully so that
 	 * plugin loads even on old MC versions where those types are non existent
 	 * but are present in plugin's default configuration files
@@ -69,6 +55,21 @@ public final class ReflectionUtil {
 	private static final Map<String, Class<?>> classCache = new ConcurrentHashMap<>();
 	private static final Map<Class<?>, ReflectionData<?>> reflectionDataCache = new ConcurrentHashMap<>();
 	private static final Collection<String> classNameGuard = ConcurrentHashMap.newKeySet();
+
+	/**
+	 * The full package name for NMS
+	 */
+	public static final String NMS = "net.minecraft.server";
+
+	/**
+	 * The package name for Craftbukkit
+	 */
+	public static final String CRAFTBUKKIT = "org.bukkit.craftbukkit";
+
+	/**
+	 * The chat component class
+	 */
+	public static final Class<?> CHAT_COMPONENT_CLASS = getNMSClass("IChatBaseComponent", "net.minecraft.network.chat.IChatBaseComponent");
 
 	/**
 	 * Find a class automatically for older MC version (such as type EntityPlayer for oldName
@@ -146,7 +147,6 @@ public final class ReflectionUtil {
 
 	/**
 	 * Return a constructor for the given class
-	 *
 	 */
 	public static Constructor<?> getConstructor(@NonNull final Class<?> clazz, final Class<?>... params) {
 		try {
@@ -239,7 +239,6 @@ public final class ReflectionUtil {
 
 	/**
 	 * Gets the declared field in class by its name
-	 *
 	 */
 	public static Field getDeclaredField(final Class<?> clazz, final String fieldName) {
 		try {
@@ -253,6 +252,32 @@ public final class ReflectionUtil {
 			return field;
 
 		} catch (final ReflectiveOperationException e) {
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+
+	/**
+	 * Gets the field from the class that matches the given type and is at the given index
+	 *
+	 * @param clazz
+	 * @param type
+	 * @param index
+	 * @return
+	 */
+	public static Field getDeclaredField(final Class<?> clazz, final Class<?> type, final int index) {
+		int i = 0;
+
+		try {
+			for (final Field field : clazz.getDeclaredFields())
+				if (type.isAssignableFrom(field.getType()) && i++ == index) {
+					field.setAccessible(true);
+
+					return field;
+				}
+
+		} catch (final SecurityException e) {
 			e.printStackTrace();
 		}
 
@@ -307,7 +332,7 @@ public final class ReflectionUtil {
 	 * @param index
 	 * @param value
 	 */
-	public static void setChatComponentField(Object instance, int index, String value) {
+	public static void setChatComponentField(final Object instance, final int index, final String value) {
 		if (MinecraftVersion.olderThan(MinecraftVersion.V.v1_13)) {
 			setDeclaredField(instance, String.class, index, value);
 
@@ -409,7 +434,6 @@ public final class ReflectionUtil {
 
 	/**
 	 * Get a declared class method
-	 *
 	 */
 	public static Method getDeclaredMethod(final Class<?> clazz, final String methodName, Class<?>... args) {
 		try {
@@ -741,7 +765,7 @@ public final class ReflectionUtil {
 						name = "ZOMBIE";
 			}
 
-			if (enumType == DamageCause.class) {
+			if (enumType == EntityDamageEvent.DamageCause.class) {
 				if (MinecraftVersion.olderThan(V.v1_13))
 					if (rawName.equals("DRYOUT"))
 						name = "CUSTOM";
@@ -762,7 +786,7 @@ public final class ReflectionUtil {
 
 				if (rawName.equals("DRAGON_BREATH"))
 					try {
-						DamageCause.valueOf("DRAGON_BREATH");
+						EntityDamageEvent.DamageCause.valueOf("DRAGON_BREATH");
 					} catch (final Throwable t) {
 						name = "ENTITY_ATTACK";
 					}
@@ -887,12 +911,9 @@ public final class ReflectionUtil {
 	// ------------------------------------------------------------------------------------------
 
 	/**
-	 * Return a tree set of classes from the plugin that extend the given class
+	 * Get all classes in the java plugin
 	 *
-	 * @param <T>
-	 * @param <T>
 	 * @param plugin
-	 * @param extendingClass
 	 * @return
 	 */
 	public static List<Class<?>> getClasses(final Plugin plugin) {
@@ -905,7 +926,7 @@ public final class ReflectionUtil {
 	}
 
 	/**
-	 * Get all classes in the java plugin
+	 * Return a tree set of classes from the plugin that extend the given class
 	 *
 	 * @param plugin
 	 * @return

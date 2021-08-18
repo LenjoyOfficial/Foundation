@@ -13,6 +13,7 @@ import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
+import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.ItemUtil;
@@ -29,6 +30,7 @@ import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.model.BoxedMessage;
 import org.mineacademy.fo.model.ColoredRanges;
+import org.mineacademy.fo.model.InventoryItem;
 import org.mineacademy.fo.model.Replacer;
 import org.mineacademy.fo.model.SimpleSound;
 import org.mineacademy.fo.model.SimpleTime;
@@ -82,7 +84,7 @@ public class YamlConfig {
 	/**
 	 * All files that are currently loaded
 	 */
-	private static volatile StrictSet<ConfigInstance> loadedFiles = new StrictSet<>();
+	private static final StrictSet<ConfigInstance> loadedFiles = new StrictSet<>();
 
 	/**
 	 * The config file instance this config belongs to.
@@ -1062,6 +1064,18 @@ public class YamlConfig {
 	}
 
 	/**
+	 * Get a CompMaterial which is our cross-version compatible material class
+	 *
+	 * @param path
+	 * @return
+	 */
+	protected final CompMaterial getMaterial(final String path) {
+		final String name = getString(path);
+
+		return name == null ? null : CompMaterial.fromStringStrict(name);
+	}
+
+	/**
 	 * Get the colored ranges which can store colors for number ranges
 	 *
 	 * @param path
@@ -1088,15 +1102,39 @@ public class YamlConfig {
 	}
 
 	/**
-	 * Get a CompMaterial which is our cross-version compatible material class
+	 * Return an itemstack at the key position or default
+	 *
+	 * @param path
+	 * @param def
+	 * @return
+	 */
+	public ItemStack getItem(final String path, final ItemStack def) {
+		return isSet(path) ? getItem(path) : def;
+	}
+
+
+	/**
+	 * Returns an itemstack from the map, or null if does not exist
 	 *
 	 * @param path
 	 * @return
 	 */
-	protected final CompMaterial getMaterial(final String path) {
-		final String name = getString(path);
+	public ItemStack getItem(final String path) {
+		final SerializedMap map = getMap(path);
 
-		return name == null ? null : CompMaterial.fromStringStrict(name);
+		return !map.isEmpty() ? InventoryItem.toItem(map) : null;
+	}
+
+	/**
+	 * Returns an InventoryItem at the key position or null if not found
+	 *
+	 * @param path
+	 * @return
+	 */
+	public InventoryItem getInventoryItem(final String path) {
+		final SerializedMap map = getMap(path);
+
+		return !map.isEmpty() ? InventoryItem.deserialize(map) : null;
 	}
 
 	/**
@@ -2080,7 +2118,7 @@ public class YamlConfig {
 			this.play(player, fadeIn, stay, fadeOut, null);
 		}
 
-		public void play(final Player player, final int fadeIn, final int stay, final int fadeOut, Function<String, String> replacer) {
+		public void play(final Player player, final int fadeIn, final int stay, final int fadeOut, final Function<String, String> replacer) {
 			Remain.sendTitle(player, fadeIn, stay, fadeOut, replacer != null ? replacer.apply(title) : title, replacer != null ? replacer.apply(subtitle) : subtitle);
 		}
 	}

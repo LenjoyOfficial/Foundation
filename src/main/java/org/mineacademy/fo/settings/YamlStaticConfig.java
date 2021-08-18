@@ -1,5 +1,26 @@
 package org.mineacademy.fo.settings;
 
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.enchantments.Enchantment;
+import org.mineacademy.fo.Common;
+import org.mineacademy.fo.ReflectionUtil;
+import org.mineacademy.fo.Valid;
+import org.mineacademy.fo.collection.SerializedMap;
+import org.mineacademy.fo.collection.StrictList;
+import org.mineacademy.fo.constants.FoConstants;
+import org.mineacademy.fo.model.BoxedMessage;
+import org.mineacademy.fo.model.ColoredRanges;
+import org.mineacademy.fo.model.Replacer;
+import org.mineacademy.fo.model.SimpleSound;
+import org.mineacademy.fo.model.SimpleTime;
+import org.mineacademy.fo.plugin.SimplePlugin;
+import org.mineacademy.fo.remain.CompMaterial;
+import org.mineacademy.fo.remain.Remain;
+import org.mineacademy.fo.settings.YamlConfig.CasusHelper;
+import org.mineacademy.fo.settings.YamlConfig.TitleHelper;
+import org.mineacademy.fo.settings.model.SimpleDisplay;
+import org.mineacademy.fo.settings.model.SimpleProgressDisplay;
+
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -14,24 +35,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.enchantments.Enchantment;
-import org.mineacademy.fo.Common;
-import org.mineacademy.fo.ReflectionUtil;
-import org.mineacademy.fo.Valid;
-import org.mineacademy.fo.collection.SerializedMap;
-import org.mineacademy.fo.collection.StrictList;
-import org.mineacademy.fo.constants.FoConstants;
-import org.mineacademy.fo.model.BoxedMessage;
-import org.mineacademy.fo.model.Replacer;
-import org.mineacademy.fo.model.SimpleSound;
-import org.mineacademy.fo.model.SimpleTime;
-import org.mineacademy.fo.plugin.SimplePlugin;
-import org.mineacademy.fo.remain.CompMaterial;
-import org.mineacademy.fo.remain.Remain;
-import org.mineacademy.fo.settings.YamlConfig.CasusHelper;
-import org.mineacademy.fo.settings.YamlConfig.TitleHelper;
 
 /**
  * A special case {@link YamlConfig} that allows static access to this config. This is unsafe
@@ -221,7 +224,7 @@ public abstract class YamlStaticConfig {
 	/**
 	 * Loads the class via reflection, scanning for "private static void init()" methods to run
 	 */
-	private final void loadViaReflection() {
+	private void loadViaReflection() {
 		Valid.checkNotNull(TEMPORARY_INSTANCE, "Instance cannot be null " + getFileName());
 		Valid.checkNotNull(TEMPORARY_INSTANCE.getConfig(), "Config cannot be null for " + getFileName());
 		Valid.checkNotNull(TEMPORARY_INSTANCE.getDefaults(), "Default config cannot be null for " + getFileName());
@@ -409,7 +412,7 @@ public abstract class YamlStaticConfig {
 		return TEMPORARY_INSTANCE.getStringList(path);
 	}
 
-	protected static final <E> Set<E> getSet(final String path, Class<E> typeOf) {
+	protected static final <E> Set<E> getSet(final String path, final Class<E> typeOf) {
 		return TEMPORARY_INSTANCE.getSet(path, typeOf);
 	}
 
@@ -446,10 +449,9 @@ public abstract class YamlStaticConfig {
 	}
 
 	/**
-	 * @deprecated use {@link #getDouble(String)}
-	 *
 	 * @param path
 	 * @return
+	 * @deprecated use {@link #getDouble(String)}
 	 */
 	@Deprecated
 	protected static final double getDoubleSafe(final String path) {
@@ -464,6 +466,14 @@ public abstract class YamlStaticConfig {
 		return TEMPORARY_INSTANCE.getSound(path);
 	}
 
+	protected static final SimpleDisplay getDisplay(final String path) {
+		return TEMPORARY_INSTANCE.getDisplay(path);
+	}
+
+	protected static final SimpleProgressDisplay getProgressDisplay(final String path) {
+		return TEMPORARY_INSTANCE.getProgressDisplay(path);
+	}
+
 	protected static final CasusHelper getCasus(final String path) {
 		return TEMPORARY_INSTANCE.getCasus(path);
 	}
@@ -474,6 +484,10 @@ public abstract class YamlStaticConfig {
 
 	protected static final <T extends SimpleTime> T getTime(final String path) {
 		return TEMPORARY_INSTANCE.getTime(path);
+	}
+
+	protected static final ColoredRanges getColoredRanges(final String path) {
+		return TEMPORARY_INSTANCE.getColoredRanges(path);
 	}
 
 	protected static final CompMaterial getMaterial(final String path) {
@@ -488,7 +502,7 @@ public abstract class YamlStaticConfig {
 		return TEMPORARY_INSTANCE.get(path, typeOf);
 	}
 
-	protected static final <E> E getWithData(final String path, final Class<E> typeOf, Object... deserializeArguments) {
+	protected static final <E> E getWithData(final String path, final Class<E> typeOf, final Object... deserializeArguments) {
 		return TEMPORARY_INSTANCE.getWithData(path, typeOf, deserializeArguments);
 	}
 

@@ -1,25 +1,10 @@
 package org.mineacademy.fo.settings;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.function.Function;
-
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
@@ -42,19 +27,35 @@ import org.mineacademy.fo.constants.FoConstants;
 import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.model.BoxedMessage;
+import org.mineacademy.fo.model.ColoredRanges;
 import org.mineacademy.fo.model.Replacer;
 import org.mineacademy.fo.model.SimpleSound;
 import org.mineacademy.fo.model.SimpleTime;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.Remain;
+import org.mineacademy.fo.settings.model.SimpleDisplay;
+import org.mineacademy.fo.settings.model.SimpleProgressDisplay;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
-
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.function.Function;
 
 /**
  * The core configuration class. Manages all settings files.
@@ -109,7 +110,6 @@ public class YamlConfig {
 
 	/**
 	 * Internal flag that can be toggled to disable working with default files.
-	 *
 	 */
 	private boolean useDefaults = true;
 
@@ -231,7 +231,7 @@ public class YamlConfig {
 					final SimpleYaml config = FileUtil.loadConfigurationStrict(file);
 					final SimpleYaml defaultsConfig = Remain.loadConfiguration(is);
 
-					Valid.checkBoolean(file != null && file.exists(), "Failed to load " + localePath + " from " + file);
+					Valid.checkBoolean(file.exists(), "Failed to load " + localePath + " from " + file);
 
 					instance = new ConfigInstance(file, config, defaultsConfig, saveComments(), getUncommentedSections(), localePath);
 					addConfig(instance, this);
@@ -497,9 +497,9 @@ public class YamlConfig {
 	/**
 	 * Shall we attempt to save comments into this yaml config
 	 * and enforce the file to always look like the default one?
-	 *
+	 * <p>
 	 * You can exclude sections you do not want to symlink in {@link #getUncommentedSections()}
-	 *
+	 * <p>
 	 * Defaults to false.
 	 *
 	 * @return
@@ -511,11 +511,11 @@ public class YamlConfig {
 	/**
 	 * If {@link #SAVE_COMMENTS} is on, what sections should we ignore from
 	 * being updated/enforced commands?
-	 *
+	 * <p>
 	 * E.g. In ChatControl people can add their own channels so we make the
 	 * "Channels.List" ignored so that peoples' channels (new sections) won't get
 	 * remove.
-	 *
+	 * <p>
 	 * None by default.
 	 *
 	 * @return
@@ -806,7 +806,6 @@ public class YamlConfig {
 	 *
 	 * @param path
 	 * @return
-	 *
 	 * @deprecated use {@link #getDouble(String)}
 	 */
 	@Deprecated
@@ -916,6 +915,30 @@ public class YamlConfig {
 	 */
 	protected final SimpleSound getSound(final String path) {
 		return new SimpleSound(getString(path));
+	}
+
+	/**
+	 * Gets a deserialized SimpleDisplay, or null if invalid or not found
+	 *
+	 * @param path
+	 * @return
+	 */
+	protected final SimpleDisplay getDisplay(final String path) {
+		final SerializedMap map = getMap(path);
+
+		return !map.isEmpty() ? new SimpleDisplay(map) : null;
+	}
+
+	/**
+	 * Gets a deserialized SimpleProgressDisplay, or null if invalid or not found
+	 *
+	 * @param path
+	 * @return
+	 */
+	protected final SimpleProgressDisplay getProgressDisplay(final String path) {
+		final SerializedMap map = getMap(path);
+
+		return !map.isEmpty() ? new SimpleProgressDisplay(map) : null;
 	}
 
 	/**
@@ -1029,6 +1052,32 @@ public class YamlConfig {
 	}
 
 	/**
+	 * Get the colored ranges which can store colors for number ranges
+	 *
+	 * @param path
+	 * @param def
+	 * @return
+	 */
+	protected final ColoredRanges getColoredRanges(final String path, final SerializedMap def) {
+		forceSingleDefaults(path);
+
+		return isSet(path) ? getColoredRanges(path) : new ColoredRanges(def);
+	}
+
+	/**
+	 * Get the colored ranges which can store colors for number ranges
+	 * or null if the path isn't set
+	 *
+	 * @param path
+	 * @return
+	 */
+	protected final ColoredRanges getColoredRanges(final String path) {
+		final SerializedMap map = getMap(path);
+
+		return !map.isEmpty() ? new ColoredRanges(map) : null;
+	}
+
+	/**
 	 * Get a CompMaterial which is our cross-version compatible material class
 	 *
 	 * @param path
@@ -1044,7 +1093,6 @@ public class YamlConfig {
 	 * Get a list of unknown values
 	 *
 	 * @param path
-	 * @param of
 	 * @return
 	 */
 	protected final List<Object> getList(final String path) {
@@ -1141,7 +1189,6 @@ public class YamlConfig {
 	 * @param <T>
 	 * @param path
 	 * @param type
-	 *
 	 * @return
 	 * @deprecated this code is specifically targeted for our plugins only
 	 */
@@ -1527,7 +1574,6 @@ public class YamlConfig {
 	 * @param to
 	 * @param converter
 	 */
-	@SuppressWarnings("rawtypes")
 	protected final <O, N> void convert(final String path, final Class<O> from, final Class<N> to, final Function<O, N> converter) {
 		final Object old = getObject(path);
 
@@ -1786,7 +1832,7 @@ public class YamlConfig {
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		throw new RuntimeException("Please implement your own equals() method for " + getClass());
 	}
 
@@ -1796,21 +1842,21 @@ public class YamlConfig {
 
 	/**
 	 * @deprecated This class has been moved into {@link SimpleTime}.
-	 * 			   To migrate, simply rename TimeHelper into SimpleTime everywhere.
+	 * To migrate, simply rename TimeHelper into SimpleTime everywhere.
 	 */
 	@Deprecated
 	public static final class TimeHelper extends SimpleTime {
 
-		protected TimeHelper(String time) {
+		protected TimeHelper(final String time) {
 			super(time);
 		}
 
 		/**
 		 * Generate new time. Valid examples: 15 ticks 1 second 25 minutes 3 hours etc.
 		 *
-		 * @deprecated use {@link SimpleTime#from(String)} that has now replaced this constructor
 		 * @param time
 		 * @return
+		 * @deprecated use {@link SimpleTime#from(String)} that has now replaced this constructor
 		 */
 		@Deprecated
 		public static TimeHelper from(final String time) {
@@ -2195,7 +2241,7 @@ final class ConfigInstance {
 	 */
 	@Override
 	public boolean equals(final Object obj) {
-		return obj instanceof ConfigInstance ? ((ConfigInstance) obj).file.getName().equals(file.getName()) : obj instanceof File ? ((File) obj).getName().equals(file.getName()) : obj instanceof String ? ((String) obj).equals(file.getName()) : false;
+		return obj instanceof ConfigInstance ? ((ConfigInstance) obj).file.getName().equals(file.getName()) : obj instanceof File ? ((File) obj).getName().equals(file.getName()) : obj instanceof String && obj.equals(file.getName());
 	}
 }
 
@@ -2228,7 +2274,7 @@ final class LegacyEnum {
 	 * @param enumName
 	 * @return
 	 */
-	public static <T extends Enum<T>> boolean isIncompatible(Class<T> type, String enumName) {
+	public static <T extends Enum<T>> boolean isIncompatible(final Class<T> type, final String enumName) {
 		final List<String> types = INCOMPATIBLE_TYPES.get(type);
 
 		return types != null && types.contains(enumName.toUpperCase().replace(" ", "_"));

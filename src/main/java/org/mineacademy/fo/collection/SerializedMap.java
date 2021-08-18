@@ -1,18 +1,7 @@
 package org.mineacademy.fo.collection;
 
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-
+import com.google.gson.Gson;
+import lombok.NonNull;
 import org.bukkit.Location;
 import org.bukkit.configuration.MemorySection;
 import org.bukkit.enchantments.Enchantment;
@@ -28,9 +17,18 @@ import org.mineacademy.fo.model.Tuple;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompMaterial;
 
-import com.google.gson.Gson;
-
-import lombok.NonNull;
+import java.lang.reflect.Constructor;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 /**
  * Serialized map enables you to save and retain values from your
@@ -123,7 +121,7 @@ public final class SerializedMap extends StrictCollection {
 	 *
 	 * @param anotherMap
 	 */
-	public SerializedMap put(@NonNull SerializedMap anotherMap) {
+	public SerializedMap put(@NonNull final SerializedMap anotherMap) {
 		map.putAll(anotherMap.asMap());
 
 		return this;
@@ -137,7 +135,7 @@ public final class SerializedMap extends StrictCollection {
 	 */
 	public void putIfTrue(final String key, final boolean value) {
 		if (value)
-			put(key, value);
+			put(key, true);
 	}
 
 	/**
@@ -153,7 +151,7 @@ public final class SerializedMap extends StrictCollection {
 
 	/**
 	 * Puts the map into this map if not null and not empty
-	 *
+	 * <p>
 	 * This will put a NULL value into the map if the value is null
 	 *
 	 * @param key
@@ -163,15 +161,15 @@ public final class SerializedMap extends StrictCollection {
 		if (value != null && !value.isEmpty())
 			put(key, value);
 
-		// This value is undesirable to save if null, so if YamlConfig is used
-		// it will remove it from the config
+			// This value is undesirable to save if null, so if YamlConfig is used
+			// it will remove it from the config
 		else
 			map.getSource().put(key, null);
 	}
 
 	/**
 	 * Puts the collection into map if not null and not empty
-	 *
+	 * <p>
 	 * This will put a NULL value into the map if the value is null
 	 *
 	 * @param key
@@ -181,15 +179,15 @@ public final class SerializedMap extends StrictCollection {
 		if (value != null && !value.isEmpty())
 			put(key, value);
 
-		// This value is undesirable to save if null, so if YamlConfig is used
-		// it will remove it from the config
+			// This value is undesirable to save if null, so if YamlConfig is used
+			// it will remove it from the config
 		else
 			map.getSource().put(key, null);
 	}
 
 	/**
 	 * Puts the boolean into map if true
-	 *
+	 * <p>
 	 * This will put a NULL value into the map if the value is null
 	 *
 	 * @param key
@@ -199,15 +197,15 @@ public final class SerializedMap extends StrictCollection {
 		if (value)
 			put(key, value);
 
-		// This value is undesirable to save if null, so if YamlConfig is used
-		// it will remove it from the config
+			// This value is undesirable to save if null, so if YamlConfig is used
+			// it will remove it from the config
 		else
 			map.getSource().put(key, null);
 	}
 
 	/**
 	 * Puts the value into map if not null
-	 *
+	 * <p>
 	 * This will put a NULL value into the map if the value is null
 	 *
 	 * @param key
@@ -217,8 +215,8 @@ public final class SerializedMap extends StrictCollection {
 		if (value != null)
 			put(key, value);
 
-		// This value is undesirable to save if null, so if YamlConfig is used
-		// it will remove it from the config
+			// This value is undesirable to save if null, so if YamlConfig is used
+			// it will remove it from the config
 		else
 			map.getSource().put(key, null);
 	}
@@ -715,7 +713,7 @@ public final class SerializedMap extends StrictCollection {
 	 * @param valueParameter
 	 * @return
 	 */
-	public <Key, Value> LinkedHashMap<Key, Value> getMap(@NonNull String path, final Class<Key> keyType, final Class<Value> valueType) {
+	public <Key, Value> LinkedHashMap<Key, Value> getMap(@NonNull final String path, final Class<Key> keyType, final Class<Value> valueType) {
 		// The map we are creating, preserve order
 		final LinkedHashMap<Key, Value> map = new LinkedHashMap<>();
 		final Object raw = this.map.get(path);
@@ -748,7 +746,7 @@ public final class SerializedMap extends StrictCollection {
 	 * @param setType
 	 * @return
 	 */
-	public <Key, Value> LinkedHashMap<Key, Set<Value>> getMapSet(@NonNull String path, final Class<Key> keyType, final Class<Value> setType) {
+	public <Key, Value> LinkedHashMap<Key, Set<Value>> getMapSet(@NonNull final String path, final Class<Key> keyType, final Class<Value> setType) {
 		// The map we are creating, preserve order
 		final LinkedHashMap<Key, Set<Value>> map = new LinkedHashMap<>();
 		Object raw = this.map.get(path);
@@ -982,9 +980,9 @@ public final class SerializedMap extends StrictCollection {
 
 	/**
 	 * Convert the key pairs into formatted string such as {
-	 * 	"key" = "value"
-	 *  "another" = "value2"
-	 *  ...
+	 * "key" = "value"
+	 * "another" = "value2"
+	 * ...
 	 * }
 	 *
 	 * @return

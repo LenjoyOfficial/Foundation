@@ -25,8 +25,6 @@ import org.mineacademy.fo.collection.StrictMap;
 import org.mineacademy.fo.collection.StrictSet;
 import org.mineacademy.fo.constants.FoConstants;
 import org.mineacademy.fo.debug.Debugger;
-import org.mineacademy.fo.display.SimpleDisplay;
-import org.mineacademy.fo.display.SimpleProgressDisplay;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.model.BoxedMessage;
 import org.mineacademy.fo.model.ColoredRanges;
@@ -36,6 +34,8 @@ import org.mineacademy.fo.model.SimpleTime;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.Remain;
+import org.mineacademy.fo.settings.model.SimpleDisplay;
+import org.mineacademy.fo.settings.model.SimpleProgressDisplay;
 
 import java.io.File;
 import java.io.FileOutputStream;

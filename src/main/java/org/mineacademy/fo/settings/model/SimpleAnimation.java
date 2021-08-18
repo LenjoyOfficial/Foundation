@@ -1,4 +1,4 @@
-package org.mineacademy.fo.display;
+package org.mineacademy.fo.settings.model;
 
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;

@@ -1,5 +1,26 @@
 package org.mineacademy.fo.settings;
 
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.enchantments.Enchantment;
+import org.mineacademy.fo.Common;
+import org.mineacademy.fo.ReflectionUtil;
+import org.mineacademy.fo.Valid;
+import org.mineacademy.fo.collection.SerializedMap;
+import org.mineacademy.fo.collection.StrictList;
+import org.mineacademy.fo.constants.FoConstants;
+import org.mineacademy.fo.model.BoxedMessage;
+import org.mineacademy.fo.model.ColoredRanges;
+import org.mineacademy.fo.model.Replacer;
+import org.mineacademy.fo.model.SimpleSound;
+import org.mineacademy.fo.model.SimpleTime;
+import org.mineacademy.fo.plugin.SimplePlugin;
+import org.mineacademy.fo.remain.CompMaterial;
+import org.mineacademy.fo.remain.Remain;
+import org.mineacademy.fo.settings.YamlConfig.CasusHelper;
+import org.mineacademy.fo.settings.YamlConfig.TitleHelper;
+import org.mineacademy.fo.settings.model.SimpleDisplay;
+import org.mineacademy.fo.settings.model.SimpleProgressDisplay;
+
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -14,27 +35,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.enchantments.Enchantment;
-import org.mineacademy.fo.Common;
-import org.mineacademy.fo.ReflectionUtil;
-import org.mineacademy.fo.Valid;
-import org.mineacademy.fo.collection.SerializedMap;
-import org.mineacademy.fo.collection.StrictList;
-import org.mineacademy.fo.constants.FoConstants;
-import org.mineacademy.fo.display.SimpleDisplay;
-import org.mineacademy.fo.display.SimpleProgressDisplay;
-import org.mineacademy.fo.model.BoxedMessage;
-import org.mineacademy.fo.model.ColoredRanges;
-import org.mineacademy.fo.model.Replacer;
-import org.mineacademy.fo.model.SimpleSound;
-import org.mineacademy.fo.model.SimpleTime;
-import org.mineacademy.fo.plugin.SimplePlugin;
-import org.mineacademy.fo.remain.CompMaterial;
-import org.mineacademy.fo.remain.Remain;
-import org.mineacademy.fo.settings.YamlConfig.CasusHelper;
-import org.mineacademy.fo.settings.YamlConfig.TitleHelper;
 
 /**
  * A special case {@link YamlConfig} that allows static access to this config. This is unsafe

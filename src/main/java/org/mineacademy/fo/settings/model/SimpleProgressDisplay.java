@@ -1,4 +1,4 @@
-package org.mineacademy.fo.display;
+package org.mineacademy.fo.settings.model;
 
 import lombok.Getter;
 import org.bukkit.ChatColor;

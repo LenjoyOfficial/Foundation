@@ -215,8 +215,8 @@ public abstract class SimpleConversation implements ConversationAbandonedListene
 	 * @param conversable
 	 * @param messages
 	 */
-	protected static final void tellBoxed(final int delayTicks, final Conversable conversable, final String... messages) {
-		Common.runLater(delayTicks, () -> tellBoxed(conversable, messages));
+	protected static final void tellBoxed(final int delayTicks, final Conversable conversable, final ChatColor frameColor, final String... messages) {
+		Common.runLater(delayTicks, () -> tellBoxed(conversable, frameColor, messages));
 	}
 
 	/**
@@ -225,8 +225,8 @@ public abstract class SimpleConversation implements ConversationAbandonedListene
 	 * @param conversable
 	 * @param messages
 	 */
-	protected static final void tellBoxed(final Conversable conversable, final String... messages) {
-		BoxedMessage.tell((Player) conversable, ChatColor.DARK_GRAY, messages);
+	protected static final void tellBoxed(final Conversable conversable, final ChatColor frameColor, final String... messages) {
+		BoxedMessage.tell((Player) conversable, frameColor, messages);
 	}
 
 	/**

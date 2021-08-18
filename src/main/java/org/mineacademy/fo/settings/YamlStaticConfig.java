@@ -2,7 +2,6 @@ package org.mineacademy.fo.settings;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictList;
@@ -11,7 +10,6 @@ import org.mineacademy.fo.display.SimpleDisplay;
 import org.mineacademy.fo.display.SimpleProgressDisplay;
 import org.mineacademy.fo.model.BoxedMessage;
 import org.mineacademy.fo.model.ColoredRanges;
-import org.mineacademy.fo.model.InventoryItem;
 import org.mineacademy.fo.model.Replacer;
 import org.mineacademy.fo.model.SimpleSound;
 import org.mineacademy.fo.model.SimpleTime;
@@ -419,14 +417,6 @@ public abstract class YamlStaticConfig {
 
 	protected static final CompMaterial getMaterial(final String path) {
 		return TEMPORARY_INSTANCE.getMaterial(path);
-	}
-
-	protected static final ItemStack getItem(final String path) {
-		return TEMPORARY_INSTANCE.getItem(path);
-	}
-
-	protected static final InventoryItem getInventoryItem(final String path) {
-		return TEMPORARY_INSTANCE.getInventoryItem(path);
 	}
 
 	protected static final BoxedMessage getBoxedMessage(final String path) {

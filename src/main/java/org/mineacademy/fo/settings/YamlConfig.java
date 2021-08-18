@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -1035,7 +1036,16 @@ public class YamlConfig {
 	 * @return
 	 */
 	protected final BoxedMessage getBoxedMessage(final String path) {
-		return new BoxedMessage(getString(path));
+		final String message = getString(path, "");
+
+		if (message.startsWith("<framed>")) {
+			final String[] split = message.substring(7).split("::");
+			final ChatColor color = ChatColor.getByChar(split[0].charAt(1));
+
+			return new BoxedMessage(color, split[1]);
+		}
+
+		return new BoxedMessage(message);
 	}
 
 	/**

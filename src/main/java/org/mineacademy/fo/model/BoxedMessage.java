@@ -1,8 +1,6 @@
 package org.mineacademy.fo.model;
 
-import java.util.Arrays;
-import java.util.Objects;
-
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -11,7 +9,9 @@ import org.mineacademy.fo.ChatUtil;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.remain.Remain;
 
-import lombok.RequiredArgsConstructor;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Objects;
 
 /**
  * Represents a chat message surrounded by chat-wide line on the top and bottom:
@@ -34,6 +34,9 @@ public final class BoxedMessage {
 	 */
 	private final Player sender;
 
+	/**
+	 * The color of the frame
+	 */
 	private final ChatColor frameColor;
 
 	/**
@@ -48,7 +51,17 @@ public final class BoxedMessage {
 	 * @param messages
 	 */
 	public BoxedMessage(final String... messages) {
-		this(null, null, ChatColor.DARK_GRAY, messages);
+		this(ChatColor.DARK_GRAY, messages);
+	}
+
+	/**
+	 * Creates a new boxed message from the given frame color and messages
+	 *
+	 * @param frameColor
+	 * @param messages
+	 */
+	public BoxedMessage(final ChatColor frameColor, final String... messages) {
+		this(null, null, frameColor, messages);
 	}
 
 	/**
@@ -129,6 +142,17 @@ public final class BoxedMessage {
 		send(frameColor + Common.chatLineSmooth());
 	}
 
+	private int length() {
+		int length = 0;
+
+		for (final String message : messages)
+			for (@SuppressWarnings("unused")
+			final String part : message.split("\n"))
+				length++;
+
+		return length;
+	}
+
 	private void send(String message) {
 		message = centerMessage0(message);
 
@@ -141,7 +165,7 @@ public final class BoxedMessage {
 
 	private String centerMessage0(String message) {
 		if (message.startsWith("<center>"))
-			return ChatUtil.center(message.replaceFirst("\\<center\\>(\\s|)", ""));
+			return ChatUtil.center(message.replaceFirst("<center>(\\s|)", ""));
 
 		return message;
 	}
@@ -188,7 +212,7 @@ public final class BoxedMessage {
 	 * Broadcast this message to everyone on the message
 	 */
 	public void broadcast() {
-		broadcast(null, messages);
+		broadcast(null, frameColor, messages);
 	}
 
 	/**
@@ -250,12 +274,31 @@ public final class BoxedMessage {
 	 *
 	 * @param messages
 	 */
+	public static void broadcast(final String... messages) {
+		broadcast(ChatColor.DARK_GRAY, messages);
+	}
+
+	/**
+	 * Send this message to everyone with a custom frame color
+	 *
+	 * @param messages
+	 */
 	public static void broadcast(final ChatColor frameColor, final String... messages) {
-		broadcast(null, messages);
+		broadcast(null, frameColor, messages);
 	}
 
 	/**
 	 * Sends this message to the all players as the sender
+	 *
+	 * @param sender
+	 * @param messages
+	 */
+	public static void broadcast(final Player sender, final String... messages) {
+		broadcast(sender, ChatColor.DARK_GRAY, messages);
+	}
+
+	/**
+	 * Sends this message to the all players as the sender with a custom frame color
 	 *
 	 * @param sender
 	 * @param messages
@@ -270,8 +313,28 @@ public final class BoxedMessage {
 	 * @param recipient
 	 * @param messages
 	 */
+	public static void tell(final CommandSender recipient, final String... messages) {
+		tell(recipient, ChatColor.DARK_GRAY, messages);
+	}
+
+	/**
+	 * Sends the message to the recipient with a custom frame color
+	 *
+	 * @param recipient
+	 * @param messages
+	 */
 	public static void tell(final CommandSender recipient, final ChatColor frameColor, final String... messages) {
-		tell(null, Arrays.asList(recipient), frameColor, messages);
+		tell(Arrays.asList(recipient), frameColor, messages);
+	}
+
+	/**
+	 * Sends the message to the given recipients
+	 *
+	 * @param recipients
+	 * @param messages
+	 */
+	public static void tell(final Iterable<? extends CommandSender> recipients, final String... messages) {
+		tell(recipients, ChatColor.DARK_GRAY, messages);
 	}
 
 	/**
@@ -291,12 +354,34 @@ public final class BoxedMessage {
 	 * @param receiver
 	 * @param messages
 	 */
+	public static void tell(final Player sender, final CommandSender receiver, final String... messages) {
+		tell(sender, receiver, ChatColor.DARK_GRAY, messages);
+	}
+
+	/**
+	 * Sends this message to a recipient as sender
+	 *
+	 * @param sender
+	 * @param receiver
+	 * @param messages
+	 */
 	public static void tell(final Player sender, final CommandSender receiver, final ChatColor frameColor, final String... messages) {
-		tell(sender, Arrays.asList(receiver), frameColor, messages);
+		tell(sender, Collections.singletonList(receiver), frameColor, messages);
 	}
 
 	/**
 	 * Sends this message to recipients as sender
+	 *
+	 * @param sender
+	 * @param receivers
+	 * @param messages
+	 */
+	public static void tell(final Player sender, final Iterable<? extends CommandSender> receivers, final String... messages) {
+		tell(sender, receivers, ChatColor.DARK_GRAY, messages);
+	}
+
+	/**
+	 * Sends this message to recipients as sender with a custom frame color
 	 *
 	 * @param sender
 	 * @param receivers

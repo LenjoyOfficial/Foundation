@@ -1,42 +1,18 @@
 package org.mineacademy.fo.remain;
 
-import static org.mineacademy.fo.ReflectionUtil.getNMSClass;
-import static org.mineacademy.fo.ReflectionUtil.getOBCClass;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.chat.ComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Color;
 import org.bukkit.GameRule;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.Particle;
 import org.bukkit.Statistic;
 import org.bukkit.Statistic.Type;
 import org.bukkit.World;
@@ -70,7 +46,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.SpawnEggMeta;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.Potion;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
 import org.bukkit.scoreboard.Objective;
@@ -84,7 +60,6 @@ import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.PlayerUtil;
 import org.mineacademy.fo.ReflectionUtil;
-import org.mineacademy.fo.ReflectionUtil.ReflectionException;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictMap;
@@ -96,13 +71,32 @@ import org.mineacademy.fo.remain.internal.ChatInternals;
 import org.mineacademy.fo.remain.nbt.NBTInternals;
 import org.mineacademy.fo.settings.SimpleYaml;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.chat.ComponentSerializer;
+import static org.mineacademy.fo.ReflectionUtil.*;
 
 /**
  * Our main cross-version compatibility class.
@@ -115,7 +109,7 @@ public final class Remain {
 	/**
 	 * Pattern used to match encoded HEX colors &x&F&F&F&F&F&F
 	 */
-	private static final Pattern RGB_HEX_ENCODED_REGEX = Pattern.compile("(?i)(§x)((§[0-9A-F]){6})");
+	private static final Pattern RGB_HEX_ENCODED_REGEX = Pattern.compile("(?i)(" + ChatColor.COLOR_CHAR + "x)((" + ChatColor.COLOR_CHAR + "[0-9A-F]){6})");
 
 	/**
 	 * The Google Json instance
@@ -284,7 +278,7 @@ public final class Remain {
 			} catch (final Throwable t) {
 				Bukkit.getLogger().warning("Unable to find setup some parts of reflection. Plugin will still function.");
 				Bukkit.getLogger().warning("Error: " + t.getClass().getSimpleName() + ": " + t.getMessage());
-				Bukkit.getLogger().warning("Ignore this if using Cauldron. Otherwise check if your server is compatibble.");
+				Bukkit.getLogger().warning("Ignore this if using Cauldron. Otherwise check if your server is compatible.");
 
 				fieldPlayerConnection = null;
 				sendPacket = null;
@@ -801,17 +795,17 @@ public final class Remain {
 	 */
 	public static String toJson(ItemStack item) {
 		// ItemStack methods to get a net.minecraft.server.ItemStack object for serialization
-		final Class<?> craftItemstack = ReflectionUtil.getOBCClass("inventory.CraftItemStack");
-		final Method asNMSCopyMethod = ReflectionUtil.getMethod(craftItemstack, "asNMSCopy", ItemStack.class);
+		final Class<?> craftItemstack = getOBCClass("inventory.CraftItemStack");
+		final Method asNMSCopyMethod = getMethod(craftItemstack, "asNMSCopy", ItemStack.class);
 
 		// NMS Method to serialize a net.minecraft.server.ItemStack to a valid Json string
-		final Class<?> nmsItemStack = ReflectionUtil.getNMSClass("ItemStack", "net.minecraft.world.item.ItemStack");
-		final Class<?> nbtTagCompound = ReflectionUtil.getNMSClass("NBTTagCompound", "net.minecraft.nbt.NBTTagCompound");
-		final Method saveItemstackMethod = ReflectionUtil.getMethod(nmsItemStack, "save", nbtTagCompound);
+		final Class<?> nmsItemStack = getNMSClass("ItemStack", "net.minecraft.world.item.ItemStack");
+		final Class<?> nbtTagCompound = getNMSClass("NBTTagCompound", "net.minecraft.nbt.NBTTagCompound");
+		final Method saveItemstackMethod = getMethod(nmsItemStack, "save", nbtTagCompound);
 
-		final Object nmsNbtTagCompoundObj = ReflectionUtil.instantiate(nbtTagCompound);
-		final Object nmsItemStackObj = ReflectionUtil.invoke(asNMSCopyMethod, null, item);
-		final Object itemAsJsonObject = ReflectionUtil.invoke(saveItemstackMethod, nmsItemStackObj, nmsNbtTagCompoundObj);
+		final Object nmsNbtTagCompoundObj = instantiate(nbtTagCompound);
+		final Object nmsItemStackObj = invoke(asNMSCopyMethod, null, item);
+		final Object itemAsJsonObject = invoke(saveItemstackMethod, nmsItemStackObj, nmsNbtTagCompoundObj);
 
 		// Return a string representation of the serialized object
 		return itemAsJsonObject.toString();
@@ -1407,7 +1401,6 @@ public final class Remain {
 		book.setItemMeta(meta);
 
 		try {
-
 			player.openBook(book);
 
 		} catch (final NoSuchMethodError ex) {
@@ -1440,46 +1433,31 @@ public final class Remain {
 	public static void updateInventoryTitle(final Player player, String title) {
 
 		try {
+			final Class<?> packetOpenWindowClass = getNMSClass(MinecraftVersion.atLeast(V.v1_7) ? "PacketPlayOutOpenWindow" : "Packet100OpenWindow",
+					"net.minecraft.network.protocol.game.PacketPlayOutOpenWindow");
+
 			if (MinecraftVersion.atLeast(V.v1_17)) {
 				final Object nmsPlayer = Remain.getHandleEntity(player);
 				final Object chatComponent = toIChatBaseComponentPlain(ChatColor.translateAlternateColorCodes('&', title));
 
+				final Class<?> containersClass = getNMSClass("Containers", "net.minecraft.world.inventory.Containers");
 				final int inventorySize = player.getOpenInventory().getTopInventory().getSize() / 9;
-				String containerName;
 
-				if (inventorySize == 1)
-					containerName = "a";
-
-				else if (inventorySize == 2)
-					containerName = "b";
-
-				else if (inventorySize == 3)
-					containerName = "c";
-
-				else if (inventorySize == 4)
-					containerName = "d";
-
-				else if (inventorySize == 5)
-					containerName = "e";
-
-				else if (inventorySize == 6)
-					containerName = "f";
-				else
+				if (!Valid.isInRange(inventorySize, 1, 6))
 					throw new FoException("Cannot generate NMS container class to update inventory of size " + inventorySize);
 
-				final Object container = ReflectionUtil.getStaticFieldContent(ReflectionUtil.lookupClass("net.minecraft.world.inventory.Containers"), containerName);
+				final Object container = getFieldContent(getDeclaredField(containersClass, containersClass, inventorySize - 1), (Object) null);
 
-				final Constructor<?> packetConstructor = ReflectionUtil.getConstructor(
-						"net.minecraft.network.protocol.game.PacketPlayOutOpenWindow",
-						int.class,
-						container.getClass(),
-						ReflectionUtil.lookupClass("net.minecraft.network.chat.IChatBaseComponent"));
+				final Constructor<?> packetConstructor = packetOpenWindowClass.getConstructor(
+						int.class, //windowID
+						containersClass, //containers
+						CHAT_COMPONENT_CLASS); //msg
 
-				final Object activeContainer = ReflectionUtil.getFieldContent(nmsPlayer, "bV");
-				final int windowId = ReflectionUtil.getFieldContent(activeContainer, "j");
+				final Object activeContainer = getFieldContent(nmsPlayer, "bV");
+				final int windowId = getFieldContent(activeContainer, "j");
 
-				Remain.sendPacket(player, ReflectionUtil.instantiate(packetConstructor, windowId, container, chatComponent));
-				ReflectionUtil.invoke("initMenu", nmsPlayer, activeContainer);
+				Remain.sendPacket(player, instantiate(packetConstructor, windowId, container, chatComponent));
+				invoke("initMenu", nmsPlayer, activeContainer);
 
 				return;
 			}
@@ -1498,6 +1476,7 @@ public final class Remain {
 				final Object chatMessage = chatMessageConst.newInstance(ChatColor.translateAlternateColorCodes('&', title), new Object[0]);
 
 				if (MinecraftVersion.newerThan(V.v1_13)) {
+					final Class<?> containersClass = getNMSClass("Containers", "net.minecraft.world.inventory.Containers");
 					final int inventorySize = player.getOpenInventory().getTopInventory().getSize() / 9;
 
 					if (inventorySize < 1 || inventorySize > 6) {
@@ -1505,10 +1484,10 @@ public final class Remain {
 
 						return;
 					}
-
-					final Class<?> containersClass = getNMSClass("Containers", "net.minecraft.world.inventory.Containers");
-					final Constructor<?> packetConst = getNMSClass("PacketPlayOutOpenWindow", "net.minecraft.network.protocol.game.PacketPlayOutOpenWindow")
-							.getConstructor(/*windowID*/int.class, /*containers*/containersClass, /*msg*/getNMSClass("IChatBaseComponent", "net.minecraft.network.chat.IChatBaseComponent"));
+					final Constructor<?> packetConst = packetOpenWindowClass.getConstructor(
+							int.class, //windowID
+							containersClass, //containers
+							CHAT_COMPONENT_CLASS); //msg
 
 					final String containerName = "GENERIC_9X" + inventorySize;
 
@@ -1517,15 +1496,23 @@ public final class Remain {
 					packetOpenWindow = packetConst.newInstance(windowId, container, chatMessage);
 
 				} else {
-					final Constructor<?> packetConst = getNMSClass("PacketPlayOutOpenWindow", "N/A").getConstructor(int.class, String.class, getNMSClass("IChatBaseComponent", "net.minecraft.network.chat.IChatBaseComponent"), int.class);
+					final Constructor<?> packetConst = packetOpenWindowClass.getConstructor(
+							int.class,
+							String.class,
+							CHAT_COMPONENT_CLASS,
+							int.class);
 
 					packetOpenWindow = packetConst.newInstance(windowId, "minecraft:chest", chatMessage, player.getOpenInventory().getTopInventory().getSize());
 				}
 			} else {
-				final Constructor<?> openWindow = ReflectionUtil.getConstructor(
-						getNMSClass(MinecraftVersion.atLeast(V.v1_7) ? "PacketPlayOutOpenWindow" : "Packet100OpenWindow", "N/A"), int.class, int.class, String.class, int.class, boolean.class);
+				final Constructor<?> openWindow = packetOpenWindowClass.getConstructor(
+						int.class,
+						int.class,
+						String.class,
+						int.class,
+						boolean.class);
 
-				packetOpenWindow = ReflectionUtil.instantiate(openWindow, windowId, 0, ChatColor.translateAlternateColorCodes('&', title), player.getOpenInventory().getTopInventory().getSize(), true);
+				packetOpenWindow = instantiate(openWindow, windowId, 0, ChatColor.translateAlternateColorCodes('&', title), player.getOpenInventory().getTopInventory().getSize(), true);
 			}
 
 			sendPacket(player, packetOpenWindow);
@@ -1821,10 +1808,10 @@ public final class Remain {
 	public static Object toIChatBaseComponent(String json) {
 		Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_7), "Serializing chat components requires Minecraft 1.7.10 and greater");
 
-		final Class<?> chatSerializer = ReflectionUtil.getNMSClass((MinecraftVersion.equals(V.v1_7) ? "" : "IChatBaseComponent$") + "ChatSerializer", "net.minecraft.network.chat.IChatBaseComponent$ChatSerializer");
-		final Method a = ReflectionUtil.getMethod(chatSerializer, "a", String.class);
+		final Class<?> chatSerializer = getNMSClass((MinecraftVersion.equals(V.v1_7) ? "" : "IChatBaseComponent$") + "ChatSerializer", "net.minecraft.network.chat.IChatBaseComponent$ChatSerializer");
+		final Method a = getMethod(chatSerializer, "a", String.class);
 
-		return ReflectionUtil.invoke(a, null, json);
+		return invoke(a, null, json);
 	}
 
 	/**
@@ -2010,7 +1997,7 @@ public final class Remain {
 	 *
 	 * Each player sending is delayed by 0.1s
 	 *
-	 * @param receiver
+	 * @param receivers
 	 * @param message you can replace player-specific variables in the message here
 	 * @param icon
 	 */
@@ -2224,11 +2211,13 @@ public final class Remain {
 	 *
 	 * @param item
 	 * @param type
-	 * @param level
+	 * @param splash
+	 * @param extended
+	 * @param upgraded
 	 */
-	public static void setPotion(final ItemStack item, final PotionEffectType type, final int level) {
+	public static void setPotion(final ItemStack item, final PotionEffectType type, final boolean splash, final boolean extended, final boolean upgraded) {
 		if (hasItemMeta)
-			PotionSetter.setPotion(item, type, level);
+			PotionSetter.setPotion(item, type, splash, extended, upgraded);
 	}
 
 	/**
@@ -2701,7 +2690,7 @@ class BungeeChatProvider {
 				final Class<?> packetClass = getNMSClass("PacketPlayOutChat", "N/A");
 
 				final Object chatBaseComponent = Remain.toIChatBaseComponent(comps);
-				final Object packet = ReflectionUtil.instantiate(ReflectionUtil.getConstructor(packetClass, chatBaseComponentClass), chatBaseComponent);
+				final Object packet = instantiate(ReflectionUtil.getConstructor(packetClass, chatBaseComponentClass), chatBaseComponent);
 
 				Remain.sendPacket((Player) sender, packet);
 
@@ -2795,7 +2784,7 @@ class AdvancementAccessor {
 		final AdvancementProgress progress = plazer.getAdvancementProgress(adv);
 
 		if (!progress.isDone())
-			progress.getRemainingCriteria().forEach(crit -> progress.awardCriteria(crit));
+			progress.getRemainingCriteria().forEach(progress::awardCriteria);
 	}
 
 	private void revokeAdvancement(final Player plazer) {
@@ -2803,7 +2792,7 @@ class AdvancementAccessor {
 		final AdvancementProgress prog = plazer.getAdvancementProgress(adv);
 
 		if (prog.isDone())
-			prog.getAwardedCriteria().forEach(crit -> prog.revokeCriteria(crit));
+			prog.getAwardedCriteria().forEach(prog::revokeCriteria);
 	}
 
 	private void removeAdvancement() {
@@ -2822,25 +2811,31 @@ class PotionSetter {
 	 *
 	 * @param item
 	 * @param type
-	 * @param level
+	 * @param splash
+	 * @param extended
+	 * @param upgraded
 	 */
-	public static void setPotion(final ItemStack item, final PotionEffectType type, final int level) {
+	public static void setPotion(final ItemStack item, final PotionEffectType type, final boolean splash, final boolean extended, final boolean upgraded) {
 		Valid.checkBoolean(item.getItemMeta() instanceof org.bukkit.inventory.meta.PotionMeta, "Can only use setPotion for items with PotionMeta not: " + item.getItemMeta());
 
 		final PotionType wrapped = PotionType.getByEffect(type);
 		final org.bukkit.inventory.meta.PotionMeta meta = (org.bukkit.inventory.meta.PotionMeta) item.getItemMeta();
 
-		try {
-			final org.bukkit.potion.PotionData data = new org.bukkit.potion.PotionData(level > 0 && wrapped != null ? wrapped : PotionType.WATER);
+		if (MinecraftVersion.atLeast(V.v1_9)) {
+			final org.bukkit.potion.PotionData data = new org.bukkit.potion.PotionData(Common.getOrDefault(wrapped, PotionType.WATER), extended, upgraded);
 
-			if (level > 0 && wrapped == null)
+			if (wrapped == null)
 				meta.addEnchant(Enchantment.DURABILITY, 1, true);
 
 			meta.setBasePotionData(data);
 
-		} catch (final NoSuchMethodError | NoClassDefFoundError ex) {
-			meta.setMainEffect(type);
-			meta.addCustomEffect(new PotionEffect(type, Integer.MAX_VALUE, level - 1), true);
+		} else {
+			final Potion data = new Potion(Common.getOrDefault(wrapped, PotionType.WATER), upgraded ? 1 : 2, splash, extended);
+
+			if (splash)
+				item.setType(Material.SPLASH_POTION);
+
+			data.apply(item);
 		}
 
 		item.setItemMeta(meta);

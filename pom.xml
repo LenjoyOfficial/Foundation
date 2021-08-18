@@ -1,7 +1,7 @@
-<!-- (c) 2013 - 2021 - All rights reserved. Do not share, copy, reproduce 
-	or sell any part of this library unless you have written permission from 
-	MineAcademy.org. All infringements will be prosecuted. If you are the personal 
-	owner of the MineAcademy.org End User License then you may use it for your 
+<!-- (c) 2013 - 2021 - All rights reserved. Do not share, copy, reproduce
+	or sell any part of this library unless you have written permission from
+	MineAcademy.org. All infringements will be prosecuted. If you are the personal
+	owner of the MineAcademy.org End User License then you may use it for your
 	own use in plugins but not for any other purpose. -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -30,6 +30,10 @@
 			<id>spigot-repo</id>
 			<url>https://hub.spigotmc.org/nexus/content/repositories/snapshots</url>
 		</repository>
+		<repository>
+			<id>dmulloy2-repo</id>
+			<url>https://repo.dmulloy2.net/repository/public/</url>
+		</repository>
 	</repositories>
 
 	<dependencies>
@@ -40,7 +44,7 @@
 			<version>1.18.20</version>
 		</dependency>
 
-		<!-- This is NOT used anywhere in Foundation, only here to prevent compile 
+		<!-- This is NOT used anywhere in Foundation, only here to prevent compile
 			errors from missing the log4j dependency that is shipped in the server jar -->
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
@@ -55,7 +59,7 @@
 			<artifactId>spigot-api</artifactId>
 			<version>1.17.1-R0.1-SNAPSHOT</version>
 		</dependency>
-		
+
 		<!-- MineAcademy guaranteed availability repos for plugins -->
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
@@ -132,11 +136,18 @@
 			<artifactId>PlaceholderAPI</artifactId>
 			<version>2.10.9</version>
 		</dependency>
-		<dependency>
+
+		<!--<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>ProtocolLib</artifactId>
 			<version>4.6.1-SNAPSHOT-b499</version>
+		</dependency>-->
+		<dependency>
+			<groupId>com.comphenix.protocol</groupId>
+			<artifactId>ProtocolLib</artifactId>
+			<version>4.7.0</version>
 		</dependency>
+
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>Residence</artifactId>
@@ -151,7 +162,7 @@
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>StackMob</artifactId>
 			<version>5.5.3</version>
-		</dependency>		
+		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>Towny</artifactId>

@@ -2,8 +2,6 @@ package org.mineacademy.fo.remain;
 
 import java.lang.reflect.Constructor;
 
-import javax.annotation.Nullable;
-
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
@@ -133,13 +131,11 @@ public enum CompParticle {
 	/**
 	 * The NMS EnumParticle class cache here for top performance
 	 */
-	@Nullable
 	private final Object nmsEnumParticle;
 
 	/**
 	 * The bukkit particle object, if this is running on a new MC version, cached for top performance
 	 */
-	@Nullable
 	private final Object bukkitEnumParticle;
 
 	/**
@@ -170,7 +166,16 @@ public enum CompParticle {
 
 				if (MinecraftVersion.equals(V.v1_7)) {
 					this.nmsEnumParticle = null;
-					this.packetConstructor = ReflectionUtil.getConstructor(packetClass, String.class, Float.TYPE, Float.TYPE, Float.TYPE, Float.TYPE, Float.TYPE, Float.TYPE, Float.TYPE, Integer.TYPE);
+					this.packetConstructor = ReflectionUtil.getConstructor(packetClass,
+							String.class, // particle name
+							float.class,           // x
+							float.class,           // y
+							float.class,           // z
+							float.class,           // x offset
+							float.class,           // y offset
+							float.class,           // z offset
+							float.class,           // speed
+							int.class);            // count
 				}
 
 				else {
@@ -182,7 +187,18 @@ public enum CompParticle {
 					if (this.nmsEnumParticle == null)
 						this.packetConstructor = null;
 					else
-						this.packetConstructor = ReflectionUtil.getConstructor(packetClass, particleClass, Boolean.TYPE, Float.TYPE, Float.TYPE, Float.TYPE, Float.TYPE, Float.TYPE, Float.TYPE, Float.TYPE, Integer.TYPE, int[].class);
+						this.packetConstructor = ReflectionUtil.getConstructor(packetClass,
+								particleClass,
+								boolean.class, // long distance
+								float.class,   // x
+								float.class,   // y
+								float.class,   // z
+								float.class,   // x offset
+								float.class,   // y offset
+								float.class,   // z offset
+								float.class,   // speed
+								int.class,     // count
+								int[].class);  // data
 				}
 
 			} else {
@@ -206,7 +222,7 @@ public enum CompParticle {
 	}
 
 	/**
-	 * Spawns this particle with the given color, only works for {@link #REDSTONE}
+	 * Spawns this particle with the given color, only works for {@link #REDSTONE}, {@link #SPELL_MOB} and {@link #SPELL_MOB_AMBIENT}
 	 * The particle size requires MC 1.13+
 	 *
 	 * @param location
@@ -214,9 +230,9 @@ public enum CompParticle {
 	 * @param particleSize
 	 */
 	public void spawn(Location location, Color color, float particleSize) {
-		Valid.checkBoolean(this == REDSTONE, "Can only send colors for REDSTONE particle, not: " + this);
+		Valid.checkBoolean(this == REDSTONE || this == SPELL_MOB || this == SPELL_MOB_AMBIENT, "Can only send colors for REDSTONE, SPELL_MOB or SPELL_MOB_AMBIENT particles, not: " + this);
 
-		if (atLeast1_13)
+		if (atLeast1_13 && this == REDSTONE)
 			location.getWorld().spawnParticle((Particle) this.bukkitEnumParticle, location, 1, 0, 0, 0, 0, new DustOptions(color, particleSize));
 
 		else {
@@ -224,7 +240,7 @@ public enum CompParticle {
 			final float green = color.getGreen() / 255F;
 			final float blue = color.getBlue() / 255F;
 
-			this.spawn(location, red, green, blue, 1, 0, 1, null);
+			this.spawn(location, red, green, blue, 1, 0, 1);
 		}
 	}
 
@@ -234,7 +250,7 @@ public enum CompParticle {
 	 * @param location
 	 */
 	public void spawn(Location location) {
-		this.spawn(location, 0, 0, 0, 0, 0, 0, null);
+		this.spawn(location, 0, 0, 0, 0, 0, 0);
 	}
 
 	/**
@@ -275,7 +291,7 @@ public enum CompParticle {
 	 * @param extra
 	 */
 	public final void spawn(Location location, double speed, double extra) {
-		this.spawn(location, 0d, 0d, 0d, speed, 0, extra, null);
+		this.spawn(location, 0d, 0d, 0d, speed, 0, extra);
 	}
 
 	/**
@@ -315,7 +331,7 @@ public enum CompParticle {
 	 * @param location
 	 */
 	public void spawn(Player player, Location location) {
-		this.spawn(player, location, 0d, 0d, 0d, 0d, 0, 0d, null);
+		this.spawn(player, location, 0d, 0d, 0d, 0d, 0, 0d);
 	}
 
 	/**

@@ -219,7 +219,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		// Solve reloading issues with PlugMan
 		for (final StackTraceElement element : new Throwable().getStackTrace()) {
 			if (element.toString().contains("com.rylinaux.plugman.util.PluginUtil.load")) {
-				Common.log("&cWarning: &fDetected PlugMan reload, which is poorly designed. "
+				Common.warning("Detected PlugMan reload, which is poorly designed. "
 						+ "It causes Bukkit not able to get our plugin from a static initializer."
 						+ " It may or may not run. Use our own reload command or do a clean restart!");
 
@@ -260,6 +260,14 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		// Inject server-name to newer MC versions that lack it
 		Remain.injectServerName();
 
+		// Load our dependency system
+		try {
+			HookManager.loadDependencies();
+
+		} catch (final Throwable throwable) {
+			Common.throwError(throwable, "Error while loading " + getName() + " dependencies!");
+		}
+
 		// --------------------------------------------
 		// Call the main pre start method
 		// --------------------------------------------
@@ -280,14 +288,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 			// Register classes
 			checkSingletons();
-
-			// Load our dependency system
-			try {
-				HookManager.loadDependencies();
-
-			} catch (final Throwable throwable) {
-				Common.throwError(throwable, "Error while loading " + getName() + " dependencies!");
-			}
 
 			if (!isEnabled || !isEnabled())
 				return;

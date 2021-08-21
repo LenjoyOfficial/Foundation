@@ -364,14 +364,6 @@ public final class Remain {
 				hasItemMeta = false;
 			}
 
-			// Initialize legacy material data now to avoid future lag
-			if (MinecraftVersion.atLeast(V.v1_16))
-				try {
-					Bukkit.getUnsafe().fromLegacy(Material.AIR);
-				} catch (final Throwable t) {
-					// Silence
-				}
-
 		} catch (final ReflectiveOperationException ex) {
 			throw new UnsupportedOperationException("Failed to set up reflection, " + SimplePlugin.getNamed() + " won't work properly", ex);
 		}
@@ -1033,7 +1025,7 @@ public final class Remain {
 	 * @param style
 	 */
 	public static void sendBossbarPercent(final Player player, final String message, final float percent, final CompBarColor color, final CompBarStyle style) {
-		BossBarInternals.setMessage(player, message, percent, color, style);
+		BossBarInternals.getInstance().setMessage(player, message, percent, color, style);
 	}
 
 	/**
@@ -1057,7 +1049,7 @@ public final class Remain {
 	 * @param style
 	 */
 	public static void sendBossbarTimed(final Player player, final String message, final int seconds, final CompBarColor color, final CompBarStyle style) {
-		BossBarInternals.setMessage(player, message, seconds, color, style);
+		BossBarInternals.getInstance().setMessage(player, message, seconds, color, style);
 	}
 
 	/**
@@ -1068,7 +1060,7 @@ public final class Remain {
 	 * @param player
 	 */
 	public static void removeBar(final Player player) {
-		BossBarInternals.removeBar(player);
+		BossBarInternals.getInstance().removeBar(player);
 	}
 
 	/**
@@ -1870,31 +1862,18 @@ public final class Remain {
 	 * @param entity
 	 * @param invisible
 	 */
-	public static void setInvisible(Entity entity, boolean invisible) {
+	public static void setInvisible(Object entity, boolean invisible) {
 		Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_4), "Entity#setInvisible requires Minecraft 1.4.7 or greater");
 
 		if (entity instanceof LivingEntity && MinecraftVersion.atLeast(V.v1_16))
 			((LivingEntity) entity).setInvisible(invisible);
 
 		else {
-
-			// Minimize entity flicker when hiding two ticks later
-			// NOT USED : Potentially expensive for performance and hides the entity equipment which may be used purposefully
-			/*if (entity instanceof LivingEntity && MinecraftVersion.atLeast(V.v1_7)) {
-				final Class<?> destroyPacketClass = ReflectionUtil.getNMSClass("PacketPlayOutEntityDestroy");
-				final Object destroyPacket = ReflectionUtil.instantiate(ReflectionUtil.getConstructor(destroyPacketClass, int[].class), new int[] { entity.getEntityId() });
-
-				final double range = 64;
-
-				for (final Entity nearby : entity.getWorld().getNearbyEntities(entity.getLocation(), range, range, range))
-					if (nearby instanceof Player)
-						Remain.sendPacket((Player) nearby, destroyPacket);
-			}*/
-
-			final Object nmsEntity = getHandleEntity(entity);
+			final Object nmsEntity = entity.getClass().toString().contains("net.minecraft.server") ? entity : entity instanceof LivingEntity ? getHandleEntity((LivingEntity) entity) : null;
+			Valid.checkNotNull(nmsEntity, "setInvisible requires either a LivingEntity or a NMS Entity, got: " + entity.getClass());
 
 			// https://www.spigotmc.org/threads/how-do-i-make-an-entity-go-invisible-without-using-potioneffects.321227/
-			Common.runLater(2, () -> ReflectionUtil.invoke("setInvisible", nmsEntity, invisible));
+			Common.runLater(2, () -> invoke("setInvisible", nmsEntity, invisible));
 		}
 	}
 
@@ -2399,7 +2378,7 @@ public final class Remain {
 			final String previousNameRaw = settings.getString("Bungee_Server_Name");
 
 			if (previousNameRaw != null && !previousNameRaw.isEmpty() && !"none".equals(previousNameRaw) && !"undefined".equals(previousNameRaw)) {
-				Common.log("&eWarning: Detected Bungee_Server_Name being used in your settings.yml that is now located in server.properties." +
+				Common.warning("Detected Bungee_Server_Name being used in your settings.yml that is now located in server.properties." +
 						" It has been moved there and you can now delete this key from settings.yml if it was not deleted already.");
 
 				previousName = previousNameRaw;

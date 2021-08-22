@@ -1,5 +1,21 @@
 package org.mineacademy.fo.model;
 
+import lombok.Getter;
+import lombok.Setter;
+import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.mineacademy.fo.Common;
+import org.mineacademy.fo.MinecraftVersion;
+import org.mineacademy.fo.MinecraftVersion.V;
+import org.mineacademy.fo.ReflectionUtil;
+import org.mineacademy.fo.Valid;
+import org.mineacademy.fo.collection.StrictList;
+import org.mineacademy.fo.exception.FoException;
+import org.mineacademy.fo.plugin.SimplePlugin;
+import org.mineacademy.fo.remain.Remain;
+import sun.misc.Unsafe;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -8,22 +24,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.wrappers.WrappedChatComponent;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.mineacademy.fo.Common;
-import org.mineacademy.fo.MinecraftVersion;
-import org.mineacademy.fo.MinecraftVersion.V;
-import org.mineacademy.fo.Valid;
-import org.mineacademy.fo.collection.StrictList;
-import org.mineacademy.fo.plugin.SimplePlugin;
-
-import lombok.Getter;
-import lombok.Setter;
 
 import static org.mineacademy.fo.ReflectionUtil.*;
 
@@ -39,6 +39,8 @@ public class PacketScoreboard {
 
 	// Cached color codes for best performance
 	private static final String[] CHAT_COLORS = Common.convert(ChatColor.values(), ChatColor::toString).toArray(new String[0]);
+
+	private static final Unsafe UNSAFE = ReflectionUtil.getStaticFieldContent(Unsafe.class, "theUnsafe");
 
 	// ------------------------------------------------------------------------------------------------------------
 	// NMS constructors, methods and fields
@@ -91,7 +93,7 @@ public class PacketScoreboard {
 			TEAM_PARAMETERS_FIELD = getDeclaredField(TEAM_PACKET, Optional.class, 0);
 
 			CHAT_FORMAT_ENUM = getNMSClass("EnumChatFormat", "net.minecraft.EnumChatFormat").asSubclass(Enum.class);
-			CHAT_FORMAT_RESET = lookupEnumSilent(CHAT_FORMAT_ENUM, "v");
+			CHAT_FORMAT_RESET = lookupEnumSilent(CHAT_FORMAT_ENUM, "RESET");
 		}
 
 		RENDERTYPE_ENUM = getNMSClass("IScoreboardCriteria$EnumScoreboardHealthDisplay",
@@ -218,7 +220,7 @@ public class PacketScoreboard {
 	 * @param player
 	 * @param title
 	 */
-	public final void updateTitleFor(final Player player, final String title) {
+	public final void setTitleFor(final Player player, final String title) {
 		if (MinecraftVersion.olderThan(V.v1_13))
 			Valid.checkBoolean(title.length() <= 32, "Title " + title + " is longer than 32 characters for " + player.getName());
 
@@ -234,7 +236,7 @@ public class PacketScoreboard {
 	 *
 	 * @param title
 	 */
-	public void updateTitle(final String title) {
+	public void setTitle(final String title) {
 		if (MinecraftVersion.olderThan(V.v1_13))
 			Valid.checkBoolean(title.length() <= 32, "Title " + title + " is longer than 32 characters");
 
@@ -463,34 +465,31 @@ public class PacketScoreboard {
 		 * Create or remove the objective, or update its display name
 		 */
 		private void updateObjective(final int mode) {
-			final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_OBJECTIVE);
+			final Object packet = allocateInstance(OBJECTIVE_PACKET);
 
-			packet.getStrings().write(0, objectiveID);
-			packet.getIntegers().write(0, mode);
+			setDeclaredField(packet, String.class, 0, objectiveID);
+			setDeclaredField(packet, int.class, MinecraftVersion.atLeast(V.v1_17) ? 3 : 0, mode);
 
 			if (mode != 1) {
 				if (title != null)
 					Valid.checkBoolean(title.length() <= 32, "Title (" + title + ") size is greater than 32");
 
-				final String nonNullTitle = Common.getOrEmpty(title);
+				setChatComponentField(packet, 1, Common.getOrEmpty(title));
 
-				// 1.12 and below had Strings for IChatBaseComponents
-				if (MinecraftVersion.atLeast(V.v1_13))
-					packet.getChatComponents().write(0, WrappedChatComponent.fromLegacyText(nonNullTitle));
-				else
-					packet.getStrings().write(1, nonNullTitle);
+				if (MinecraftVersion.atLeast(MinecraftVersion.V.v1_8))
+					setDeclaredField(packet, RENDERTYPE_ENUM, 0, RENDERTYPE_INTEGER);
 			}
 
-			HookManager.sendPacket(viewer, packet);
+			Remain.sendPacket(viewer, packet);
 
 			// If creating the objective, send a display packet to show the scoreboard to the player
 			if (mode == 0) {
-				final PacketContainer displayPacket = new PacketContainer(PacketType.Play.Server.SCOREBOARD_DISPLAY_OBJECTIVE);
+				final Object displayPacket = allocateInstance(DISPLAY_OBJECTIVE_PACKET);
 
-				displayPacket.getIntegers().write(0, 1);
-				displayPacket.getStrings().write(0, objectiveID);
+				setDeclaredField(displayPacket, int.class, 0, 1);
+				setDeclaredField(displayPacket, String.class, 0, objectiveID);
 
-				HookManager.sendPacket(viewer, displayPacket);
+				Remain.sendPacket(viewer, displayPacket);
 			}
 		}
 
@@ -502,17 +501,17 @@ public class PacketScoreboard {
 		 * @param size
 		 */
 		private void updateScore(final int index, final ScoreAction action, final int size) {
-			final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_SCORE);
+			final Object packet = allocateInstance(SCORE_PACKET);
 
-			packet.getStrings().write(0, CHAT_COLORS[index]);
-			packet.getModifier().withType(SCORE_ACTION_ENUM).write(0, action == ScoreAction.CHANGE ? SCORE_ACTION_CHANGE : SCORE_ACTION_REMOVE);
+			setDeclaredField(packet, String.class, 0, CHAT_COLORS[index]);
+			setDeclaredField(packet, SCORE_ACTION_ENUM, 0, action == ScoreAction.CHANGE ? SCORE_ACTION_CHANGE : SCORE_ACTION_REMOVE);
 
 			if (action == ScoreAction.CHANGE) {
-				packet.getStrings().write(1, objectiveID);
-				packet.getIntegers().write(0, size - 1 - index);
+				setDeclaredField(packet, String.class, 1, objectiveID);
+				setDeclaredField(packet, int.class, 0, size - 1 - index);
 			}
 
-			HookManager.sendPacket(viewer, packet);
+			Remain.sendPacket(viewer, packet);
 		}
 
 		/**
@@ -522,10 +521,10 @@ public class PacketScoreboard {
 		 * @param mode
 		 */
 		private void updateRow(final int index, final int mode) {
-			final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
+			final Object packet = allocateInstance(TEAM_PACKET);
 
-			packet.getStrings().write(0, viewer.getName() + "-" + index);
-			packet.getIntegers().write(MinecraftVersion.atLeast(V.v1_13) ? 0 : 1, mode);
+			setDeclaredField(packet, String.class, 0, viewer.getName() + "-" + index);
+			setDeclaredField(packet, int.class, MinecraftVersion.atLeast(V.v1_13) ? MinecraftVersion.atLeast(V.v1_17) ? 7 : 0 : 1, mode);
 
 			if (mode != 1) {
 				final String row = this.rows.get(index);
@@ -554,7 +553,7 @@ public class PacketScoreboard {
 					// Add prefix's last color if suffix's first color is format code (e.g. bold)
 					final boolean addLastColor = firstColor == null || firstColor.isFormat();
 
-					suffix = (addLastColor ? lastColors.isEmpty() ? ChatColor.RESET.toString() : lastColors : "") + suffix;
+					suffix = (addLastColor ? (lastColors.isEmpty() ? ChatColor.RESET.toString() : lastColors) : "") + suffix;
 				}
 
 				if (MinecraftVersion.olderThan(V.v1_13)) {
@@ -565,32 +564,41 @@ public class PacketScoreboard {
 						suffix = suffix.substring(0, 16);
 				}
 
-				// Finally update the NMS team with the new prefix and suffix
+				// Update the NMS team with the new prefix and suffix
 				if (MinecraftVersion.atLeast(V.v1_17)) {
-					// 1.17 moved team data to an inner class
-					final Object handle = packet.getHandle();
-					final Object parameters = ((Optional<?>) getFieldContent(TEAM_PARAMETERS_FIELD, handle)).get();
+					final Object parameters = allocateInstance(TEAM_PARAMETERS);
 
 					setChatComponentField(parameters, 0, "");
 					setChatComponentField(parameters, 1, prefix);
 					setChatComponentField(parameters, 2, suffix);
+					setDeclaredField(parameters, String.class, 0, "always");
+					setDeclaredField(parameters, String.class, 1, "always");
+					setDeclaredField(parameters, CHAT_FORMAT_ENUM, 0, CHAT_FORMAT_RESET);
 
-					//setDeclaredField(handle, Optional.class, 0, Optional.of(parameters));
-
-				} else if (MinecraftVersion.atLeast(V.v1_13)) {
-					packet.getChatComponents().write(1, WrappedChatComponent.fromLegacyText(prefix));
-					packet.getChatComponents().write(2, WrappedChatComponent.fromLegacyText(suffix));
+					setDeclaredField(packet, Optional.class, 0, Optional.of(parameters));
 
 				} else {
-					packet.getStrings().write(2, prefix);
-					packet.getStrings().write(3, suffix);
+					setChatComponentField(packet, 2, prefix);
+					setChatComponentField(packet, 3, suffix);
 				}
 
 				if (mode == 0)
-					packet.getModifier().withType(Collection.class).write(0, Collections.singletonList(CHAT_COLORS[index]));
+					setDeclaredField(packet, Collection.class, 0, Collections.singletonList(CHAT_COLORS[index]));
 			}
 
-			HookManager.sendPacket(viewer, packet);
+			Remain.sendPacket(viewer, packet);
+		}
+	}
+
+	/*
+	 * Wrapper method without the need of try-catch
+	 */
+	private static Object allocateInstance(final Class<?> clazz) {
+		try {
+			return UNSAFE.allocateInstance(clazz);
+
+		} catch (InstantiationException e) {
+			throw new FoException(e, "Couldn't allocate new instance of class " + clazz.getName());
 		}
 	}
 

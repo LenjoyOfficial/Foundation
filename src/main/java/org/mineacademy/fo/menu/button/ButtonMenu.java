@@ -1,7 +1,6 @@
 package org.mineacademy.fo.menu.button;
 
-import java.util.concurrent.Callable;
-
+import lombok.Getter;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
@@ -11,7 +10,7 @@ import org.mineacademy.fo.menu.Menu;
 import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.remain.CompMaterial;
 
-import lombok.Getter;
+import java.util.concurrent.Callable;
 
 /**
  * A button that opens another menu
@@ -137,15 +136,15 @@ public final class ButtonMenu extends Button {
 			if (newInstance)
 				menuToOpen = menuToOpen.newInstance();
 
-			menuToOpen.displayTo(pl);
+			menuToOpen.displayTo(pl, false);
 
 		} else {
 			Valid.checkNotNull(menuToOpen, "Report / ButtonTrigger requires either 'late bind menu' or normal menu to be set!");
 
 			if (newInstance)
-				menuToOpen.newInstance().displayTo(pl);
+				menuToOpen.newInstance().displayTo(pl, false);
 			else
-				menuToOpen.displayTo(pl);
+				menuToOpen.displayTo(pl, false);
 		}
 	}
 }

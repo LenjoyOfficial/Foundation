@@ -8,15 +8,12 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
-import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.StrictList;
-import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.Remain;
-import sun.misc.Unsafe;
 
-import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -40,7 +37,8 @@ public class PacketScoreboard {
 	// Cached color codes for best performance
 	private static final String[] CHAT_COLORS = Common.convert(ChatColor.values(), ChatColor::toString).toArray(new String[0]);
 
-	private static final Unsafe UNSAFE = ReflectionUtil.getStaticFieldContent(Unsafe.class, "theUnsafe");
+	private static final Object UNSAFE;
+	private static final Method ALLOCATE_INSTANCE;
 
 	// ------------------------------------------------------------------------------------------------------------
 	// NMS constructors, methods and fields
@@ -53,7 +51,6 @@ public class PacketScoreboard {
 
 	// 1.17 team packet
 	private static Class<?> TEAM_PARAMETERS;
-	private static Field TEAM_PARAMETERS_FIELD;
 
 	// Chat format
 	private static Class<? extends Enum> CHAT_FORMAT_ENUM;
@@ -71,6 +68,12 @@ public class PacketScoreboard {
 	private static final Object RENDERTYPE_INTEGER;
 
 	static {
+		// Initializing Unsafe
+		final Class<Object> unsafe = lookupClass("sun.misc.Unsafe");
+
+		UNSAFE = getStaticFieldContent(unsafe, "theUnsafe");
+		ALLOCATE_INSTANCE = getMethod(unsafe, "allocateInstance", Class.class);
+
 		final boolean atLeast1_17 = MinecraftVersion.atLeast(V.v1_17);
 
 		OBJECTIVE_PACKET = getNMSClass("PacketPlayOutScoreboardObjective", "net.minecraft.network.protocol.game.PacketPlayOutScoreboardObjective");
@@ -90,7 +93,6 @@ public class PacketScoreboard {
 
 		if (atLeast1_17) {
 			TEAM_PARAMETERS = TEAM_PACKET.getDeclaredClasses()[0];
-			TEAM_PARAMETERS_FIELD = getDeclaredField(TEAM_PACKET, Optional.class, 0);
 
 			CHAT_FORMAT_ENUM = getNMSClass("EnumChatFormat", "net.minecraft.EnumChatFormat").asSubclass(Enum.class);
 			CHAT_FORMAT_RESET = lookupEnumSilent(CHAT_FORMAT_ENUM, "RESET");
@@ -591,15 +593,10 @@ public class PacketScoreboard {
 	}
 
 	/*
-	 * Wrapper method without the need of try-catch
+	 * Wrapper method for creating a new instance of the given class
 	 */
 	private static Object allocateInstance(final Class<?> clazz) {
-		try {
-			return UNSAFE.allocateInstance(clazz);
-
-		} catch (InstantiationException e) {
-			throw new FoException(e, "Couldn't allocate new instance of class " + clazz.getName());
-		}
+		return invoke(ALLOCATE_INSTANCE, UNSAFE, clazz);
 	}
 
 	/**

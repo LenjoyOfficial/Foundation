@@ -29,12 +29,12 @@ import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompMaterial;
+import org.mineacademy.fo.remain.Remain;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.SneakyThrows;
-import org.mineacademy.fo.remain.Remain;
 
 /**
  * Utility class for various reflection methods
@@ -326,7 +326,7 @@ public final class ReflectionUtil {
 	}
 
 	/**
-	 * Set a chat component field in the instance's class to a component created from the given value
+	 * Set a chat component field in the instance's class to a component created from the given string, & colors supported
 	 *
 	 * @param instance
 	 * @param index
@@ -343,7 +343,7 @@ public final class ReflectionUtil {
 
 		try {
 			for (Field field : instance.getClass().getDeclaredFields())
-				if ((field.getType() == CHAT_COMPONENT_CLASS || field.getType() == String.class) && i++ == index) {
+				if ((CHAT_COMPONENT_CLASS.isAssignableFrom(field.getType()) || field.getType() == String.class) && i++ == index) {
 					field.setAccessible(true);
 					field.set(instance, Remain.toIChatBaseComponent(Remain.toJson(value)));
 				}

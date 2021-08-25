@@ -163,8 +163,6 @@ public class PacketScoreboard {
 	 * Create a new scoreboard
 	 */
 	public PacketScoreboard(final boolean async) {
-		Valid.checkBoolean(HookManager.isProtocolLibLoaded(), "PacketScoreboard requires ProtocolLib to function");
-
 		this.async = async;
 
 		registeredBoards.add(this);

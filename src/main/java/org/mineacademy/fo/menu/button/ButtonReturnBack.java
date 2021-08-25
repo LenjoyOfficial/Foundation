@@ -72,9 +72,9 @@ public final class ButtonReturnBack extends Button {
 	@Override
 	public void onClickedInMenu(Player pl, Menu menu, ClickType click) {
 		if (makeNewInstance)
-			parentMenu.newInstance().displayTo(pl);
+			parentMenu.newInstance().displayTo(pl, false);
 
 		else
-			parentMenu.displayTo(pl);
+			parentMenu.displayTo(pl, false);
 	}
 }

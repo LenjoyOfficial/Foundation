@@ -219,7 +219,7 @@ public final class CompColor {
 	 * @return
 	 */
 	public static CompColor fromColor(Color color) {
-		return fromName("#" + Integer.toHexString(color.asRGB()).substring(2));
+		return fromName(String.format("#%06x", color.asRGB()));
 	}
 
 	/**

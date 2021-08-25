@@ -240,7 +240,7 @@ public enum CompParticle {
 			final float green = color.getGreen() / 255F;
 			final float blue = color.getBlue() / 255F;
 
-			this.spawn(location, red, green, blue, 1, 0, 1);
+			this.spawn(location, red, green, blue, 1, 0, 1, null);
 		}
 	}
 
@@ -250,7 +250,7 @@ public enum CompParticle {
 	 * @param location
 	 */
 	public void spawn(Location location) {
-		this.spawn(location, 0, 0, 0, 0, 0, 0);
+		this.spawn(location, 0, 0, 0, 0, 0, 0, null);
 	}
 
 	/**
@@ -291,7 +291,7 @@ public enum CompParticle {
 	 * @param extra
 	 */
 	public final void spawn(Location location, double speed, double extra) {
-		this.spawn(location, 0d, 0d, 0d, speed, 0, extra);
+		this.spawn(location, 0d, 0d, 0d, speed, 0, extra, null);
 	}
 
 	/**

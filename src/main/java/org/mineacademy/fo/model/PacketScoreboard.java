@@ -1,7 +1,16 @@
 package org.mineacademy.fo.model;
 
-import lombok.Getter;
-import lombok.Setter;
+import static org.mineacademy.fo.ReflectionUtil.*;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
+
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -13,16 +22,8 @@ import org.mineacademy.fo.collection.StrictList;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.Remain;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
-
-import static org.mineacademy.fo.ReflectionUtil.*;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Represents a displayable scoreboard for the players. It is working with packets, so you get absolutely no lag
@@ -467,7 +468,7 @@ public class PacketScoreboard {
 		 * Create or remove the objective, or update its display name
 		 */
 		private void updateObjective(final int mode) {
-			final Object packet = allocateInstance(OBJECTIVE_PACKET);
+			final Object packet = newInstance(OBJECTIVE_PACKET);
 
 			setDeclaredField(packet, String.class, 0, objectiveID);
 			setDeclaredField(packet, int.class, MinecraftVersion.atLeast(V.v1_17) ? 3 : 0, mode);
@@ -486,7 +487,7 @@ public class PacketScoreboard {
 
 			// If creating the objective, send a display packet to show the scoreboard to the player
 			if (mode == 0) {
-				final Object displayPacket = allocateInstance(DISPLAY_OBJECTIVE_PACKET);
+				final Object displayPacket = newInstance(DISPLAY_OBJECTIVE_PACKET);
 
 				setDeclaredField(displayPacket, int.class, 0, 1);
 				setDeclaredField(displayPacket, String.class, 0, objectiveID);
@@ -503,7 +504,7 @@ public class PacketScoreboard {
 		 * @param size
 		 */
 		private void updateScore(final int index, final ScoreAction action, final int size) {
-			final Object packet = allocateInstance(SCORE_PACKET);
+			final Object packet = newInstance(SCORE_PACKET);
 
 			setDeclaredField(packet, String.class, 0, CHAT_COLORS[index]);
 			setDeclaredField(packet, SCORE_ACTION_ENUM, 0, action == ScoreAction.CHANGE ? SCORE_ACTION_CHANGE : SCORE_ACTION_REMOVE);
@@ -523,7 +524,7 @@ public class PacketScoreboard {
 		 * @param mode
 		 */
 		private void updateRow(final int index, final int mode) {
-			final Object packet = allocateInstance(TEAM_PACKET);
+			final Object packet = newInstance(TEAM_PACKET);
 
 			setDeclaredField(packet, String.class, 0, viewer.getName() + "-" + index);
 			setDeclaredField(packet, int.class, MinecraftVersion.atLeast(V.v1_13) ? MinecraftVersion.atLeast(V.v1_17) ? 7 : 0 : 1, mode);
@@ -568,7 +569,7 @@ public class PacketScoreboard {
 
 				// Update the NMS team with the new prefix and suffix
 				if (MinecraftVersion.atLeast(V.v1_17)) {
-					final Object parameters = allocateInstance(TEAM_PARAMETERS);
+					final Object parameters = newInstance(TEAM_PARAMETERS);
 
 					setChatComponentField(parameters, 0, "");
 					setChatComponentField(parameters, 1, prefix);
@@ -593,10 +594,10 @@ public class PacketScoreboard {
 	}
 
 	/*
-	 * Wrapper method for creating a new instance of the given class
+	 * Wrapper method for creating a new instance of the given class compatible with all versions
 	 */
-	private static Object allocateInstance(final Class<?> clazz) {
-		return invoke(ALLOCATE_INSTANCE, UNSAFE, clazz);
+	private static Object newInstance(final Class<?> clazz) {
+		return MinecraftVersion.atLeast(V.v1_17) ? invoke(ALLOCATE_INSTANCE, UNSAFE, clazz) : instantiate(clazz);
 	}
 
 	/**

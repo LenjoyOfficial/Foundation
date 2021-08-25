@@ -1,6 +1,5 @@
 package org.mineacademy.fo.menu.model;
 
-import lombok.NonNull;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
@@ -12,6 +11,7 @@ import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.remain.CompMaterial;
 
 import lombok.Getter;
+import lombok.NonNull;
 
 /**
  * Represents a way to render the inventory to the player
@@ -39,7 +39,7 @@ public final class InventoryDrawer {
 	private final ItemStack[] content;
 
 	/**
-	 * The inventory with which this instance works with, used after calling {@link #of(Inventory)}
+	 * The inventory with which this instance works with, used after calling {@link #of(Player)}
 	 */
 	private Inventory inventory;
 
@@ -189,13 +189,12 @@ public final class InventoryDrawer {
 	 * @return
 	 */
 	public Inventory build(InventoryHolder holder) {
-		if (inventory == null)
-			// Automatically append the black color in the menu, can be overriden by colors
-			inventory = Bukkit.createInventory(holder, size, Common.colorize("&0" + title));
+		// Automatically append the black color in the menu, can be overriden by colors
+		final Inventory inv = Common.getOrDefault(inventory, Bukkit.createInventory(holder, size, Common.colorize("&0" + title)));
 
-		inventory.setContents(content);
+		inv.setContents(content);
 
-		return inventory;
+		return inv;
 	}
 
 	/**

@@ -67,7 +67,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.SpawnEggMeta;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.potion.Potion;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
 import org.bukkit.scoreboard.Objective;
@@ -753,8 +753,10 @@ public final class Remain {
 	 * Converts chat message with color codes to Json chat components e.g. &6Hello
 	 * world converts to {text:"Hello world",color="gold"}
 	 */
-	public static String toJson(final String message) {
+	public static String toJson(String message) {
 		Valid.checkBoolean(bungeeApiPresent, "(Un)packing chat requires Spigot 1.7.10 or newer");
+
+		message = Common.colorize(message);
 
 		return toJson(TextComponent.fromLegacyText(message));
 	}
@@ -1871,7 +1873,7 @@ public final class Remain {
 			((LivingEntity) entity).setInvisible(invisible);
 
 		else {
-			final Object nmsEntity = entity.getClass().toString().contains("net.minecraft.server") ? entity : entity instanceof LivingEntity ? getHandleEntity((LivingEntity) entity) : null;
+			final Object nmsEntity = entity.getClass().toString().startsWith("net.minecraft") ? entity : entity instanceof LivingEntity ? getHandleEntity((LivingEntity) entity) : null;
 			Valid.checkNotNull(nmsEntity, "setInvisible requires either a LivingEntity or a NMS Entity, got: " + entity.getClass());
 
 			// https://www.spigotmc.org/threads/how-do-i-make-an-entity-go-invisible-without-using-potioneffects.321227/
@@ -2192,13 +2194,11 @@ public final class Remain {
 	 *
 	 * @param item
 	 * @param type
-	 * @param splash
-	 * @param extended
-	 * @param upgraded
+	 * @param level
 	 */
-	public static void setPotion(final ItemStack item, final PotionEffectType type, final boolean splash, final boolean extended, final boolean upgraded) {
+	public static void setPotion(final ItemStack item, final PotionEffectType type, final int level) {
 		if (hasItemMeta)
-			PotionSetter.setPotion(item, type, splash, extended, upgraded);
+			PotionSetter.setPotion(item, type, level);
 	}
 
 	/**
@@ -2792,31 +2792,25 @@ class PotionSetter {
 	 *
 	 * @param item
 	 * @param type
-	 * @param splash
-	 * @param extended
-	 * @param upgraded
+	 * @param level
 	 */
-	public static void setPotion(final ItemStack item, final PotionEffectType type, final boolean splash, final boolean extended, final boolean upgraded) {
+	public static void setPotion(final ItemStack item, final PotionEffectType type, final int level) {
 		Valid.checkBoolean(item.getItemMeta() instanceof org.bukkit.inventory.meta.PotionMeta, "Can only use setPotion for items with PotionMeta not: " + item.getItemMeta());
 
 		final PotionType wrapped = PotionType.getByEffect(type);
 		final org.bukkit.inventory.meta.PotionMeta meta = (org.bukkit.inventory.meta.PotionMeta) item.getItemMeta();
 
-		if (MinecraftVersion.atLeast(V.v1_9)) {
-			final org.bukkit.potion.PotionData data = new org.bukkit.potion.PotionData(Common.getOrDefault(wrapped, PotionType.WATER), extended, upgraded);
+		try {
+			final org.bukkit.potion.PotionData data = new org.bukkit.potion.PotionData(level > 0 && wrapped != null ? wrapped : PotionType.WATER);
 
-			if (wrapped == null)
+			if (level > 0 && wrapped == null)
 				meta.addEnchant(Enchantment.DURABILITY, 1, true);
 
 			meta.setBasePotionData(data);
 
-		} else {
-			final Potion data = new Potion(Common.getOrDefault(wrapped, PotionType.WATER), upgraded ? 1 : 2, splash, extended);
-
-			if (splash)
-				item.setType(Material.SPLASH_POTION);
-
-			data.apply(item);
+		} catch (final NoSuchMethodError | NoClassDefFoundError ex) {
+			meta.setMainEffect(type);
+			meta.addCustomEffect(new PotionEffect(type, Integer.MAX_VALUE, level - 1), true);
 		}
 
 		item.setItemMeta(meta);

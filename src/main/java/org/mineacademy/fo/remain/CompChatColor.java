@@ -1,6 +1,6 @@
 package org.mineacademy.fo.remain;
 
-import java.awt.Color;
+import java.awt.*;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -271,7 +271,7 @@ public final class CompChatColor {
 	 * @return
 	 */
 	public static CompChatColor of(Color color) {
-		return of("#" + Integer.toHexString(color.getRGB()).substring(2));
+		return of("#" + String.format("%08x", color.getRGB()).substring(2));
 	}
 
 	/**

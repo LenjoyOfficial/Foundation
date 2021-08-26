@@ -10,14 +10,12 @@ import org.mineacademy.fo.remain.CompMaterial;
 
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 
 /**
  * Compatibility class to support both new {@link org.bukkit.potion.PotionData}
  * and old {@link org.bukkit.potion.Potion} for potions' main data
  */
 @Getter
-@RequiredArgsConstructor
 public final class SimplePotionData {
 	/**
 	 * The type of the potion
@@ -39,6 +37,24 @@ public final class SimplePotionData {
 	 * Is this potion upgraded to level 2?
 	 */
 	private final boolean upgraded;
+
+	/**
+	 * Construct a new potion data, throwing an exception if both extended and
+	 * upgraded are true
+	 *
+	 * @param type
+	 * @param splash
+	 * @param extended
+	 * @param upgraded
+	 */
+	public SimplePotionData(@NonNull final PotionType type, final boolean splash, final boolean extended, final boolean upgraded) {
+		Valid.checkBoolean(!(extended && upgraded), (splash ? "Splash potion " : "Potion ") + type + " cannot be both extended and upgraded");
+
+		this.type = type;
+		this.splash = splash;
+		this.extended = extended;
+		this.upgraded = upgraded;
+	}
 
 	/**
 	 * Apply this potion data to the given item

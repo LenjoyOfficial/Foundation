@@ -148,7 +148,7 @@ public abstract class Menu {
 	private boolean slotNumbersVisible;
 
 	/**
-	 * A one way boolean set to true in {@link #handleClose(Inventory)}
+	 * A flag indicating if this menu is closed (no one is currently viewing it)
 	 */
 	private boolean closed = false;
 
@@ -424,6 +424,9 @@ public abstract class Menu {
 
 		// Play the pop sound
 		sound.play(player);
+
+		// Mark as open
+		this.closed = false;
 
 		// Register previous menu if exists
 		{

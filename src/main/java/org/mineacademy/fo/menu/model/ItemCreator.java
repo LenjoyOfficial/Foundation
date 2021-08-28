@@ -64,7 +64,8 @@ import net.md_5.bungee.api.chat.BaseComponent;
  * <p>
  * You can use this to make named items with incredible speed and quality.
  */
-final @Builder public class ItemCreator {
+final @Builder
+public class ItemCreator implements ConfigSerializable {
 
 	/**
 	 * The initial item stack
@@ -240,6 +241,32 @@ final @Builder public class ItemCreator {
 	// ----------------------------------------------------------------------------------------
 	// Constructing items
 	// ----------------------------------------------------------------------------------------
+
+	/**
+	 * Returns a copy of this item creator with the given replacer
+	 * applied to the name and lore, allowing you to call any of the
+	 * {@link #make()} methods below
+	 *
+	 * @param replacer
+	 * @return
+	 */
+	public ItemCreator replaceVariables(@NonNull final Function<String, String> replacer) {
+		final ItemCreatorBuilder builder = of(make()).slot(this.slot);
+
+		if (this.name != null)
+			builder.name(replacer.apply(this.name));
+
+		if (this.lores != null && !this.lores.isEmpty()) {
+			final String joined = replacer.apply(String.join("\n", this.lores));
+
+			// Replace the variables again if the replacements had placeholders in them
+			final String[] split = StringUtils.splitPreserveAllTokens(replacer.apply(joined), '\n');
+
+			builder.clearLores().lores(Arrays.asList(split));
+		}
+
+		return builder.build();
+	}
 
 	/**
 	 * Constructs a new {@link DummyButton} from this item
@@ -518,6 +545,172 @@ final @Builder public class ItemCreator {
 		return finalItem;
 	}
 
+	/**
+	 * @see ConfigSerializable#serialize()
+	 */
+	@Override
+	public SerializedMap serialize() {
+		//
+		// First, make sure the ItemStack is not null (it can be null if you create this class only using material)
+		//
+		Valid.checkBoolean(material != null || item != null, "Material or item must be set!");
+
+		if (material != null)
+			Valid.checkNotNull(material.getMaterial(), "Material#getMaterial cannot be null for " + material);
+
+		final SerializedMap map = new SerializedMap();
+		final CompMaterial mat = Common.getOrDefault(material, CompMaterial.fromItem(item));
+
+		// Create new item meta to only serialize data relevant to the material
+		final ItemMeta meta = Bukkit.getItemFactory().getItemMeta(mat.getMaterial());
+
+		if (mat != CompMaterial.AIR)
+			map.put("Material", mat);
+
+		if (amount > 1)
+			map.put("Amount", amount);
+
+		// Player inventory slot
+		if (slot != -1)
+			map.put("Inventory_Slot", slot);
+
+		// Display
+		if (!Valid.isNullOrEmpty(name))
+			map.put("Name", name);
+
+		if (lores != null && !lores.isEmpty())
+			map.put("Lore", lores);
+
+		// -----------------------------------------------------------
+		// ItemMeta
+		// -----------------------------------------------------------
+
+		if (meta instanceof PotionMeta) {
+			if (potionData != null) {
+				final SerializedMap mainEffectMap = new SerializedMap();
+
+				mainEffectMap.put("Type", potionData.getType());
+				mainEffectMap.put("Extended", potionData.isExtended());
+				mainEffectMap.put("Upgraded", potionData.isUpgraded());
+
+				map.put("Main_Effect", mainEffectMap);
+			}
+
+			if (potionEffects != null && !potionEffects.isEmpty()) {
+				final SerializedMap effectsMap = new SerializedMap();
+
+				for (final PotionEffect effect : potionEffects) {
+					final SerializedMap effectMap = new SerializedMap();
+
+					effectMap.put("Duration", effect.getDuration() * 20);
+					effectMap.put("Amplifier", effect.getAmplifier());
+
+					effectsMap.put(effect.getType().getName(), effectMap);
+				}
+			}
+		}
+
+		if (meta instanceof EnchantmentStorageMeta && enchants != null && !enchants.isEmpty()) {
+			final SerializedMap enchantsMap = new SerializedMap();
+
+			for (final SimpleEnchant enchant : enchants)
+				enchantsMap.put(enchant.getEnchant().getName(), enchant.getLevel());
+
+			map.put("Stored_Enchants", enchantsMap);
+		}
+
+		if (damage != -1 && !(MinecraftVersion.atLeast(V.v1_13) && !(meta instanceof Damageable)))
+			map.put("Damage", damage);
+
+		if (meta instanceof SkullMeta) {
+			map.putIfExist("Skull_Owner", skullOwner);
+			map.putIfExist("Skull_Skin", skullSkin);
+		}
+
+		if (meta instanceof BookMeta) {
+			if (!Valid.isNullOrEmpty(bookAuthor))
+				map.put("Author", bookAuthor);
+
+			if (!Valid.isNullOrEmpty(bookTitle))
+				map.put("Title", bookTitle);
+
+			map.put("Pages", Common.convert(this.bookPages, page -> "[JSON]" + Remain.toJson(page)));
+		}
+
+		if (color != null && meta instanceof LeatherArmorMeta) {
+			final Color rawColor = color.getColor();
+
+			map.put("Armor_Color", rawColor.getRed() + ", " + rawColor.getGreen() + ", " + rawColor.getBlue());
+		}
+
+		if (patterns != null && !patterns.isEmpty() && meta instanceof BannerMeta) {
+			final List<SerializedMap> patterns = new ArrayList<>();
+
+			for (final Pattern pattern : this.patterns)
+				patterns.add(SerializedMap.ofArray(
+						"Type", pattern.getPattern(),
+						"Color", pattern.getColor()
+				));
+
+			map.put("Patterns", patterns);
+		}
+
+		if (meta instanceof FireworkMeta) {
+			final List<SerializedMap> effectsList = new ArrayList<>();
+
+			if (fireworkEffects != null && !fireworkEffects.isEmpty())
+				for (final FireworkEffect effect : fireworkEffects) {
+					final SerializedMap effectMap = new SerializedMap();
+
+					effectMap.put("Type", effect.getType());
+					effectMap.putIfTrue("Flicker", effect.hasFlicker());
+					effectMap.putIfTrue("Trail", effect.hasTrail());
+
+					final List<Color> colors = effect.getColors();
+
+					if (!colors.isEmpty())
+						effectMap.put("Colors", Common.convert(colors, color -> color.getRed() + ", " + color.getGreen() + ", " + color.getBlue()));
+
+					final List<Color> fadeColors = effect.getColors();
+
+					if (!fadeColors.isEmpty())
+						effectMap.put("Fade_Colors", Common.convert(fadeColors, color -> color.getRed() + ", " + color.getGreen() + ", " + color.getBlue()));
+
+					effectsList.add(effectMap);
+				}
+
+			if (fireworkPower != -1)
+				map.put("Power", fireworkPower);
+
+			if (!effectsList.isEmpty())
+				map.put("Firework_Effects", effectsList);
+		}
+
+		// -----------------------------------------------------------
+		// Universal
+		// -----------------------------------------------------------
+
+		// Enchantments
+		if (!(meta instanceof EnchantmentStorageMeta) && enchants != null && !enchants.isEmpty()) {
+			final SerializedMap enchantsMap = new SerializedMap();
+
+			for (final SimpleEnchant enchant : enchants)
+				enchantsMap.put(enchant.getEnchant().getName(), enchant.getLevel());
+
+			map.put("Enchantments", enchantsMap);
+		}
+
+		// Flags
+		if (flags != null && !flags.isEmpty())
+			map.put("Flags", flags);
+
+		// Unbreakable
+		if (unbreakable != null)
+			map.put("Unbreakable", unbreakable);
+
+		return map;
+	}
+
 	// ----------------------------------------------------------------------------------------
 	// Static access
 	// ----------------------------------------------------------------------------------------
@@ -606,5 +799,235 @@ final @Builder public class ItemCreator {
 		Valid.checkNotNull(mat, "Material cannot be null!");
 
 		return ItemCreator.builder().material(mat);
+	}
+
+	/**
+	 * Deserializes an item from the given serialized map
+	 *
+	 * @param map
+	 * @return
+	 */
+	public static ItemCreatorBuilder of(SerializedMap map) {
+		final CompMaterial material = map.getMaterial("Material", CompMaterial.AIR);
+		final ItemCreatorBuilder builder = of(material);
+
+		builder.amount(map.getInteger("Amount", 1));
+		builder.damage(material.getData());
+
+		// Player inventory slot
+		if (map.containsKey("Inventory_Slot"))
+			builder.slot(map.getInteger("Inventory_Slot"));
+
+		// Display
+		builder.name(map.getString("Name"));
+
+		if (map.containsKey("Lore"))
+			builder.lores(map.getStringList("Lore"));
+
+		// -----------------------------------------------------------
+		// ItemMeta
+		// -----------------------------------------------------------
+
+		// PotionMeta
+		if (map.containsKey("Main_Effect")) {
+			final SerializedMap mainEffect = map.getMap("Main_Effect");
+
+			final boolean extended = mainEffect.getBoolean("Extended", false);
+			final boolean upgraded = mainEffect.getBoolean("Upgraded", false);
+
+			if (extended && upgraded)
+				Common.warning("Potion " + map.toStringFormatted() + " cannot be both extended AND upgraded");
+
+			else
+				try {
+					final String rawType = mainEffect.getString("Type");
+					PotionType type = ReflectionUtil.lookupEnumSilent(PotionType.class, rawType);
+
+					if (type == null)
+						type = PotionType.getByEffect(ItemUtil.findPotion(rawType));
+
+					builder.potionData(new SimplePotionData(type, material == CompMaterial.SPLASH_POTION, extended, upgraded));
+
+				} catch (final Exception e) {
+					Common.error(e, "Error when setting main potion effect from " + map.toStringFormatted());
+				}
+		}
+
+		if (map.containsKey("Potion_Effects")) {
+			final SerializedMap potionEffects = map.getMap("Potion_Effects");
+
+			for (final String effectType : potionEffects.keySet()) {
+				final SerializedMap effect = potionEffects.getMap(effectType);
+
+				final int durationTicks = effect.getInteger("Duration") * 20;
+				final int amplifier = effect.getInteger("Amplifier");
+
+				try {
+					final PotionEffectType potion = ItemUtil.findPotion(effectType);
+
+					builder.potionEffect(new PotionEffect(potion, durationTicks, amplifier));
+
+				} catch (final Exception e) {
+					Common.error(e, "Error when adding potion effect from " + map.toStringFormatted());
+				}
+			}
+		}
+
+		// EnchantmentStorageMeta
+		if (map.containsKey("Stored_Enchants")) {
+			final SerializedMap storedEnchantments = map.getMap("Stored_Enchants");
+
+			for (final String enchantType : storedEnchantments.keySet()) {
+				final int level = storedEnchantments.getInteger(enchantType);
+
+				try {
+					final Enchantment enchantment = ItemUtil.findEnchantment(enchantType);
+
+					builder.enchant(new SimpleEnchant(enchantment, level));
+
+				} catch (Exception e) {
+					Common.error(e, "Error when adding stored enchant from " + map.toStringFormatted());
+				}
+			}
+		}
+
+		// Damageable
+		if (map.containsKey("Damage"))
+			builder.damage(map.getInteger("Damage"));
+
+		// SkullMeta
+		builder.skullOwner(map.getString("SkullOwner"));
+		builder.skullSkin(map.getString("SkullSkin"));
+
+		// BookMeta
+		builder.bookAuthor(map.getString("Author"));
+		builder.bookTitle(map.getString("Title"));
+
+		if (map.containsKey("Pages"))
+			for (final String page : map.getStringList("Pages"))
+				try {
+					// Convert pages to JSON if they are not already JSON
+					final BaseComponent[] components = Remain.toComponent(page.startsWith("[JSON]") ? page.substring(6) : Remain.toJson(page));
+
+					builder.bookPage(components);
+
+				} catch (Exception e) {
+					Common.error(e, "Error when trying to add a page from " + map.toStringFormatted());
+				}
+
+		// LeatherArmorMeta
+		if (map.containsKey("Armor_Color")) {
+			final String[] values = StringUtils.splitByWholeSeparator(map.getString("Armor_Color"), ", ");
+
+			if (values.length != 3)
+				Common.warning("Malformed RGB armor color " + Arrays.toString(values) + ", should be in format '<red>, <green>, <blue>'!");
+
+			else
+				builder.color(CompColor.fromColor(Color.fromRGB(Integer.parseInt(values[0]), Integer.parseInt(values[1]), Integer.parseInt(values[2]))));
+		}
+
+		// BannerMeta
+		if (map.containsKey("Patterns"))
+			for (final SerializedMap patternMap : map.getMapList("Patterns")) {
+				try {
+					final PatternType patternType = ReflectionUtil.lookupEnumSilent(PatternType.class, patternMap.getString("Type"));
+					final CompColor color = CompColor.fromName(patternMap.getString("Color"));
+
+					builder.pattern(new Pattern(color.getDye(), patternType));
+
+				} catch (final Exception e) {
+					Common.error(e, "Error when adding banner pattern from " + map.toStringFormatted());
+				}
+			}
+
+		// FireworkMeta
+		builder.fireworkPower(map.getInteger("Power", 0));
+
+		if (map.containsKey("Firework_Effects"))
+			for (final SerializedMap effectMap : map.getMapList("Firework_Effects")) {
+				final boolean flicker = effectMap.getBoolean("Flicker");
+				final boolean trail = effectMap.getBoolean("Trail");
+
+				try {
+					final FireworkEffect.Type type = ReflectionUtil.lookupEnumSilent(FireworkEffect.Type.class, effectMap.getString("Type"));
+
+					// Primary color of the effect
+					final List<Color> colors = new ArrayList<>();
+
+					if (effectMap.containsKey("Colors"))
+						for (final String color : effectMap.getStringList("Colors")) {
+							final String[] split = StringUtils.splitByWholeSeparator(color, ", ");
+
+							colors.add(Color.fromRGB(Integer.parseInt(split[0]), Integer.parseInt(split[1]), Integer.parseInt(split[2])));
+						}
+
+					// Fading colors of the effect
+					final List<Color> fadeColors = new ArrayList<>();
+
+					if (effectMap.containsKey("Fade_Colors"))
+						for (final String color : effectMap.getStringList("Fade_Colors")) {
+							final String[] split = StringUtils.splitByWholeSeparator(color, ", ");
+
+							fadeColors.add(Color.fromRGB(Integer.parseInt(split[0]), Integer.parseInt(split[1]), Integer.parseInt(split[2])));
+						}
+
+					builder.fireworkEffect(FireworkEffect.builder()
+							.flicker(flicker)
+							.trail(trail)
+							.withColor(colors)
+							.withFade(fadeColors)
+							.build());
+
+				} catch (final Exception e) {
+					Common.error(e, "Error when adding firework effect from " + map.toStringFormatted());
+				}
+			}
+
+		// -----------------------------------------------------------
+		// Universal
+		// -----------------------------------------------------------
+
+		// Enchantments
+		final SerializedMap enchants = map.getMap("Enchantments");
+
+		for (final String enchantType : enchants.keySet())
+			try {
+				final Enchantment enchant = ItemUtil.findEnchantment(enchantType);
+				final int level = enchants.getInteger(enchantType);
+
+				builder.enchant(new SimpleEnchant(enchant, level));
+
+			} catch (final Exception e) {
+				Common.error(e, "Error when adding enchantment from " + map.toStringFormatted());
+			}
+
+		// Item flags
+		if (map.containsKey("Flags")) {
+			final List<String> flags = map.getStringList("Flags");
+
+			for (final CompItemFlag flag : CompItemFlag.values())
+				if (flags.contains(flag.toString()))
+					builder.flag(flag);
+		}
+
+		// Make unbreakable
+		builder.unbreakable(map.getBoolean("Unbreakable", false));
+
+		// Add glow
+		builder.glow(map.getBoolean("Glow", false));
+
+		return builder;
+	}
+
+	/**
+	 * Builds an item creator from this map
+	 * <p>
+	 * You won't be able to modify this item anymore!
+	 *
+	 * @param map
+	 * @return
+	 */
+	public static ItemCreator deserialize(SerializedMap map) {
+		return of(map).build();
 	}
 }

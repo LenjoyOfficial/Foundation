@@ -1,6 +1,6 @@
 package org.mineacademy.fo;
 
-import java.awt.Color;
+import java.awt.*;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -127,10 +127,7 @@ public final class SerializeUtil {
 			return serializePotionEffect((PotionEffect) obj);
 
 		else if (obj instanceof ItemCreator.ItemCreatorBuilder)
-			return ((ItemCreator.ItemCreatorBuilder) obj).build().make();
-
-		else if (obj instanceof ItemCreator)
-			return ((ItemCreator) obj).make();
+			return ((ItemCreator.ItemCreatorBuilder) obj).build();
 
 		else if (obj instanceof SimpleTime)
 			return ((SimpleTime) obj).getRaw();

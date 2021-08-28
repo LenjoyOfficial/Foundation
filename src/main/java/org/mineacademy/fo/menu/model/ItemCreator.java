@@ -6,9 +6,15 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
 
+import org.apache.commons.lang.StringUtils;
+import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.FireworkEffect;
 import org.bukkit.Material;
 import org.bukkit.block.banner.Pattern;
+import org.bukkit.block.banner.PatternType;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -16,30 +22,42 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
 import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.material.MaterialData;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.potion.PotionType;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.Valid;
+import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.menu.button.Button;
 import org.mineacademy.fo.menu.button.Button.DummyButton;
+import org.mineacademy.fo.model.ConfigSerializable;
 import org.mineacademy.fo.model.SimpleEnchant;
 import org.mineacademy.fo.model.SimpleEnchantment;
+import org.mineacademy.fo.model.SimplePotionData;
 import org.mineacademy.fo.remain.CompColor;
 import org.mineacademy.fo.remain.CompItemFlag;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.CompMetadata;
 import org.mineacademy.fo.remain.CompMonsterEgg;
 import org.mineacademy.fo.remain.CompProperty;
+import org.mineacademy.fo.remain.Remain;
 
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.Singular;
+import net.md_5.bungee.api.chat.BaseComponent;
 
 /**
  * Our core class for easy and comfortable item creation.
@@ -71,6 +89,12 @@ final @Builder public class ItemCreator {
 	private final int damage = -1;
 
 	/**
+	 * The player inventory slot to be placed in when calling {@link #give(Player)}
+	 */
+	@Builder.Default
+	private final int slot = -1;
+
+	/**
 	 * The item name, colors are replaced
 	 */
 	private final String name;
@@ -94,7 +118,7 @@ final @Builder public class ItemCreator {
 	private List<CompItemFlag> flags;
 
 	/**
-	 * The banner patterns
+	 * The patterns if this is a banner
 	 */
 	@Singular
 	private final List<Pattern> patterns;
@@ -129,16 +153,21 @@ final @Builder public class ItemCreator {
 	private final String skullOwner;
 
 	/**
+	 * The skull skin in base64, in case this is a skull
+	 */
+	private final String skullSkin;
+
+	/**
 	 * The list of NBT tags with their key-value pairs
 	 */
 	@Singular
 	private final Map<String, String> tags;
 
 	/**
-	 * If this is a book, you can set its new pages here
+	 * If this is a book, you can set its new pages here, supports json pages starting with [JSON]
 	 */
 	@Singular
-	private final List<String> bookPages;
+	private final List<BaseComponent[]> bookPages;
 
 	/**
 	 * If this a book, you can set its author here
@@ -151,6 +180,29 @@ final @Builder public class ItemCreator {
 	private final String bookTitle;
 
 	/**
+	 * The potion data if this is a potion
+	 */
+	private final SimplePotionData potionData;
+
+	/**
+	 * The potion effects in case this is a potion
+	 */
+	@Singular
+	private final List<PotionEffect> potionEffects;
+
+	/**
+	 * The power of this firework
+	 */
+	@Builder.Default
+	private final int fireworkPower = -1;
+
+	/**
+	 * The firework effects in case this is a firework
+	 */
+	@Singular
+	private final List<FireworkEffect> fireworkEffects;
+
+	/**
 	 * The item meta, overriden by other fields
 	 */
 	private final ItemMeta meta;
@@ -161,11 +213,28 @@ final @Builder public class ItemCreator {
 
 	/**
 	 * Convenience method for quickly adding this item into a players inventory
+	 * at the slot this item creator specified. Throws an exception if the slot
+	 * is not defined.
 	 *
 	 * @param player
 	 */
 	public void give(final Player player) {
-		player.getInventory().addItem(this.make());
+		Valid.checkBoolean(this.slot != -1, "Slot is not defined in " + serialize().toStringFormatted());
+
+		give(player, this.slot);
+	}
+
+	/**
+	 * Adds this item into the player's inventory at the given slot
+	 * <p>
+	 * See {@link org.bukkit.inventory.PlayerInventory#setItem(int, ItemStack)}
+	 * for information on slots.
+	 *
+	 * @param player
+	 * @param slot
+	 */
+	public void give(final Player player, int slot) {
+		player.getInventory().setItem(slot, this.make());
 	}
 
 	// ----------------------------------------------------------------------------------------
@@ -225,8 +294,17 @@ final @Builder public class ItemCreator {
 			return compiledItem;
 
 		// Override with given material
-		if (material != null)
-			compiledItem.setType(material.getMaterial());
+		if (material != null) {
+			final Material mat = material.getMaterial();
+			final byte data = material.getData();
+
+			compiledItem.setType(mat);
+
+			if (data != 0 && MinecraftVersion.olderThan(V.v1_13)) {
+				compiledItem.setData(new MaterialData(mat, data));
+				compiledItem.setDurability(data);
+			}
+		}
 
 		// Apply specific material color if possible
 		color:
@@ -310,7 +388,7 @@ final @Builder public class ItemCreator {
 				compiledMeta = CompMonsterEgg.setEntity(compiledItem, entity).getItemMeta();
 		}
 
-		flags = new ArrayList<>(Common.getOrDefault(flags, new ArrayList<>()));
+		flags = Common.toList(flags);
 
 		if (damage != -1) {
 
@@ -336,13 +414,27 @@ final @Builder public class ItemCreator {
 			final BookMeta bookMeta = (BookMeta) compiledMeta;
 
 			if (bookPages != null)
-				bookMeta.setPages(Common.colorize(bookPages));
+				Remain.setPages(bookMeta, bookPages);
 
 			if (bookMeta.getAuthor() == null)
-				bookMeta.setAuthor(Common.getOrEmpty(bookAuthor));
+				bookMeta.setAuthor(Common.colorize(bookAuthor));
 
 			if (bookMeta.getTitle() == null)
-				bookMeta.setTitle(Common.getOrEmpty(bookTitle));
+				bookMeta.setTitle(Common.colorize(bookTitle));
+		}
+
+		if (patterns != null && compiledMeta instanceof BannerMeta)
+			for (final Pattern pattern : patterns)
+				((BannerMeta) compiledMeta).addPattern(pattern);
+
+		if (compiledMeta instanceof FireworkMeta) {
+			FireworkMeta fireworkMeta = (FireworkMeta) compiledMeta;
+
+			if (fireworkPower != -1)
+				fireworkMeta.setPower(fireworkPower);
+
+			if (fireworkEffects != null && !fireworkEffects.isEmpty())
+				fireworkMeta.addEffects(fireworkEffects);
 		}
 
 		if (glow) {
@@ -370,9 +462,9 @@ final @Builder public class ItemCreator {
 			compiledMeta.setLore(coloredLores);
 		}
 
-		if (itemMeta instanceof BannerMeta && patterns != null)
-			for (final Pattern pattern : patterns)
-				((BannerMeta) itemMeta).addPattern(pattern);
+		if (potionEffects != null && !potionEffects.isEmpty() && compiledMeta instanceof PotionMeta)
+			for (PotionEffect effect : potionEffects)
+				((PotionMeta) compiledMeta).addCustomEffect(effect, true);
 
 		if (unbreakable != null) {
 			flags.add(CompItemFlag.HIDE_ATTRIBUTES);
@@ -405,6 +497,14 @@ final @Builder public class ItemCreator {
 
 		if (enchantedIs != null)
 			finalItem = enchantedIs;
+
+		// Apply the skull skin AFTER we applied the item meta
+		if (skullSkin != null && compiledMeta instanceof SkullMeta)
+			finalItem = SkullCreator.itemWithBase64(finalItem, skullSkin);
+
+		// SimplePotionData#apply also gets the ItemMeta from the item
+		if (potionData != null && compiledMeta instanceof PotionMeta)
+			potionData.apply(compiledItem);
 
 		// Apply NBT tags
 		if (tags != null)

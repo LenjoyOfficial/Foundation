@@ -1,19 +1,5 @@
 package org.mineacademy.fo.collection;
 
-import com.google.gson.Gson;
-import lombok.NonNull;
-import org.bukkit.Location;
-import org.bukkit.configuration.MemorySection;
-import org.bukkit.inventory.ItemStack;
-import org.mineacademy.fo.Common;
-import org.mineacademy.fo.SerializeUtil;
-import org.mineacademy.fo.Valid;
-import org.mineacademy.fo.exception.FoException;
-import org.mineacademy.fo.model.InventoryItem;
-import org.mineacademy.fo.model.Tuple;
-import org.mineacademy.fo.plugin.SimplePlugin;
-import org.mineacademy.fo.remain.CompMaterial;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -25,6 +11,22 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+
+import org.bukkit.Location;
+import org.bukkit.configuration.MemorySection;
+import org.bukkit.inventory.ItemStack;
+import org.mineacademy.fo.Common;
+import org.mineacademy.fo.SerializeUtil;
+import org.mineacademy.fo.Valid;
+import org.mineacademy.fo.exception.FoException;
+import org.mineacademy.fo.menu.model.ItemCreator;
+import org.mineacademy.fo.model.Tuple;
+import org.mineacademy.fo.plugin.SimplePlugin;
+import org.mineacademy.fo.remain.CompMaterial;
+
+import com.google.gson.Gson;
+
+import lombok.NonNull;
 
 /**
  * Serialized map enables you to save and retain values from your
@@ -489,7 +491,7 @@ public final class SerializedMap extends StrictCollection {
 		if (obj instanceof ItemStack)
 			return (ItemStack) obj;
 
-		return InventoryItem.toItem(SerializedMap.of(obj));
+		return ItemCreator.of(SerializedMap.of(obj)).build().make();
 	}
 
 	/**
@@ -498,10 +500,10 @@ public final class SerializedMap extends StrictCollection {
 	 * @param key
 	 * @return
 	 */
-	public InventoryItem getInventoryItem(final String key) {
+	public ItemCreator.ItemCreatorBuilder getItemCreator(final String key) {
 		final SerializedMap map = getMap(key);
 
-		return !map.isEmpty() ? InventoryItem.deserialize(map) : null;
+		return !map.isEmpty() ? ItemCreator.of(map) : null;
 	}
 
 	/**
@@ -637,7 +639,7 @@ public final class SerializedMap extends StrictCollection {
 	}
 
 	/**
-	 * Returns a serialized map (String-Object pairs) from the map, or null if does not exist
+	 * Returns a serialized map (String-Object pairs) from the map, or empty if does not exist
 	 *
 	 * @param key
 	 * @return
@@ -946,7 +948,7 @@ public final class SerializedMap extends StrictCollection {
 			final Object value = entry.getValue();
 
 			if (value != null && !value.toString().equals("[]") && !value.toString().equals("{}") && !value.toString().isEmpty() && !value.toString().equals("0.0") && !value.toString().equals("false"))
-				lines.add("\t'" + entry.getKey() + "' = '" + entry.getValue() + "'");
+				lines.add("    '" + entry.getKey() + "' = '" + entry.getValue() + "'");
 		}
 
 		lines.add("}");

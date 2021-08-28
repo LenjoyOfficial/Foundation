@@ -1,10 +1,25 @@
 package org.mineacademy.fo.settings;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.function.Function;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -28,9 +43,9 @@ import org.mineacademy.fo.collection.StrictSet;
 import org.mineacademy.fo.constants.FoConstants;
 import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.exception.FoException;
+import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.model.BoxedMessage;
 import org.mineacademy.fo.model.ColoredRanges;
-import org.mineacademy.fo.model.InventoryItem;
 import org.mineacademy.fo.model.Replacer;
 import org.mineacademy.fo.model.SimpleSound;
 import org.mineacademy.fo.model.SimpleTime;
@@ -40,25 +55,12 @@ import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.settings.model.SimpleDisplay;
 import org.mineacademy.fo.settings.model.SimpleProgressDisplay;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.function.Function;
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
+
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 
 /**
  * The core configuration class. Manages all settings files.
@@ -1109,6 +1111,8 @@ public class YamlConfig {
 	 * @return
 	 */
 	public ItemStack getItem(final String path, final ItemStack def) {
+		forceSingleDefaults(path);
+
 		return isSet(path) ? getItem(path) : def;
 	}
 
@@ -1120,21 +1124,19 @@ public class YamlConfig {
 	 * @return
 	 */
 	public ItemStack getItem(final String path) {
-		final SerializedMap map = getMap(path);
-
-		return !map.isEmpty() ? InventoryItem.toItem(map) : null;
+		return getItemCreator(path).build().make();
 	}
 
 	/**
-	 * Returns an InventoryItem at the key position or null if not found
+	 * Returns an ItemCreatorBuilder at the key position or null if not found
 	 *
 	 * @param path
 	 * @return
 	 */
-	public InventoryItem getInventoryItem(final String path) {
+	public ItemCreator.ItemCreatorBuilder getItemCreator(final String path) {
 		final SerializedMap map = getMap(path);
 
-		return !map.isEmpty() ? InventoryItem.deserialize(map) : null;
+		return !map.isEmpty() ? ItemCreator.of(map) : null;
 	}
 
 	/**

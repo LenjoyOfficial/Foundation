@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
+import net.md_5.bungee.api.chat.BaseComponent;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
@@ -42,8 +43,6 @@ import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.menu.model.SkullCreator;
-import org.mineacademy.fo.model.ConfigSerializable;
-import org.mineacademy.fo.model.SimpleEnchant;
 import org.mineacademy.fo.remain.CompColor;
 import org.mineacademy.fo.remain.CompItemFlag;
 import org.mineacademy.fo.remain.CompMaterial;
@@ -53,11 +52,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import net.md_5.bungee.api.chat.BaseComponent;
 
 /**
  * A utility class for storing and serializing itemstacks with preset inventory slots
+ *
+ * @deprecated just use {@link ItemCreator#of(SerializedMap) ItemCreator}, much more flexible and stable
  */
+@Deprecated
 @AllArgsConstructor
 public final class InventoryItem implements ConfigSerializable {
 	@Getter
@@ -211,39 +212,46 @@ public final class InventoryItem implements ConfigSerializable {
 				final PotionConverter cache = new PotionConverter(item, (PotionMeta) meta);
 
 				map.put(cache.serialize());
+			}
 
-			} else if (meta instanceof EnchantmentStorageMeta) {
+			if (meta instanceof EnchantmentStorageMeta) {
 				// Enchanted books
 				final EnchantmentStorageConverter cache = new EnchantmentStorageConverter(item, (EnchantmentStorageMeta) meta);
 
 				map.put("Stored_Enchantments", cache);
+			}
 
-			} else if (MinecraftVersion.atLeast(MinecraftVersion.V.v1_13) && meta instanceof Damageable) {
+			if (MinecraftVersion.atLeast(MinecraftVersion.V.v1_13) && meta instanceof Damageable) {
 				final DamageableConverter converter = new DamageableConverter(item, (Damageable) meta);
 
 				map.put(converter.serialize());
+			}
 
-			} else if (meta instanceof SkullMeta) {
+			if (meta instanceof SkullMeta) {
 				final SkullConverter converter = new SkullConverter(item, (SkullMeta) meta);
 
 				map.put(converter.serialize());
+			}
 
-			} else if (meta instanceof BookMeta) {
+			if (meta instanceof BookMeta) {
 				final BookConverter converter = new BookConverter(item, (BookMeta) meta);
 
 				map.put(converter.serialize());
+			}
 
-			} else if (meta instanceof LeatherArmorMeta) {
+			if (meta instanceof LeatherArmorMeta) {
 				final LeatherArmorConverter converter = new LeatherArmorConverter(item, (LeatherArmorMeta) meta);
 
 				map.put(converter.serialize());
+			}
 
-			} else if (meta instanceof BannerMeta) {
+			if (meta instanceof BannerMeta) {
 				final BannerConverter converter = new BannerConverter(item, (BannerMeta) meta);
 
 				map.put("Patterns", converter);
+			}
 
-			} else if (meta instanceof FireworkMeta) {
+			if (meta instanceof FireworkMeta) {
 				final FireworkConverter converter = new FireworkConverter(item, (FireworkMeta) meta);
 
 				map.put(converter.serialize());
@@ -263,10 +271,10 @@ public final class InventoryItem implements ConfigSerializable {
 			map.put("Flags", Common.toList(meta.getItemFlags()));
 
 			// Unbreakable
-			if (MinecraftVersion.atLeast(MinecraftVersion.V.v1_12) && meta.isUnbreakable())
-				map.put("Unbreakable", true);
+			try {
+				map.put("Unbreakable", meta.isUnbreakable());
 
-			else {
+			} catch (Throwable t) {
 				final Object metaSpigot = ReflectionUtil.invoke("spigot", meta);
 				final boolean isUnbreakable = ReflectionUtil.invoke("isUnbreakable", metaSpigot);
 
@@ -345,38 +353,45 @@ public final class InventoryItem implements ConfigSerializable {
 			final PotionConverter converter = PotionConverter.deserialize(map);
 
 			converter.apply(builder, (PotionMeta) meta);
+		}
 
-		} else if (meta instanceof EnchantmentStorageMeta) {
+		if (meta instanceof EnchantmentStorageMeta) {
 			final EnchantmentStorageConverter converter = map.get("Stored_Enchantments", EnchantmentStorageConverter.class);
 
 			converter.apply(builder, (EnchantmentStorageMeta) meta);
+		}
 
-		} else if (MinecraftVersion.atLeast(MinecraftVersion.V.v1_13) && meta instanceof Damageable) {
+		if (MinecraftVersion.atLeast(MinecraftVersion.V.v1_13) && meta instanceof Damageable) {
 			final DamageableConverter converter = DamageableConverter.deserialize(map);
 
 			converter.apply(builder, (Damageable) meta);
+		}
 
-		} else if (meta instanceof SkullMeta) {
+		if (meta instanceof SkullMeta) {
 			final SkullConverter converter = SkullConverter.deserialize(map);
 
 			converter.apply(builder, (SkullMeta) meta);
+		}
 
-		} else if (meta instanceof BookMeta) {
+		if (meta instanceof BookMeta) {
 			final BookConverter converter = BookConverter.deserialize(map);
 
 			converter.apply(builder, (BookMeta) meta);
+		}
 
-		} else if (meta instanceof LeatherArmorMeta) {
+		if (meta instanceof LeatherArmorMeta) {
 			final LeatherArmorConverter converter = LeatherArmorConverter.deserialize(map);
 
 			converter.apply(builder, (LeatherArmorMeta) meta);
+		}
 
-		} else if (meta instanceof BannerMeta) {
+		if (meta instanceof BannerMeta) {
 			final BannerConverter converter = BannerConverter.deserialize(map);
 
 			converter.apply(builder, (BannerMeta) meta);
+		}
 
-		} else if (meta instanceof FireworkMeta) {
+		if (meta instanceof FireworkMeta) {
 			final FireworkConverter converter = FireworkConverter.deserialize(map);
 
 			converter.apply(builder, (FireworkMeta) meta);
@@ -404,9 +419,11 @@ public final class InventoryItem implements ConfigSerializable {
 					builder.flag(flag);
 		}
 
-		// Unbreakable
-		if (map.containsKey("Unbreakable"))
-			builder.unbreakable(map.getBoolean("Unbreakable"));
+		// Make unbreakable
+		builder.unbreakable(map.getBoolean("Unbreakable", false));
+
+		// Add glow
+		builder.glow(map.getBoolean("Glow", false));
 
 		return builder.build().make();
 	}
@@ -475,10 +492,11 @@ public final class InventoryItem implements ConfigSerializable {
 			if (!effects.isEmpty()) {
 				final SerializedMap potionMap = new SerializedMap();
 
-				for (final PotionEffect effect : effects) {
-					potionMap.put(effect.getType().toString(), SerializedMap.ofArray("Amplifier", effect.getAmplifier(),
-							"Duration", effect.getDuration()));
-				}
+				for (final PotionEffect effect : effects)
+					potionMap.put(effect.getType().toString(), SerializedMap.ofArray(
+							"Amplifier", effect.getAmplifier(),
+							"Duration", effect.getDuration() / 20)
+					);
 
 				map.put("Potion_Effects", potionMap);
 			}
@@ -526,7 +544,7 @@ public final class InventoryItem implements ConfigSerializable {
 
 				try {
 					effects.add(new PotionEffect(ItemUtil.findPotion(effectType),
-							effect.getInteger("Duration"),
+							effect.getInteger("Duration") * 20,
 							effect.getInteger("Amplifier")));
 
 				} catch (final Exception e) {
@@ -812,7 +830,7 @@ public final class InventoryItem implements ConfigSerializable {
 			if (map.containsKey("Pages"))
 				pages.addAll(Common.convert(map.getStringList("Pages"),
 						// Convert pages to JSON if they are not already JSON
-						page -> Remain.toComponent(page.startsWith("[JSON]") ? page : Remain.toJson(page.substring(6)))));
+						page -> Remain.toComponent(page.startsWith("[JSON]") ? page.substring(6) : Remain.toJson(page))));
 
 			return new BookConverter(author, title, pages);
 		}
@@ -827,7 +845,7 @@ public final class InventoryItem implements ConfigSerializable {
 			meta.setAuthor(author);
 			meta.setTitle(title);
 
-			Remain.setPages(meta, pages);
+			builder.bookPages(pages);
 		}
 	}
 
@@ -900,7 +918,7 @@ public final class InventoryItem implements ConfigSerializable {
 		// -----------------------------------------------------------------------------------
 
 		/**
-		 * Creates a new cache for a META from an existing item
+		 * Creates a new cache for a BannerMeta from an existing item
 		 *
 		 * @param item
 		 * @param meta
@@ -924,7 +942,7 @@ public final class InventoryItem implements ConfigSerializable {
 		// -----------------------------------------------------------------------------------
 
 		/**
-		 * Creates a new cache from a serialized META
+		 * Creates a new cache from a serialized BannerMeta
 		 *
 		 * @param map
 		 * @return
@@ -950,7 +968,7 @@ public final class InventoryItem implements ConfigSerializable {
 		}
 
 		/**
-		 * Applies the cached values onto the item builder and the META
+		 * Applies the cached values onto the item builder and the BannerMeta
 		 *
 		 * @param builder
 		 * @param meta
@@ -1082,19 +1100,19 @@ public final class InventoryItem implements ConfigSerializable {
 		}
 	}
 
-	@RequiredArgsConstructor
+	/*@RequiredArgsConstructor
 	private static final class MetaConverter implements ConfigSerializable {
 
 		// -----------------------------------------------------------------------------------
 		// Serialization
 		// -----------------------------------------------------------------------------------
 
-		/**
-		 * Creates a new cache for a META from an existing item
-		 *
-		 * @param item
-		 * @param meta
-		 */
+		*//**
+	 * Creates a new cache for a META from an existing item
+	 *
+	 * @param item
+	 * @param meta
+	 *//*
 		private MetaConverter(final ItemStack item, final Damageable meta) {
 		}
 
@@ -1109,24 +1127,24 @@ public final class InventoryItem implements ConfigSerializable {
 		// Deserialization
 		// -----------------------------------------------------------------------------------
 
-		/**
-		 * Creates a new cache from a serialized META
-		 *
-		 * @param map
-		 * @return
-		 */
+		*//**
+	 * Creates a new cache from a serialized META
+	 *
+	 * @param map
+	 * @return
+	 *//*
 		public static MetaConverter deserialize(final SerializedMap map) {
 			return new MetaConverter();
 		}
 
-		/**
-		 * Applies the cached values onto the item builder and the META
-		 *
-		 * @param builder
-		 * @param meta
-		 */
+		*//**
+	 * Applies the cached values onto the item builder and the META
+	 *
+	 * @param builder
+	 * @param meta
+	 *//*
 		private void apply(final ItemCreator.ItemCreatorBuilder builder, final Damageable meta) {
 
 		}
-	}
+	}*/
 }

@@ -217,7 +217,7 @@ public enum CompSound {
 	BLOCK_DISPENSER_LAUNCH("LEVEL_UP", "DISPENSER_LAUNCH", "BLOCK_DISPENSER_LAUNCH"),
 	ENTITY_ITEMFRAME_BREAK("STEP_WOOL", "BLOCK_CLOTH_STEP", "BLOCK_WOOL_STEP", "ENTITY_ITEMFRAME_BREAK");
 
-	private String[] versionDependentNames;
+	private final String[] versionDependentNames;
 	private org.bukkit.Sound cached = null;
 
 	CompSound(final String... versionDependentNames) {
@@ -322,10 +322,14 @@ public enum CompSound {
 			}
 
 		// If not, try to find the corresponding new sound
+		find:
 		for (final CompSound compSound : values())
 			for (final String name : compSound.versionDependentNames)
-				if (name.equalsIgnoreCase(soundName))
+				if (name.equalsIgnoreCase(soundName)) {
 					sound = compSound;
+
+					break find;
+				}
 
 		return sound != null ? sound.getSound() : getFallback();
 	}

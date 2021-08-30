@@ -313,7 +313,7 @@ public class ItemCreator implements ConfigSerializable {
 		if (material != null)
 			Valid.checkNotNull(material.getMaterial(), "Material#getMaterial cannot be null for " + material);
 
-		final ItemStack compiledItem = item != null ? item.clone() : new ItemStack(material.getMaterial(), amount);
+		final ItemStack compiledItem = item != null ? item.clone() : material.toItem(amount);
 		ItemMeta compiledMeta = meta != null ? meta.clone() : compiledItem.getItemMeta();
 
 		// Skip if air
@@ -322,15 +322,10 @@ public class ItemCreator implements ConfigSerializable {
 
 		// Override with given material
 		if (material != null) {
-			final Material mat = material.getMaterial();
-			final byte data = material.getData();
+			compiledItem.setType(material.getMaterial());
 
-			compiledItem.setType(mat);
-
-			if (data != 0 && MinecraftVersion.olderThan(V.v1_13)) {
-				compiledItem.setData(new MaterialData(mat, data));
-				compiledItem.setDurability(data);
-			}
+			if (MinecraftVersion.olderThan(V.v1_13))
+				compiledItem.setData(new MaterialData(material.getMaterial(), material.getData()));
 		}
 
 		// Apply specific material color if possible

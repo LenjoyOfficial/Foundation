@@ -478,7 +478,7 @@ public class ItemCreator implements ConfigSerializable {
 					compiledMeta.addEnchant(ench.getEnchant(), ench.getLevel(), true);
 
 		if (name != null && !"".equals(name))
-			compiledMeta.setDisplayName(Common.colorize("&r&0" + name));
+			compiledMeta.setDisplayName(Common.colorize("&r&f" + name));
 
 		if (lores != null && !lores.isEmpty()) {
 			final List<String> coloredLores = new ArrayList<>();

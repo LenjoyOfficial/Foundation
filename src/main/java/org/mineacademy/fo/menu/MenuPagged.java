@@ -20,6 +20,7 @@ import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.settings.SimpleLocalization;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.val;
 
 /**
@@ -33,6 +34,26 @@ public abstract class MenuPagged<T> extends Menu {
 	 */
 	@Getter
 	private final List<Integer> slots;
+
+	/**
+	 * The active page button material, used in buttons to previous/next pages
+	 * when they can be clicked (such as to go to the next/previous page)
+	 *
+	 * Defaults to lime dye
+	 */
+	@Getter
+	@Setter
+	private static CompMaterial activePageButton = CompMaterial.LIME_DYE;
+
+	/**
+	 * The inactive page button material, used in buttons to previous/next
+	 * pages when they cannot be clicked (i.e. on the first/last page)
+	 *
+	 * Defaults to gray dye
+	 */
+	@Getter
+	@Setter
+	private static CompMaterial inactivePageButton = CompMaterial.GRAY_DYE;
 
 	/**
 	 * The pages by the page number, containing a list of items
@@ -224,7 +245,7 @@ public abstract class MenuPagged<T> extends Menu {
 				final int previousPage = currentPage - 1;
 
 				return ItemCreator
-						.of(canGo ? CompMaterial.LIME_DYE : CompMaterial.GRAY_DYE)
+						.of(canGo ? activePageButton : inactivePageButton)
 						.name(previousPage == 0 ? SimpleLocalization.Menu.PAGE_FIRST : SimpleLocalization.Menu.PAGE_PREVIOUS.replace("{page}", String.valueOf(previousPage)))
 						.build().make();
 			}
@@ -255,7 +276,7 @@ public abstract class MenuPagged<T> extends Menu {
 				final boolean lastPage = currentPage == pages.size();
 
 				return ItemCreator
-						.of(canGo ? CompMaterial.LIME_DYE : CompMaterial.GRAY_DYE)
+						.of(canGo ? activePageButton : inactivePageButton)
 						.name(lastPage ? SimpleLocalization.Menu.PAGE_LAST : SimpleLocalization.Menu.PAGE_NEXT.replace("{page}", String.valueOf(currentPage + 1)))
 						.build().make();
 			}
@@ -356,13 +377,33 @@ public abstract class MenuPagged<T> extends Menu {
 				return convertToItemStack(object);
 		}
 
-		if (slot == getSize() - 6)
+		if (slot == this.getPreviousButtonPosition())
 			return prevButton.getItem();
 
-		if (slot == getSize() - 4)
+		if (slot == this.getNextButtonPosition())
 			return nextButton.getItem();
 
 		return null;
+	}
+
+	/**
+	 * Override to edit where the button to previous page is,
+	 * defaults to "size of the menu - 6"
+	 *
+	 * @return
+	 */
+	protected int getPreviousButtonPosition() {
+		return this.getSize() - 6;
+	}
+
+	/**
+	 * Override to edit where the button to next page is,
+	 * defaults to "size of the menu - 4"
+	 *
+	 * @return
+	 */
+	protected int getNextButtonPosition() {
+		return this.getSize() - 4;
 	}
 
 	/**

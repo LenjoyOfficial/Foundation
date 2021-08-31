@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
+import com.google.common.collect.Sets;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -19,8 +20,6 @@ import org.bukkit.util.Vector;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.Remain;
-
-import com.google.common.collect.Sets;
 
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -128,6 +127,18 @@ public final class BlockUtil {
 	 * @return
 	 */
 	public static Set<Location> getBoundingBox(final Location primary, final Location secondary) {
+		return getBoundingBox(primary, secondary, true);
+	}
+
+	/**
+	 * Return locations representing the bounding box of a cuboid region,
+	 * used when rendering particle effects
+	 *
+	 * @param primary
+	 * @param secondary
+	 * @return
+	 */
+	public static Set<Location> getBoundingBox(final Location primary, final Location secondary, final boolean fillWalls) {
 		final List<VectorHelper> shape = new ArrayList<>();
 
 		final VectorHelper min = getMinimumPoint(primary, secondary);
@@ -152,11 +163,12 @@ public final class BlockUtil {
 			shape.addAll(plotLine(p3, p4));
 			shape.addAll(plotLine(p1, p3));
 
-			for (double offset = BOUNDING_VERTICAL_GAP; offset < height; offset += BOUNDING_VERTICAL_GAP) {
-				final VectorHelper p5 = p1.add(0.0D, offset, 0.0D);
-				final VectorHelper p6 = p2.add(0.0D, offset, 0.0D);
-				shape.addAll(plotLine(p5, p6));
-			}
+			if (fillWalls)
+				for (double offset = BOUNDING_VERTICAL_GAP; offset < height; offset += BOUNDING_VERTICAL_GAP) {
+					final VectorHelper p5 = p1.add(0.0D, offset, 0.0D);
+					final VectorHelper p6 = p2.add(0.0D, offset, 0.0D);
+					shape.addAll(plotLine(p5, p6));
+				}
 		}
 
 		final Set<Location> locations = new HashSet<>();

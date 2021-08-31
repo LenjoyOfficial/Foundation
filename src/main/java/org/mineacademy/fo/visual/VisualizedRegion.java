@@ -28,6 +28,12 @@ public final class VisualizedRegion extends Region {
 	private final List<Player> viewers = new ArrayList<>();
 
 	/**
+	 * Should we visualize the walls or just the edges?
+	 */
+	@Setter
+	private boolean fillWalls;
+
+	/**
 	 * The task responsible for sending particles
 	 */
 	private BukkitTask task;
@@ -45,7 +51,20 @@ public final class VisualizedRegion extends Region {
 	 * @param secondary
 	 */
 	public VisualizedRegion(final Location primary, final Location secondary) {
+		this(primary, secondary, true);
+	}
+
+	/**
+	 * Create a new visualizable region
+	 *
+	 * @param primary
+	 * @param secondary
+	 * @param fillWalls if set to false, only the region's edges will be visualized
+	 */
+	public VisualizedRegion(final Location primary, final Location secondary, final boolean fillWalls) {
 		super(primary, secondary);
+
+		this.fillWalls = fillWalls;
 	}
 
 	/**
@@ -56,7 +75,21 @@ public final class VisualizedRegion extends Region {
 	 * @param secondary
 	 */
 	public VisualizedRegion(final String name, final Location primary, final Location secondary) {
+		this(name, primary, secondary, true);
+	}
+
+	/**
+	 * Create a visualizable region
+	 *
+	 * @param name
+	 * @param primary
+	 * @param secondary
+	 * @param fillWalls if set to false, only the region's edges will be visualized
+	 */
+	public VisualizedRegion(final String name, final Location primary, final Location secondary, final boolean fillWalls) {
 		super(name, primary, secondary);
+
+		this.fillWalls = fillWalls;
 	}
 
 	// ------–------–------–------–------–------–------–------–------–------–------–------–
@@ -134,7 +167,7 @@ public final class VisualizedRegion extends Region {
 					return;
 				}
 
-				final Set<Location> blocks = BlockUtil.getBoundingBox(getPrimary(), getSecondary());
+				final Set<Location> blocks = BlockUtil.getBoundingBox(getPrimary(), getSecondary(), fillWalls);
 
 				for (final Location location : blocks)
 					for (final Player viewer : viewers) {
@@ -160,6 +193,15 @@ public final class VisualizedRegion extends Region {
 		viewers.clear();
 	}
 
+	@Override
+	public SerializedMap serialize() {
+		final SerializedMap map = super.serialize();
+
+		map.put("Visualize_Walls", fillWalls);
+
+		return map;
+	}
+
 	/**
 	 * Converts a saved map from your yaml/json file into a region if it contains Primary and Secondary keys
 	 *
@@ -172,7 +214,8 @@ public final class VisualizedRegion extends Region {
 		final String name = map.getString("Name");
 		final Location prim = map.getLocation("Primary");
 		final Location sec = map.getLocation("Secondary");
+		final boolean fillWalls = map.getBoolean("Visualize_Walls", true);
 
-		return new VisualizedRegion(name, prim, sec);
+		return new VisualizedRegion(name, prim, sec, fillWalls);
 	}
 }

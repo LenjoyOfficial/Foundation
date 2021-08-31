@@ -292,7 +292,7 @@ public class Region implements ConfigSerializable {
 	 * Saves the region data into a map you can save in your yaml or json file
 	 */
 	@Override
-	public final SerializedMap serialize() {
+	public SerializedMap serialize() {
 		final SerializedMap map = new SerializedMap();
 
 		map.putIfExist("Name", name);

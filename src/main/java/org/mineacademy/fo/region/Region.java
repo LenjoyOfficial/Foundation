@@ -1,10 +1,12 @@
 package org.mineacademy.fo.region;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -159,6 +161,24 @@ public class Region implements ConfigSerializable {
 
 		final List<Entity> found = new LinkedList<>();
 
+		for (final Chunk chunk : getChunks())
+			for (final Entity entity : chunk.getEntities())
+				if (entity.isValid() && entity.getLocation() != null && isWithin(entity.getLocation()))
+					found.add(entity);
+
+		return found;
+	}
+
+	/**
+	 * Gets the chunks in this region
+	 *
+	 * @return
+	 */
+	public List<Chunk> getChunks() {
+		Valid.checkBoolean(isWhole(), "Cannot perform getChunks on a non-complete region: " + this);
+
+		final List<Chunk> chunks = new ArrayList<>();
+
 		final Location[] centered = getCorrectedPoints();
 		final Location primary = centered[0];
 		final Location secondary = centered[1];
@@ -168,13 +188,13 @@ public class Region implements ConfigSerializable {
 		final int zMin = (int) primary.getZ() >> 4;
 		final int zMax = (int) secondary.getZ() >> 4;
 
+		final World world = getWorld();
+
 		for (int cx = xMin; cx <= xMax; ++cx)
 			for (int cz = zMin; cz <= zMax; ++cz)
-				for (final Entity entity : getWorld().getChunkAt(cx, cz).getEntities())
-					if (entity.isValid() && entity.getLocation() != null && isWithin(entity.getLocation()))
-						found.add(entity);
+				chunks.add(world.getChunkAt(cx, cz));
 
-		return found;
+		return chunks;
 	}
 
 	/**

@@ -148,6 +148,11 @@ public abstract class Menu {
 	private boolean slotNumbersVisible;
 
 	/**
+	 * A one way boolean indicating this menu has been opened at least once
+	 */
+	private boolean opened = false;
+
+	/**
 	 * A flag indicating if this menu is closed (no one is currently viewing it)
 	 */
 	private boolean closed = false;
@@ -386,7 +391,7 @@ public abstract class Menu {
 	public final void displayTo(final Player player, boolean closeOpenInventory) {
 		Valid.checkNotNull(this.size, "Size not set in " + this + " (call setSize in your constructor)");
 		Valid.checkNotNull(this.title, "Title not set in " + this + " (call setTitle in your constructor)");
-		Valid.checkBoolean(this.closed || this.viewer == null, "One menu instance can be shown to one player only, " + this + " is already visible for " + this.viewer);
+		Valid.checkBoolean(!this.closed, "One menu instance can be shown to one player only, " + this + " is already visible for " + this.viewer);
 
 		viewer = player;
 		registerButtonsIfHasnt();
@@ -441,6 +446,8 @@ public abstract class Menu {
 			drawer.display(player);
 
 			player.setMetadata(FoConstants.NBT.TAG_MENU_CURRENT, new FixedMetadataValue(SimplePlugin.getInstance(), Menu.this));
+
+			opened = true;
 		});
 	}
 
@@ -773,7 +780,7 @@ public abstract class Menu {
 	protected final void setTitle(final String title) {
 		this.title = title;
 
-		if (this.viewer != null)
+		if (this.viewer != null && this.opened)
 			PlayerUtil.updateInventoryTitle(this.viewer, title);
 	}
 

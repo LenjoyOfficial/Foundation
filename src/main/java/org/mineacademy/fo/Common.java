@@ -1919,8 +1919,9 @@ public final class Common {
 
 		for (final OLD old : list) {
 			final NEW result = converter.convert(old);
+
 			if (result != null)
-				copy.add(converter.convert(old));
+				copy.add(result);
 		}
 
 		return copy;

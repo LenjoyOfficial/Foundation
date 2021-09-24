@@ -1067,7 +1067,7 @@ public final class SerializedMap extends StrictCollection {
 			serializedMap.map.putAll(map);
 
 		} catch (final Throwable t) {
-			Common.throwError(t, "Failed to parse JSON from " + json);
+			Common.throwError(t, "Failed to parse JSON from input: ", json);
 		}
 
 		return serializedMap;

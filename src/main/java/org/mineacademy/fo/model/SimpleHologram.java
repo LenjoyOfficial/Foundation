@@ -1,17 +1,22 @@
 package org.mineacademy.fo.model;
 
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.CompParticle;
@@ -25,12 +30,27 @@ import lombok.Setter;
  */
 public abstract class SimpleHologram {
 
+	private static final Constructor<?> SPAWN_ENTITY_LIVING_PACKET;
+	private static final Constructor<?> DESTROY_ENTITIES_PACKET;
+
+	static {
+		final Class<?> nmsLivingEntity = ReflectionUtil.getNMSClass("EntityLiving", "net.minecraft.world.entity.EntityLiving");
+
+		SPAWN_ENTITY_LIVING_PACKET = ReflectionUtil.getConstructor(
+				ReflectionUtil.getNMSClass("PacketPlayOutSpawnEntityLiving", "net.minecraft.network.protocol.game.PacketPlayOutSpawnEntityLiving"),
+				nmsLivingEntity);
+
+		DESTROY_ENTITIES_PACKET = ReflectionUtil.getConstructor(
+				ReflectionUtil.getNMSClass("PacketPlayOutEntityDestroy", "net.minecraft.network.protocol.game.PacketPlayOutEntityDestroy"),
+				int[].class);
+	}
+
 	/**
 	 * The distance between each line of lore for this item
 	 */
 	@Getter
 	@Setter
-	private static double loreLineHeight = 0.26D;
+	private static double loreLineHeight = 0.3D;
 
 	/**
 	 * A registry of created animated items
@@ -66,6 +86,11 @@ public abstract class SimpleHologram {
 	@Getter
 	private Entity entity;
 
+	/**
+	 * The players' UUID this hologram is hidden from
+	 */
+	private final Set<UUID> hiddenFromPlayers = new HashSet<>();
+
 	/*
 	 * A private flag to help with teleporting of this entity
 	 */
@@ -92,7 +117,7 @@ public abstract class SimpleHologram {
 		this.entity = this.createEntity();
 		Valid.checkNotNull(this.entity, "Failed to spawn entity from " + this);
 
-		this.drawLore(this.lastTeleportLocation);
+		this.drawLore(getLastTeleportLocation());
 
 		return this;
 	}
@@ -109,18 +134,24 @@ public abstract class SimpleHologram {
 	 */
 	private void drawLore(Location location) {
 
+		// Lower the hologram a little bit if the entity is a small armor stand
 		if (this.entity instanceof ArmorStand && ((ArmorStand) this.entity).isSmall())
-			location = location.add(0, -0.5, 0);
+			location.subtract(0, 0.5, 0);
+
+		// Start creating from the top
+		location.add(0, loreLineHeight * (loreLines.size() - 1), 0);
+
+		final World world = location.getWorld();
 
 		for (final String loreLine : this.loreLines) {
-			final ArmorStand armorStand = (ArmorStand) location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
+			final ArmorStand armorStand = (ArmorStand) world.spawnEntity(location, EntityType.ARMOR_STAND);
 
 			armorStand.setGravity(false);
 			armorStand.setVisible(false);
 
 			Remain.setCustomName(armorStand, loreLine);
 
-			location = location.subtract(0, loreLineHeight, 0);
+			location.subtract(0, loreLineHeight, 0);
 
 			this.loreEntities.add(armorStand);
 		}
@@ -134,8 +165,14 @@ public abstract class SimpleHologram {
 		if (this.pendingTeleport != null) {
 			this.entity.teleport(this.pendingTeleport);
 
-			for (final ArmorStand loreEntity : this.loreEntities)
+			// The first line is on the top
+			pendingTeleport.add(0, loreLineHeight * (loreLines.size() - 1), 0);
+
+			for (final ArmorStand loreEntity : this.loreEntities) {
 				loreEntity.teleport(this.pendingTeleport);
+
+				pendingTeleport.subtract(0, loreLineHeight, 0);
+			}
 
 			this.pendingTeleport = null;
 			return;
@@ -175,16 +212,32 @@ public abstract class SimpleHologram {
 	 */
 	public final void removeLore() {
 		this.loreEntities.forEach(stand -> stand.remove());
+		this.loreEntities.clear();
 	}
 
 	/**
-	 *
 	 * @param lore
 	 * @return
 	 */
 	public final SimpleHologram setLore(String... lore) {
 		this.loreLines.clear();
 		this.loreLines.addAll(Arrays.asList(lore));
+
+		return this;
+	}
+
+	/**
+	 * Updates the line at the index to the given line
+	 *
+	 * @param index
+	 * @param line
+	 * @return
+	 */
+	public final SimpleHologram setLine(int index, String line) {
+		Valid.checkBoolean(index >= 0 && index < this.loreLines.size(), "Index " + index + " is out of range for " + this);
+		final ArmorStand stand = this.loreEntities.get(index);
+
+		Remain.setCustomName(stand, line);
 
 		return this;
 	}
@@ -209,6 +262,60 @@ public abstract class SimpleHologram {
 	}
 
 	/**
+	 * Shows this hologram to the player via packets, returning if it's already shown
+	 *
+	 * @param player
+	 */
+	public final void showTo(Player player) {
+		this.checkSpawned("showTo");
+
+		if (!isHiddenFrom(player))
+			return;
+
+		// Show the hidden entity too
+		Remain.sendPacket(player, ReflectionUtil.instantiate(SPAWN_ENTITY_LIVING_PACKET, Remain.getHandleEntity(entity)));
+
+		for (final ArmorStand stand : loreEntities)
+			Remain.sendPacket(player, ReflectionUtil.instantiate(SPAWN_ENTITY_LIVING_PACKET, Remain.getHandleEntity(stand)));
+
+		hiddenFromPlayers.remove(player.getUniqueId());
+	}
+
+	/**
+	 * Hides this hologram from the player via packets, returning if it's already hidden
+	 *
+	 * @param player
+	 */
+	public final void hideFrom(Player player) {
+		this.checkSpawned("hideFrom");
+
+		if (isHiddenFrom(player))
+			return;
+
+		final int[] ids = new int[loreEntities.size() + 1];
+
+		// Hide the entity too
+		ids[0] = entity.getEntityId();
+
+		for (int i = 0; i < loreEntities.size(); i++)
+			ids[i + 1] = loreEntities.get(i).getEntityId();
+
+		Remain.sendPacket(player, ReflectionUtil.instantiate(DESTROY_ENTITIES_PACKET, ids));
+
+		hiddenFromPlayers.add(player.getUniqueId());
+	}
+
+	/**
+	 * Checks if the given player can see this hologram
+	 *
+	 * @param player
+	 * @return true if the player can NOT see this hologram
+	 */
+	public final boolean isHiddenFrom(Player player) {
+		return hiddenFromPlayers.contains(player.getUniqueId());
+	}
+
+	/**
 	 * Return the current armor stand location
 	 *
 	 * @return
@@ -220,7 +327,7 @@ public abstract class SimpleHologram {
 	}
 
 	/**
-	 * Return the last known teleport location
+	 * Returns a copy of the last teleport location
 	 *
 	 * @return
 	 */
@@ -237,7 +344,7 @@ public abstract class SimpleHologram {
 		Valid.checkBoolean(this.pendingTeleport == null, this + " is already pending teleport to " + this.pendingTeleport);
 		this.checkSpawned("teleport");
 
-		this.lastTeleportLocation.setX(location.getY());
+		this.lastTeleportLocation.setX(location.getX());
 		this.lastTeleportLocation.setY(location.getY());
 		this.lastTeleportLocation.setZ(location.getZ());
 
@@ -250,8 +357,11 @@ public abstract class SimpleHologram {
 	public final void remove() {
 		this.removeLore();
 
-		if (this.entity != null)
+		if (this.entity != null) {
 			this.entity.remove();
+
+			this.entity = null;
+		}
 
 		registeredItems.remove(this);
 	}
@@ -268,7 +378,7 @@ public abstract class SimpleHologram {
 	 */
 	@Override
 	public String toString() {
-		return "ArmorStandItem{spawnLocation=" + Common.shortLocation(this.lastTeleportLocation) + ", spawned=" + this.isSpawned() + "}";
+		return "SimpleHologram{spawnLocation=" + Common.shortLocation(this.lastTeleportLocation) + ", spawned=" + this.isSpawned() + "}";
 	}
 
 	/**
@@ -281,16 +391,14 @@ public abstract class SimpleHologram {
 
 		Common.runTimer(1, () -> {
 
-			for (final Iterator<SimpleHologram> it = registeredItems.iterator(); it.hasNext();) {
+			for (final Iterator<SimpleHologram> it = registeredItems.iterator(); it.hasNext(); ) {
 				final SimpleHologram model = it.next();
 
 				if (model.isSpawned()) {
-					if (!model.getEntity().isValid() || model.getEntity().isDead()) {
-						model.removeLore();
-						model.getEntity().remove();
+					if (!model.getEntity().isValid())
+						model.remove();
 
-						it.remove();
-					} else
+					else
 						model.tick();
 				}
 			}

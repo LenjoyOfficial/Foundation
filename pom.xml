@@ -1,11 +1,11 @@
-<!-- (c) 2013 - 2021 - All rights reserved. Do not share, copy, reproduce 
-	or sell any part of this library unless you have written permission from 
-	MineAcademy.org. All infringements will be prosecuted. If you are the personal 
-	owner of the MineAcademy.org End User License then you may use it for your 
+<!-- (c) 2013 - 2021 - All rights reserved. Do not share, copy, reproduce
+	or sell any part of this library unless you have written permission from
+	MineAcademy.org. All infringements will be prosecuted. If you are the personal
+	owner of the MineAcademy.org End User License then you may use it for your
 	own use in plugins but not for any other purpose. -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>org.mineacademy</groupId>
@@ -37,10 +37,10 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<version>1.18.20</version>
+			<version>1.18.22</version>
 		</dependency>
 
-		<!-- This is NOT used anywhere in Foundation, only here to prevent compile 
+		<!-- This is NOT used anywhere in Foundation, only here to prevent compile
 			errors from missing the log4j dependency that is shipped in the server jar -->
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
@@ -55,7 +55,7 @@
 			<artifactId>spigot-api</artifactId>
 			<version>1.17.1-R0.1-SNAPSHOT</version>
 		</dependency>
-		
+
 		<!-- MineAcademy guaranteed availability repos for plugins -->
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
@@ -131,7 +131,7 @@
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>SimpleClans</artifactId>
 			<version>2.16.0</version>
-		</dependency>	
+		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>Towny</artifactId>
@@ -173,6 +173,18 @@
 					<source>${java.version}</source>
 					<target>${java.version}</target>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>3.2.1</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

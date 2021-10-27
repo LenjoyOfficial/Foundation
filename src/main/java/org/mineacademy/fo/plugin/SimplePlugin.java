@@ -13,7 +13,6 @@ package org.mineacademy.fo.plugin;
 import java.io.File;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -386,12 +385,12 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 * Register a simple bungee class as a custom bungeecord listener,
 	 * for sample implementation you can see the SimpleBungee field at:
 	 * https://github.com/kangarko/PluginTemplate/blob/main/src/main/java/org/mineacademy/template/PluginTemplate.java
-	 *
+	 * <p>
 	 * DO NOT use this if you only have that one field there with a getter, we already register it automatically,
 	 * this method is intended to be used if you have multiple fields there and want to register multiple channels.
 	 * Then you just call this method and parse the field into it from your onReloadablesStart method.
 	 */
-	protected final void registerBungeeCord(@NonNull SimpleBungee bungee) {
+	protected final void registerBungeeCord(@NonNull final SimpleBungee bungee) {
 		final Messenger messenger = getServer().getMessenger();
 
 		messenger.registerIncomingPluginChannel(this, bungee.getChannel(), bungee.getListener());
@@ -412,7 +411,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		final Pattern anonymousClassPattern = Pattern.compile("\\w+\\$[0-9]$");
 
 		try (final JarFile file = new JarFile(SimplePlugin.getSource())) {
-			for (final Enumeration<JarEntry> entry = file.entries(); entry.hasMoreElements();) {
+			for (final Enumeration<JarEntry> entry = file.entries(); entry.hasMoreElements(); ) {
 				final JarEntry jar = entry.nextElement();
 				final String name = jar.getName().replace("/", ".");
 
@@ -431,13 +430,8 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 						if (Modifier.isAbstract(clazz.getModifiers()))
 							continue;
 
-						System.out.println("@@@ iterating over " + className);
-
-						if (anonymousClassPattern.matcher(className).find()) {
-							System.out.println("@ignoring anonymous inner class " + className);
-
+						if (anonymousClassPattern.matcher(className).find())
 							continue;
-						}
 
 						final boolean isTool = Tool.class.isAssignableFrom(clazz);
 						final boolean isEnchant = SimpleEnchantment.class.isAssignableFrom(clazz);
@@ -460,9 +454,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 											&& Modifier.isPrivate(field.getModifiers()) && Modifier.isStatic(field.getModifiers()) && Modifier.isFinal(field.getModifiers()))
 										instanceField = field;
 
-								for (final Method method : clazz.getDeclaredMethods())
-									System.out.println("\tmethod " + method);
-
 								Valid.checkNotNull(instanceField, "Your class " + className + " must be a singleton and have 'private static final " + clazz.getSimpleName()
 										+ " instance' field and a private constructor!");
 
@@ -483,8 +474,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 									// Finally register events
 									if (instance instanceof Listener)
 										Common.registerEvents((Listener) instance);
-
-									System.out.println("@auto registered class " + clazz);
 								}
 
 							} catch (final NoClassDefFoundError | NoSuchFieldError ex) {
@@ -523,7 +512,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	/**
 	 * A dirty way of checking if Foundation has been shaded correctly
 	 */
-	private final void checkShading() {
+	private void checkShading() {
 		try {
 			throw new ShadingException();
 		} catch (final Throwable t) {
@@ -567,7 +556,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 *
 	 * @return
 	 */
-	private final boolean checkLibraries0() {
+	private boolean checkLibraries0() {
 		boolean md_5 = false;
 		boolean gson = false;
 
@@ -604,7 +593,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 *
 	 * @return
 	 */
-	private final boolean checkServerVersions0() {
+	private boolean checkServerVersions0() {
 
 		// Call the static block to test compatibility early
 		if (!MinecraftVersion.getCurrent().isTested())
@@ -867,7 +856,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		}
 	}
 
-	private final void unregisterReloadables() {
+	private void unregisterReloadables() {
 		SimpleSettings.resetSettingsCall();
 		SimpleLocalization.resetLocalizationCall();
 
@@ -895,9 +884,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	/**
 	 * Convenience method for quickly registering events in all classes in your plugin that
 	 * extend the given class.
-	 *
+	 * <p>
 	 * NB: You must have a no arguments constructor otherwise it will not be registered
-	 *
+	 * <p>
 	 * TIP: Set your Debug key in your settings.yml to ["auto-register"] to see what is registered.
 	 *
 	 * @param extendingClass
@@ -983,9 +972,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	/**
 	 * Convenience method for quickly registering all command classes in your plugin that
 	 * extend the given class.
-	 *
+	 * <p>
 	 * NB: You must have a no arguments constructor otherwise it will not be registered
-	 *
+	 * <p>
 	 * TIP: Set your Debug key in your settings.yml to ["auto-register"] to see what is registered.
 	 *
 	 * @param extendingClass
@@ -1163,7 +1152,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	/**
 	 * Foundation automatically can filter console commands for you, including
 	 * messages from other plugins or the server itself, preventing unnecessary console spam.
-	 *
+	 * <p>
 	 * You can return a list of messages that will be matched using "startsWith OR contains" method
 	 * and will be filtered.
 	 *
@@ -1352,7 +1341,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		throw new FoException("Cannot call reloadConfig in " + getName() + ", use reload()!");
 	}
 
-	private final FoException unsupported(final String method) {
+	private FoException unsupported(final String method) {
 		return new FoException("Cannot call " + method + " in " + getName() + ", use YamlConfig or SimpleCommand classes in Foundation for that!");
 	}
 }

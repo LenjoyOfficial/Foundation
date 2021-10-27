@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
 
+import net.md_5.bungee.api.chat.BaseComponent;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
@@ -40,6 +41,7 @@ import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
+import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.menu.button.Button;
 import org.mineacademy.fo.menu.button.Button.DummyButton;
 import org.mineacademy.fo.model.ConfigSerializable;
@@ -57,7 +59,6 @@ import org.mineacademy.fo.remain.Remain;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.Singular;
-import net.md_5.bungee.api.chat.BaseComponent;
 
 /**
  * Our core class for easy and comfortable item creation.
@@ -220,7 +221,9 @@ public class ItemCreator implements ConfigSerializable {
 	 * @param player
 	 */
 	public void give(final Player player) {
-		Valid.checkBoolean(this.slot != -1, "Slot is not defined in " + serialize().toStringFormatted());
+		// Avoid calling Valid#checkBoolean because it will serialize this creator even if slot != -1
+		if (this.slot == -1)
+			throw new FoException("Slot is not defined in " + serialize().toStringFormatted());
 
 		give(player, this.slot);
 	}
@@ -234,7 +237,7 @@ public class ItemCreator implements ConfigSerializable {
 	 * @param player
 	 * @param slot
 	 */
-	public void give(final Player player, int slot) {
+	public void give(final Player player, final int slot) {
 		player.getInventory().setItem(slot, this.make());
 	}
 
@@ -248,6 +251,7 @@ public class ItemCreator implements ConfigSerializable {
 	 * {@link #make()} methods below
 	 *
 	 * @param replacer
+	 *
 	 * @return
 	 */
 	public ItemCreator replaceVariables(@NonNull final Function<String, String> replacer) {
@@ -290,9 +294,8 @@ public class ItemCreator implements ConfigSerializable {
 	}
 
 	/**
-	 * @deprecated pending removal, this simply calls {@link #make()}
-	 *
 	 * @return
+	 * @deprecated pending removal, this simply calls {@link #make()}
 	 */
 	@Deprecated
 	public ItemStack makeSurvival() {
@@ -338,9 +341,7 @@ public class ItemCreator implements ConfigSerializable {
 
 					((LeatherArmorMeta) compiledMeta).setColor(color.getColor());
 				}
-			}
-
-			else {
+			} else {
 
 				// Hack: If you put WHITE_WOOL and a color, we automatically will change the material to the colorized version
 				if (MinecraftVersion.atLeast(V.v1_13)) {
@@ -357,9 +358,7 @@ public class ItemCreator implements ConfigSerializable {
 							break color;
 						}
 					}
-				}
-
-				else {
+				} else {
 					final byte dataValue = color.getDye().getWoolData();
 
 					compiledItem.setData(new MaterialData(compiledItem.getType(), dataValue));
@@ -450,7 +449,7 @@ public class ItemCreator implements ConfigSerializable {
 				((BannerMeta) compiledMeta).addPattern(pattern);
 
 		if (compiledMeta instanceof FireworkMeta) {
-			FireworkMeta fireworkMeta = (FireworkMeta) compiledMeta;
+			final FireworkMeta fireworkMeta = (FireworkMeta) compiledMeta;
 
 			if (fireworkPower != -1)
 				fireworkMeta.setPower(fireworkPower);
@@ -485,7 +484,7 @@ public class ItemCreator implements ConfigSerializable {
 		}
 
 		if (potionEffects != null && !potionEffects.isEmpty() && compiledMeta instanceof PotionMeta)
-			for (PotionEffect effect : potionEffects)
+			for (final PotionEffect effect : potionEffects)
 				((PotionMeta) compiledMeta).addCustomEffect(effect, true);
 
 		if (unbreakable != null) {
@@ -554,7 +553,7 @@ public class ItemCreator implements ConfigSerializable {
 			Valid.checkNotNull(material.getMaterial(), "Material#getMaterial cannot be null for " + material);
 
 		final SerializedMap map = new SerializedMap();
-		final CompMaterial mat = Common.getOrDefault(material, CompMaterial.fromItem(item));
+		final CompMaterial mat = material != null ? material : CompMaterial.fromItem(item);
 
 		// Create new item meta to only serialize data relevant to the material
 		final ItemMeta meta = Bukkit.getItemFactory().getItemMeta(mat.getMaterial());
@@ -716,6 +715,7 @@ public class ItemCreator implements ConfigSerializable {
 	 * @param material
 	 * @param name
 	 * @param lore
+	 *
 	 * @return
 	 */
 	public static ItemCreatorBuilder of(final CompMaterial material, final String name, @NonNull final Collection<String> lore) {
@@ -728,6 +728,7 @@ public class ItemCreator implements ConfigSerializable {
 	 * @param material
 	 * @param name
 	 * @param lore
+	 *
 	 * @return
 	 */
 	public static ItemCreatorBuilder of(final String material, final String name, @NonNull final Collection<String> lore) {
@@ -740,6 +741,7 @@ public class ItemCreator implements ConfigSerializable {
 	 * @param material
 	 * @param name
 	 * @param lore
+	 *
 	 * @return new item creator
 	 */
 	public static ItemCreatorBuilder of(final CompMaterial material, final String name, @NonNull final String... lore) {
@@ -752,6 +754,7 @@ public class ItemCreator implements ConfigSerializable {
 	 * @param material
 	 * @param name
 	 * @param lore
+	 *
 	 * @return new item creator
 	 */
 	public static ItemCreatorBuilder of(final String material, final String name, @NonNull final String... lore) {
@@ -762,6 +765,7 @@ public class ItemCreator implements ConfigSerializable {
 	 * Convenience method to get a wool
 	 *
 	 * @param color the wool color
+	 *
 	 * @return the new item creator
 	 */
 	public static ItemCreatorBuilder ofWool(final CompColor color) {
@@ -772,6 +776,7 @@ public class ItemCreator implements ConfigSerializable {
 	 * Convenience method to get the creator of an existing itemstack
 	 *
 	 * @param item existing itemstack
+	 *
 	 * @return the new item creator
 	 */
 	public static ItemCreatorBuilder of(final ItemStack item) {
@@ -788,6 +793,7 @@ public class ItemCreator implements ConfigSerializable {
 	 * Get a new item creator from material
 	 *
 	 * @param mat existing material
+	 *
 	 * @return the new item creator
 	 */
 	public static ItemCreatorBuilder of(final CompMaterial mat) {
@@ -800,9 +806,10 @@ public class ItemCreator implements ConfigSerializable {
 	 * Deserializes an item from the given serialized map
 	 *
 	 * @param map
+	 *
 	 * @return
 	 */
-	public static ItemCreatorBuilder of(SerializedMap map) {
+	public static ItemCreatorBuilder of(final SerializedMap map) {
 		final CompMaterial material = map.getMaterial("Material", CompMaterial.AIR);
 		final ItemCreatorBuilder builder = of(material);
 
@@ -880,7 +887,7 @@ public class ItemCreator implements ConfigSerializable {
 
 					builder.enchant(new SimpleEnchant(enchantment, level));
 
-				} catch (Exception e) {
+				} catch (final Exception e) {
 					Common.error(e, "Error when adding stored enchant from " + map.toStringFormatted());
 				}
 			}
@@ -906,7 +913,7 @@ public class ItemCreator implements ConfigSerializable {
 
 					builder.bookPage(components);
 
-				} catch (Exception e) {
+				} catch (final Exception e) {
 					Common.error(e, "Error when trying to add a page from " + map.toStringFormatted());
 				}
 
@@ -1020,9 +1027,10 @@ public class ItemCreator implements ConfigSerializable {
 	 * You won't be able to modify this item anymore!
 	 *
 	 * @param map
+	 *
 	 * @return
 	 */
-	public static ItemCreator deserialize(SerializedMap map) {
+	public static ItemCreator deserialize(final SerializedMap map) {
 		return of(map).build();
 	}
 }

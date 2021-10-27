@@ -345,7 +345,7 @@ public enum CompParticle {
 	 * @param location
 	 */
 	public void spawn(Player player, Location location) {
-		this.spawn(player, location, 0d, 0d, 0d, 0d, 0, 0d);
+		this.spawn(player, location, 0d, 0d, 0d, 0d, 0, 0d, null);
 	}
 
 	/**

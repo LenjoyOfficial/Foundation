@@ -10,6 +10,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.mineacademy.fo.BlockUtil;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.SerializeUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.region.Region;
@@ -103,7 +104,7 @@ public final class VisualizedRegion extends Region {
 	 * @param player
 	 * @param durationTicks
 	 */
-	public void showParticles(Player player, int durationTicks) {
+	public void showParticles(final Player player, final int durationTicks) {
 		showParticles(player);
 
 		Common.runLater(durationTicks, () -> {
@@ -145,6 +146,7 @@ public final class VisualizedRegion extends Region {
 	 * Return true if the given player can see the region particles
 	 *
 	 * @param player
+	 *
 	 * @return
 	 */
 	public boolean canSeeParticles(final Player player) {
@@ -206,14 +208,15 @@ public final class VisualizedRegion extends Region {
 	 * Converts a saved map from your yaml/json file into a region if it contains Primary and Secondary keys
 	 *
 	 * @param map
+	 *
 	 * @return
 	 */
 	public static VisualizedRegion deserialize(final SerializedMap map) {
 		Valid.checkBoolean(map.containsKey("Primary") && map.containsKey("Secondary"), "The region must have Primary and a Secondary location");
 
 		final String name = map.getString("Name");
-		final Location prim = map.getLocation("Primary");
-		final Location sec = map.getLocation("Secondary");
+		final Location prim = SerializeUtil.deserializeLocationD(map.getString("Primary"));
+		final Location sec = SerializeUtil.deserializeLocationD(map.getString("Secondary"));
 		final boolean fillWalls = map.getBoolean("Visualize_Walls", true);
 
 		return new VisualizedRegion(name, prim, sec, fillWalls);

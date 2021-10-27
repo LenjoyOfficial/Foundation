@@ -13,6 +13,7 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.mineacademy.fo.BlockUtil;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.SerializeUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.model.ConfigSerializable;
@@ -106,7 +107,7 @@ public class Region implements ConfigSerializable {
 		secondary.setY(Math.max(y1, y2));
 		secondary.setZ(Math.max(z1, z2));
 
-		return new Location[] { primary, secondary };
+		return new Location[] {primary, secondary};
 	}
 
 	/**
@@ -220,6 +221,7 @@ public class Region implements ConfigSerializable {
 	 * Return true if the given point is within this region
 	 *
 	 * @param location
+	 *
 	 * @return
 	 */
 	public final boolean isWithin(@NonNull final Location location) {
@@ -306,14 +308,15 @@ public class Region implements ConfigSerializable {
 	 * Converts a saved map from your yaml/json file into a region if it contains Primary and Secondary keys
 	 *
 	 * @param map
+	 *
 	 * @return
 	 */
 	public static Region deserialize(final SerializedMap map) {
 		Valid.checkBoolean(map.containsKey("Primary") && map.containsKey("Secondary"), "The region must have Primary and a Secondary location");
 
 		final String name = map.getString("Name");
-		final Location prim = map.getLocation("Primary");
-		final Location sec = map.getLocation("Secondary");
+		final Location prim = SerializeUtil.deserializeLocationD(map.getString("Primary"));
+		final Location sec = SerializeUtil.deserializeLocationD(map.getString("Secondary"));
 
 		return new Region(name, prim, sec);
 	}

@@ -41,7 +41,7 @@ public interface MenuQuantitable {
 	 * @return the next quantity (higher or lower depending on the click)
 	 */
 	default int getNextQuantity(ClickType clickType) {
-		return clickType == ClickType.LEFT ? -+getQuantity().getAmount() : getQuantity().getAmount();
+		return clickType == ClickType.LEFT ? getQuantity().getAmount() : -getQuantity().getAmount();
 	}
 
 	/**
@@ -56,7 +56,7 @@ public interface MenuQuantitable {
 
 			@Override
 			public final void onClickedInMenu(Player pl, Menu clickedMenu, ClickType click) {
-				setQuantity(click == ClickType.LEFT ? getQuantity().previous() : getQuantity().next());
+				setQuantity(click == ClickType.LEFT ? getQuantity().next() : getQuantity().previous());
 				menu.redraw();
 
 				menu.animateTitle("&9Editing quantity set to " + getQuantity().getAmount());
@@ -67,10 +67,10 @@ public interface MenuQuantitable {
 				return ItemCreator
 						.of(
 								CompMaterial.STRING,
-								"Edit Quantity: &7" + getQuantity().getAmount(),
+								"&aEdit Quantity: &e" + getQuantity().getAmount(),
 								"",
-								"&8< &7Left click to decrease",
-								"&8> &7Right click to increase")
+								"&7Left click to increase to &b" + getQuantity().next(),
+								"&7Right click to decrease to &b" + getQuantity().previous())
 						.build().make();
 			}
 		};

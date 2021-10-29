@@ -100,57 +100,13 @@ public final class BoxedMessage {
 	}
 
 	private void sendFrameInternals0() {
-		for (int i = 0; i < getTopLines(); i++)
-			send("&r");
-
 		for (final String message : messages)
 			for (final String part : message.split("\n"))
 				send(part);
-
-		for (int i = 0; i < getBottomLines(); i++)
-			send("&r");
-	}
-
-	private int getTopLines() {
-		switch (length()) {
-			case 1:
-				return 2;
-			case 2:
-			case 3:
-			case 4:
-				return 1;
-
-			default:
-				return 0;
-		}
-	}
-
-	private int getBottomLines() {
-		switch (length()) {
-			case 1:
-			case 2:
-				return 2;
-			case 3:
-				return 1;
-
-			default:
-				return 0;
-		}
 	}
 
 	private void sendLine() {
 		send(frameColor + Common.chatLineSmooth());
-	}
-
-	private int length() {
-		int length = 0;
-
-		for (final String message : messages)
-			for (@SuppressWarnings("unused")
-			final String part : message.split("\n"))
-				length++;
-
-		return length;
 	}
 
 	private void send(String message) {

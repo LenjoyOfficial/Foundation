@@ -3,6 +3,7 @@ package org.mineacademy.fo.settings.model;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.model.Tuple;
 import org.mineacademy.fo.plugin.SimplePlugin;
 
@@ -18,6 +19,7 @@ import java.util.Map;
  * and call {@link #launch(boolean)}.
  */
 public abstract class SimpleAnimation extends BukkitRunnable {
+
 	/**
 	 * The processed animations for the animation types, cached for performance saving
 	 */
@@ -81,10 +83,30 @@ public abstract class SimpleAnimation extends BukkitRunnable {
 	}
 
 	// --------------------------------------------------------------------
-	// Running animation data
+	// Backend
 	// --------------------------------------------------------------------
 
-	private int timer = 0, index = 0, animationFinished = 0;
+	/**
+	 * The task of the running animation
+	 */
+	private BukkitTask task;
+
+	/**
+	 * The time elapsed since the animation started, resets each time the
+	 * animation starts over
+	 */
+	private int timer = 0;
+
+	/**
+	 * The index of the current animation frame
+	 */
+	private int index = 0;
+
+	/**
+	 * Indicates how many times the animation has finished, used for stopping
+	 * it if it has to run only once
+	 */
+	private int animationFinished = 0;
 
 	/**
 	 * The frame currently being selected.
@@ -93,16 +115,31 @@ public abstract class SimpleAnimation extends BukkitRunnable {
 	 */
 	protected Tuple<Integer, String> currentFrame;
 
+	/**
+	 * @see org.bukkit.scheduler.BukkitRunnable#run()
+	 */
 	@Override
 	public void run() {
+		// Stop if we can or if the animation has finished for the first time
 		if (canCancel() || (runOnce && animationFinished > 0)) {
 			cancel();
+
 			return;
 		}
 
 		// The timer reached the next frame
 		if (timer == currentFrame.getKey()) {
-			onNextFrame();
+			try {
+				onNextFrame();
+
+			} catch (Throwable t) {
+				Common.error(t,
+						"Error while ticking animation " + getClass() + ", stopping",
+						"Current frame: " + currentFrame);
+				cancel();
+
+				return;
+			}
 
 			if (index < frames.size() - 1)
 				currentFrame = frames.get(++index);
@@ -128,9 +165,19 @@ public abstract class SimpleAnimation extends BukkitRunnable {
 	protected abstract boolean canCancel();
 
 	/**
-	 * This method is called when the timer hits a frame's time.
+	 * Called when the timer hits a frame's time.
 	 */
 	protected abstract void onNextFrame();
+
+	/**
+	 * Called when this animation stops
+	 */
+	protected void onEnd() {
+	}
+
+	// -----------------------------------------------------------------------------------
+	// Animation management
+	// -----------------------------------------------------------------------------------
 
 	/**
 	 * Runs the animation.
@@ -140,8 +187,30 @@ public abstract class SimpleAnimation extends BukkitRunnable {
 	 */
 	public final BukkitTask launch(final boolean async) {
 		if (async)
-			return this.runTaskTimerAsynchronously(SimplePlugin.getInstance(), startDelay, 1);
+			return task = this.runTaskTimerAsynchronously(SimplePlugin.getInstance(), startDelay, 1);
 
-		return this.runTaskTimer(SimplePlugin.getInstance(), startDelay, 1);
+		return task = this.runTaskTimer(SimplePlugin.getInstance(), startDelay, 1);
+	}
+
+	/**
+	 * Stops this animation, throwing an error if it wasn't running
+	 */
+	public final void cancel() {
+		Valid.checkBoolean(task != null && task.getTaskId() != -1, "Animation " + getClass() + " is not running");
+
+		try {
+			onEnd();
+
+		} catch (Throwable t) {
+			Common.error(t, "Error while cancelling animation " + getClass() + ", task id: " + task.getTaskId());
+		}
+
+		task.cancel();
+
+		// Reset data for running
+		timer = 0;
+		index = 0;
+		animationFinished = 0;
+		currentFrame = this.frames.get(0);
 	}
 }

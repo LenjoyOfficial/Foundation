@@ -16,6 +16,8 @@ import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompChatColor;
 
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
@@ -591,6 +593,8 @@ public final class ChatUtil {
  * @deprecated new Minecraft versions support Unicode and a much broader range
  *
  */
+@Getter(value = AccessLevel.PACKAGE)
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
 enum DefaultFontInfo {
 
 	A('A', 5),
@@ -616,7 +620,7 @@ enum DefaultFontInfo {
 	K('K', 5),
 	k('k', 4),
 	L('L', 5),
-	l('l', 1),
+	l('l', 2),
 	M('M', 5),
 	m('m', 5),
 	N('N', 5),
@@ -632,7 +636,7 @@ enum DefaultFontInfo {
 	S('S', 5),
 	s('s', 5),
 	T('T', 5),
-	t('t', 4),
+	t('t', 3),
 	U('U', 5),
 	u('u', 5),
 	V('V', 5),
@@ -662,9 +666,9 @@ enum DefaultFontInfo {
 	PERCENT('%', 5),
 	UP_ARROW('^', 5),
 	AMPERSAND('&', 5),
-	ASTERISK('*', 5),
-	LEFT_PARENTHESIS('(', 4),
-	RIGHT_PERENTHESIS(')', 4),
+	ASTERISK('*', 4),
+	LEFT_PARENTHESES('(', 4),
+	RIGHT_PARENTHESES(')', 4),
 	MINUS('-', 5),
 	UNDERSCORE('_', 5),
 	PLUS_SIGN('+', 5),
@@ -675,7 +679,7 @@ enum DefaultFontInfo {
 	RIGHT_BRACKET(']', 3),
 	COLON(':', 1),
 	SEMI_COLON(';', 1),
-	DOUBLE_QUOTE('"', 3),
+	DOUBLE_QUOTE('"', 4),
 	SINGLE_QUOTE('\'', 1),
 	LEFT_ARROW('<', 4),
 	RIGHT_ARROW('>', 4),
@@ -688,31 +692,28 @@ enum DefaultFontInfo {
 	PERIOD('.', 1),
 	COMMA(',', 1),
 	SPACE(' ', 3),
-	DEFAULT('a', 4);
+	DEFAULT('a', 5);
+
 
 	private final char character;
 	private final int length;
 
-	DefaultFontInfo(final char character, final int length) {
-		this.character = character;
-		this.length = length;
-	}
-
-	public char getCharacter() {
-		return this.character;
-	}
-
-	public int getLength() {
-		return this.length;
-	}
-
-	public int getBoldLength() {
-		if (this == DefaultFontInfo.SPACE)
-			return this.getLength();
+	/**
+	 * Gets the length for the bold version of this character
+	 *
+	 * @return
+	 */
+	int getBoldLength() {
 		return this.length + 1;
 	}
 
-	public static DefaultFontInfo getDefaultFontInfo(final char c) {
+	/**
+	 * Returns the font info for the given character
+	 *
+	 * @param c
+	 * @return
+	 */
+	static DefaultFontInfo getDefaultFontInfo(final char c) {
 		for (final DefaultFontInfo dFI : DefaultFontInfo.values())
 			if (dFI.getCharacter() == c)
 				return dFI;

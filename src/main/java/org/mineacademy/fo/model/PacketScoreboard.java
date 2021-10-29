@@ -254,7 +254,7 @@ public class PacketScoreboard {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Updates this scoreboard
+	 * Updates the scoreboard of the viewers with the current rows, replacing variables in them
 	 */
 	public final void updateScoreboards() {
 		final BukkitRunnable runnable = new BukkitRunnable() {
@@ -267,21 +267,21 @@ public class PacketScoreboard {
 						final List<String> playerRows = new ArrayList<>();
 
 						for (final String row : rows) {
-							final List<String> newLines = Common.colorize(replaceVariables(row, board.getViewer()));
+							final List<String> newRows = Common.colorize(replaceVariables(row, board.getViewer()));
 
 							if (MinecraftVersion.olderThan(V.v1_13))
-								for (final String newLine : newLines)
-									Valid.checkBoolean(newLine != null && newLine.length() <= 32, "Line (" + newLine + ") is null or longer than 32!");
+								for (final String newRow : newRows)
+									Valid.checkBoolean(newRow != null && newRow.length() <= 32, "Line (" + newRow + ") is null or longer than 32!");
 
-							playerRows.addAll(newLines);
+							playerRows.addAll(newRows);
 						}
 
 						Valid.checkBoolean(playerRows.size() <= 16, "New lines' size is greater than 16! Lines: " + String.join(" ", playerRows));
 
-						// Get the size of the scoreboard's internal lines because we haven't updated them yet
+						// Get the size of the scoreboard's internal rows because we haven't updated them yet
 						final int oldRowsSize = board.getRows().size();
 
-						// Update the lines list
+						// Update the rows list
 						for (int i = 0; i < playerRows.size(); i++) {
 							final String row = Common.colorize(playerRows.get(i));
 
@@ -533,7 +533,7 @@ public class PacketScoreboard {
 				String suffix = "";
 
 				if (row.isEmpty())
-					prefix = ChatColor.values()[index].toString();
+					prefix = CHAT_COLORS[index];
 
 				else if (row.length() <= 16)
 					prefix = row;

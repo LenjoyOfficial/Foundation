@@ -1,20 +1,15 @@
 package org.mineacademy.fo.settings.model;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.reflect.StructureModifier;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.comphenix.protocol.wrappers.EnumWrappers;
 import org.bukkit.entity.Player;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.collection.SerializedMap;
-import org.mineacademy.fo.model.HookManager;
 import org.mineacademy.fo.remain.CompBarColor;
 import org.mineacademy.fo.remain.CompBarStyle;
 import org.mineacademy.fo.remain.Remain;
@@ -28,18 +23,12 @@ import java.util.function.Function;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class SimpleDisplay {
 
-	private static final Constructor<?> TITLE_CONSTRUCTOR;
-
-	static {
-		TITLE_CONSTRUCTOR = ReflectionUtil.getConstructor(ReflectionUtil.getNMSClass("PacketPlayOutTitle", "net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket"), int.class, int.class, int.class);
-	}
-
 	// --------------------------------------------------------------------------
 	// Display data
 	// --------------------------------------------------------------------------
 
 	/**
-	 * Should we add {@link Common#getTellPrefix() tell prefix} to the chat message?
+	 * Should we add the {@link Common#getTellPrefix() tell prefix} to the chat message?
 	 */
 	private final boolean addPrefix;
 
@@ -218,19 +207,8 @@ public class SimpleDisplay {
 		@Setter
 		private String message;
 
-		/**
-		 * The packet used to set the fade in, stay and fade out times
-		 */
-		private final Object timesPacket;
-
 		private ActionBarHelper(final SerializedMap map) {
 			this.message = Common.colorize(map.getString("Message"));
-
-			final int fadeIn = map.getInteger("FadeIn", 20);
-			final int stay = map.getInteger("Stay", 3 * 20);
-			final int fadeOut = map.getInteger("FadeOut", 20);
-
-			this.timesPacket = ReflectionUtil.instantiate(TITLE_CONSTRUCTOR, fadeIn, stay, fadeOut);
 		}
 
 		/**
@@ -239,9 +217,6 @@ public class SimpleDisplay {
 		 * @param player
 		 */
 		public void show(final Player player) {
-			// Set the times for the action bar
-			Remain.sendPacket(player, timesPacket);
-
 			Remain.sendActionBar(player, replacer.apply(message));
 		}
 	}

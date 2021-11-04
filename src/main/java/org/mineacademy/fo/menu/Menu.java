@@ -42,6 +42,7 @@ import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.CompSound;
 import org.mineacademy.fo.settings.SimpleLocalization;
 
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -151,6 +152,7 @@ public abstract class Menu {
 	/**
 	 * A one way boolean set to true in {@link #handleClose(Inventory)}
 	 */
+	@Getter(value = AccessLevel.PACKAGE)
 	private boolean closed = false;
 
 	/**
@@ -313,7 +315,7 @@ public abstract class Menu {
 		} else if (Button[].class.isAssignableFrom(type)) {
 			/*Valid.checkBoolean(Modifier.isFinal(field.getModifiers()), "Report / Button[] field must be final: " + field);
 			final Button[] buttons = (Button[]) ReflectionUtil.getFieldContent(field, this);
-			
+
 			Valid.checkBoolean(buttons != null && buttons.length > 0, "Null " + field.getName() + "[] in " + this);
 			registeredButtons.addAll(Arrays.asList(buttons));*/
 			throw new FoException("Button[] is no longer supported in menu for " + this.getClass());
@@ -1046,7 +1048,7 @@ public abstract class Menu {
 	 * @param inventory
 	 */
 	@Deprecated
-	protected final void handleClose(Inventory inventory) {
+	public final void handleClose(Inventory inventory) {
 		this.viewer.removeMetadata(FoConstants.NBT.TAG_MENU_CURRENT, SimplePlugin.getInstance());
 		this.viewer.setMetadata(FoConstants.NBT.TAG_MENU_LAST_CLOSED, new FixedMetadataValue(SimplePlugin.getInstance(), this));
 		this.closed = true;

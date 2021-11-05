@@ -810,11 +810,13 @@ public class ItemCreator implements ConfigSerializable {
 	 * @return
 	 */
 	public static ItemCreatorBuilder of(final SerializedMap map) {
-		final CompMaterial material = map.getMaterial("Material", CompMaterial.AIR);
-		final ItemCreatorBuilder builder = of(material);
+		final CompMaterial material = map.getMaterial("Material");
+		final ItemCreatorBuilder builder = ItemCreator.builder();
+
+		if (material != null)
+			builder.material(material);
 
 		builder.amount(map.getInteger("Amount", 1));
-		builder.damage(material.getData());
 
 		// Player inventory slot
 		if (map.containsKey("Inventory_Slot"))

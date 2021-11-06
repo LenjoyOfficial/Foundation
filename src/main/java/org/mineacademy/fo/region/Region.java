@@ -90,7 +90,7 @@ public class Region implements ConfigSerializable {
 		if (primary == null || secondary == null)
 			return null;
 
-		Valid.checkBoolean(primary.getWorld().getName().equals(secondary.getWorld().getName()), "Points must be in one world! Primary: " + primary + " != secondary: " + secondary);
+		final World world = getWorld();
 
 		final int x1 = primary.getBlockX(), x2 = secondary.getBlockX(),
 				y1 = primary.getBlockY(), y2 = secondary.getBlockY(),
@@ -102,10 +102,12 @@ public class Region implements ConfigSerializable {
 		primary.setX(Math.min(x1, x2));
 		primary.setY(Math.min(y1, y2));
 		primary.setZ(Math.min(z1, z2));
+		primary.setWorld(world);
 
 		secondary.setX(Math.max(x1, x2));
 		secondary.setY(Math.max(y1, y2));
 		secondary.setZ(Math.max(z1, z2));
+		secondary.setWorld(world);
 
 		return new Location[] {primary, secondary};
 	}
@@ -207,14 +209,11 @@ public class Region implements ConfigSerializable {
 		if (!isWhole())
 			return null;
 
-		if (primary != null && secondary == null)
-			return Bukkit.getWorld(primary.getWorld().getName());
+		World primaryWorld = Bukkit.getWorld(primary.getWorld().getName());
+		World secondaryWorld = Bukkit.getWorld(secondary.getWorld().getName());
 
-		if (secondary != null && primary == null)
-			return Bukkit.getWorld(secondary.getWorld().getName());
-
-		Valid.checkBoolean(primary.getWorld().getName().equals(secondary.getWorld().getName()), "Worlds of this region not the same: " + primary.getWorld() + " != " + secondary.getWorld());
-		return Bukkit.getWorld(primary.getWorld().getName());
+		Valid.checkBoolean(primaryWorld.getName().equals(secondaryWorld.getName()), "Worlds of this region not the same: " + primaryWorld + " != " + secondaryWorld);
+		return primaryWorld;
 	}
 
 	/**
@@ -227,7 +226,7 @@ public class Region implements ConfigSerializable {
 	public final boolean isWithin(@NonNull final Location location) {
 		Valid.checkBoolean(isWhole(), "Cannot perform isWithin on a non-complete region: " + toString());
 
-		if (!location.getWorld().getName().equals(primary.getWorld().getName()))
+		if (!location.getWorld().getName().equals(getWorld().getName()))
 			return false;
 
 		final Location[] centered = getCorrectedPoints();

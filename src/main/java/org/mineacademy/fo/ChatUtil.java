@@ -119,7 +119,7 @@ public final class ChatUtil {
 
 		final int halvedMessageSize = messagePxSize / 2;
 		final int toCompensate = centerPx - halvedMessageSize;
-		final int spaceLength = DefaultFontInfo.getDefaultFontInfo(space).getLength() + (isBold ? 2 : 1);
+		final int spaceLength = DefaultFontInfo.getDefaultFontInfo(space).getLength() + 1;
 
 		int compensated = 0;
 
@@ -129,7 +129,7 @@ public final class ChatUtil {
 			compensated += spaceLength;
 		}
 
-		return builder.toString() + " " + message + " " + builder.toString();
+		return builder.toString() + " " + message;
 	}
 
 	/**

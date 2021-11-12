@@ -69,8 +69,8 @@ public interface MenuQuantitable {
 								CompMaterial.STRING,
 								"&aEdit Quantity: &e" + getQuantity().getAmount(),
 								"",
-								"&7Left click to increase to &b" + getQuantity().next(),
-								"&7Right click to decrease to &b" + getQuantity().previous())
+								"&7Left click to increase to &b" + getQuantity().next().getAmount() + "&7!",
+								"&7Right click to decrease to &b" + getQuantity().previous().getAmount() + "&7!")
 						.build().make();
 			}
 		};

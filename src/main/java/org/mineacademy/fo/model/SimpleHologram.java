@@ -15,6 +15,7 @@ import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.Valid;
@@ -56,7 +57,12 @@ public abstract class SimpleHologram {
 	 * A registry of created animated items
 	 */
 	@Getter
-	private static Set<SimpleHologram> registeredItems = new HashSet<>();
+	private static volatile Set<SimpleHologram> registeredItems = new HashSet<>();
+
+	/**
+	 * The task for ticking the registered holograms
+	 */
+	private static BukkitTask tickTask;
 
 	/**
 	 * The armor stand names, each line spawns another invisible stand
@@ -388,12 +394,14 @@ public abstract class SimpleHologram {
 	 */
 	@Deprecated
 	public static final void init() {
+		if (tickTask != null)
+			tickTask.cancel();
 
-		Common.runTimer(1, () -> {
+		tickTask = Common.runTimer(1, () -> {
 
-			for (final Iterator<SimpleHologram> it = registeredItems.iterator(); it.hasNext(); ) {
-				final SimpleHologram model = it.next();
+			final HashSet<SimpleHologram> copy = new HashSet<>(registeredItems);
 
+			for (final SimpleHologram model : copy) {
 				if (model.isSpawned()) {
 					if (!model.getEntity().isValid())
 						model.remove();

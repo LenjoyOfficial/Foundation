@@ -88,7 +88,7 @@ public class ButtonRemove extends Button {
 	 */
 	@Override
 	public void onClickedInMenu(final Player pl, final Menu menu, final ClickType click) {
-		new MenuDialogRemove(parentMenu, new RemoveConfirmButton()).displayTo(pl);
+		new MenuDialogRemove(parentMenu, new RemoveConfirmButton()).displayTo(pl, false);
 	}
 
 	/**

@@ -178,7 +178,10 @@ public enum CompAttribute {
 
 	// MC 1.8.9
 	private double getLegacy(final Entity entity) {
-		return (double) ReflectionUtil.invoke("getValue", getLegacyAttributeInstance(entity));
+		final Object instance = getLegacyAttributeInstance(entity);
+		final Method getBaseValue = ReflectionUtil.getDeclaredMethod(instance.getClass(), "b");
+
+		return (double) ReflectionUtil.invoke(getBaseValue, instance);
 	}
 
 	// MC 1.8.9

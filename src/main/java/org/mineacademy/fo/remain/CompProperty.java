@@ -102,6 +102,9 @@ public enum CompProperty {
 
 					else if (this == CompProperty.GRAVITY)
 						nbtEntity.setInteger("NoGravity", has ? 0 : 1);
+
+					else if (this == SILENT)
+						nbtEntity.setInteger("Silent", has ? 1 : 0);
 				}
 
 				if (Remain.hasItemMeta() && instance instanceof ItemMeta) {

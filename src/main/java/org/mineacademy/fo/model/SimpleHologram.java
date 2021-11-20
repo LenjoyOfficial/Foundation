@@ -145,7 +145,7 @@ public abstract class SimpleHologram {
 			location.subtract(0, 0.5, 0);
 
 		// Start creating from the top
-		location.add(0, loreLineHeight * (loreLines.size() - 1), 0);
+		location.add(0, 2 + loreLineHeight * (loreLines.size() - 1), 0);
 
 		final World world = location.getWorld();
 
@@ -154,6 +154,7 @@ public abstract class SimpleHologram {
 
 			armorStand.setGravity(false);
 			armorStand.setVisible(false);
+			armorStand.setMarker(true);
 
 			Remain.setCustomName(armorStand, loreLine);
 

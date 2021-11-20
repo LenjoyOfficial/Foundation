@@ -8,6 +8,7 @@ import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictMap;
 import org.mineacademy.fo.menu.model.InventoryDrawer;
+import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.model.Tuple;
 
 import java.util.ArrayList;
@@ -43,7 +44,7 @@ public class MenuTemplate {
 					final SerializedMap itemMap = types.getOrPut(item, map.getMap(item + ""));
 
 					if (!slots.contains(item)) {
-						final ItemStack display = itemMap.containsKey("Display") ? InventoryItem.toItem(itemMap.getMap("Display")) : null;
+						final ItemStack display = itemMap.containsKey("Display") ? ItemCreator.of(itemMap.getMap("Display")).build().make() : null;
 
 						slots.put(item, new Tuple<>(Common.toList(slot++), display));
 						continue;

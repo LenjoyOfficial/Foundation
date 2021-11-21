@@ -66,8 +66,8 @@ public final class SimpleEquipment {
 	 * @param slot
 	 * @param builder
 	 */
-	public void set(final CompEquipmentSlot slot, final ItemCreator.ItemCreatorBuilder builder) {
-		set(slot, builder.build().make());
+	public void set(final CompEquipmentSlot slot, final ItemCreator builder) {
+		set(slot, builder.make());
 	}
 
 	/**
@@ -110,8 +110,8 @@ public final class SimpleEquipment {
 	 * @param builder
 	 * @param dropChance
 	 */
-	public void set(final CompEquipmentSlot slot, final ItemCreator.ItemCreatorBuilder builder, final Float dropChance) {
-		set(slot, builder.build().make(), dropChance);
+	public void set(final CompEquipmentSlot slot, final ItemCreator builder, final Float dropChance) {
+		set(slot, builder.make(), dropChance);
 	}
 
 	/**
@@ -186,8 +186,8 @@ public final class SimpleEquipment {
 	 * @param leggings
 	 * @param boots
 	 */
-	public void setContent(final ItemCreator.ItemCreatorBuilder helmet, final ItemCreator.ItemCreatorBuilder chest, final ItemCreator.ItemCreatorBuilder leggings, final ItemCreator.ItemCreatorBuilder boots) {
-		setContent(helmet.build().make(), chest.build().make(), leggings.build().make(), boots.build().make());
+	public void setContent(final ItemCreator helmet, final ItemCreator chest, final ItemCreator leggings, final ItemCreator boots) {
+		setContent(helmet.make(), chest.make(), leggings.make(), boots.make());
 	}
 
 	/**

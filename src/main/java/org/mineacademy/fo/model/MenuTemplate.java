@@ -44,7 +44,7 @@ public class MenuTemplate {
 					final SerializedMap itemMap = types.getOrPut(item, map.getMap(item + ""));
 
 					if (!slots.contains(item)) {
-						final ItemStack display = itemMap.containsKey("Display") ? ItemCreator.of(itemMap.getMap("Display")).build().make() : null;
+						final ItemStack display = itemMap.containsKey("Display") ? ItemCreator.of(itemMap.getMap("Display")).make() : null;
 
 						slots.put(item, new Tuple<>(Common.toList(slot++), display));
 						continue;

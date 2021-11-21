@@ -1,8 +1,10 @@
 package org.mineacademy.fo.menu.model;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -12,6 +14,7 @@ import net.md_5.bungee.api.chat.BaseComponent;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
+import org.bukkit.DyeColor;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Material;
 import org.bukkit.block.banner.Pattern;
@@ -55,159 +58,580 @@ import org.mineacademy.fo.remain.CompMetadata;
 import org.mineacademy.fo.remain.CompMonsterEgg;
 import org.mineacademy.fo.remain.CompProperty;
 import org.mineacademy.fo.remain.Remain;
+import org.mineacademy.fo.remain.nbt.NBTItem;
 
+import lombok.AccessLevel;
 import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.Singular;
+import lombok.SneakyThrows;
 
 /**
- * Our core class for easy and comfortable item creation.
- * <p>
- * You can use this to make named items with incredible speed and quality.
+ * ItemCreator allows you to create highly customized {@link ItemStack}
+ * easily, simply call the static "of" methods, customize your item and then
+ * call {@link #make()} to turn it into a Bukkit ItemStack.
  */
-final @Builder
-public class ItemCreator implements ConfigSerializable {
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public final class ItemCreator implements ConfigSerializable {
 
 	/**
-	 * The initial item stack
+	 * The {@link ItemStack}, if any, to start building with. Either this, or {@link #material} must be set.
 	 */
-	private final ItemStack item;
+	@Nullable
+	private ItemStack item;
 
 	/**
-	 * The initial material
+	 * The item meta, if any, to start building with. Parameters above
+	 * will override this.
 	 */
-	private final CompMaterial material;
+	@Nullable
+	private ItemMeta meta;
 
 	/**
-	 * The amount of the item
+	 * The {@link CompMaterial}, if any, to start building with. Either this, or {@link #item} must be set.
 	 */
-	@Builder.Default
-	private final int amount = 1;
+	@Nullable
+	private CompMaterial material;
 
 	/**
-	 * The item damage
+	 * The amount of the item.
 	 */
-	@Builder.Default
-	private final int damage = -1;
+	private int amount = -1;
+
+	/**
+	 * The item damage.
+	 */
+	private int damage = -1;
 
 	/**
 	 * The player inventory slot to be placed in when calling {@link #give(Player)}
 	 */
-	@Builder.Default
-	private final int slot = -1;
+	private int slot = -1;
 
 	/**
-	 * The item name, colors are replaced
+	 * The item name (& color codes are replaced automatically).
 	 */
-	private final String name;
+	@Getter
+	private String name;
 
 	/**
-	 * The lore for this item, colors are replaced
+	 * The lore for this item (& color codes are replaced automatically).
 	 */
-	@Singular
-	private final List<String> lores;
+	private final List<String> lores = new ArrayList<>();
 
 	/**
-	 * The enchants applied for the item
+	 * The enchants applied to the item.
 	 */
-	@Singular
-	private final List<SimpleEnchant> enchants;
+	private final List<SimpleEnchant> enchants = new ArrayList<>();
 
 	/**
-	 * The item flags
+	 * The {@link CompItemFlag}.
 	 */
-	@Singular
-	private List<CompItemFlag> flags;
+	private final List<CompItemFlag> flags = new ArrayList<>();
 
 	/**
-	 * The patterns if this is a banner
+	 * The patterns if this is a banner.
 	 */
-	@Singular
-	private final List<Pattern> patterns;
+	private final List<Pattern> patterns = new ArrayList<>();
 
 	/**
 	 * Is the item unbreakable?
 	 */
-	private Boolean unbreakable;
+	private boolean unbreakable = false;
 
 	/**
-	 * The dye color in case your item is compatible
+	 * The color in case your item is either of {@link LeatherArmorMeta},
+	 * or from a selected list of compatible items such as stained glass, wool, etc.
 	 */
-	private final CompColor color;
+	@Nullable
+	private CompColor color;
 
 	/**
-	 * Should we hide all tags from the item (enchants, etc.)?
+	 * Should we hide all tags from the item (enchants, attributes, etc.)?
 	 */
-	@Builder.Default
 	private boolean hideTags = false;
 
 	/**
-	 * Should we add glow to the item? (adds a fake enchant and uses
-	 * {@link ItemFlag} to hide it)
-	 * <p>
-	 * The enchant is visible on older MC versions.
+	 * Should we add glow to the item? (adds a fake enchant and uses {@link ItemFlag}
+	 * to hide it). The enchant is visible on older MC versions.
 	 */
-	private final boolean glow;
+	private boolean glow = false;
 
 	/**
-	 * The skull owner, in case it applies
+	 * The skull owner, in case the item is a skull.
 	 */
-	private final String skullOwner;
+	@Nullable
+	private String skullOwner;
 
 	/**
 	 * The skull skin in base64, in case this is a skull
 	 */
-	private final String skullSkin;
+	@Nullable
+	private String skullSkin;
 
 	/**
-	 * The list of NBT tags with their key-value pairs
+	 * The list of custom hidden data injected to the item.
 	 */
-	@Singular
-	private final Map<String, String> tags;
+	private final Map<String, String> tags = new HashMap<>();
 
 	/**
-	 * If this is a book, you can set its new pages here, supports json pages starting with [JSON]
+	 * If this is a book, you can set its new pages here.
 	 */
-	@Singular
-	private final List<BaseComponent[]> bookPages;
+	private final List<BaseComponent[]> bookPages = new ArrayList<>();
 
 	/**
-	 * If this a book, you can set its author here
+	 * If this a book, you can set its author here.
 	 */
-	private final String bookAuthor;
+	@Nullable
+	private String bookAuthor;
 
 	/**
-	 * If this a book, you can set its title here
+	 * If this a book, you can set its title here.
 	 */
-	private final String bookTitle;
+	@Nullable
+	private String bookTitle;
 
 	/**
 	 * The potion data if this is a potion
 	 */
-	private final SimplePotionData potionData;
+	@Nullable
+	private SimplePotionData potionData;
 
 	/**
 	 * The potion effects in case this is a potion
 	 */
-	@Singular
-	private final List<PotionEffect> potionEffects;
+	private final List<PotionEffect> potionEffects = new ArrayList<>();
 
 	/**
 	 * The power of this firework
 	 */
-	@Builder.Default
-	private final int fireworkPower = -1;
+	private int fireworkPower = -1;
 
 	/**
 	 * The firework effects in case this is a firework
 	 */
-	@Singular
-	private final List<FireworkEffect> fireworkEffects;
+	private final List<FireworkEffect> fireworkEffects = new ArrayList<>();
+
+	// ----------------------------------------------------------------------------------------
+	// Builder methods
+	// ----------------------------------------------------------------------------------------
 
 	/**
-	 * The item meta, overriden by other fields
+	 * Set the ItemStack for this item. We will reapply all other properties
+	 * on this ItemStack, make sure they are compatible (such as skullOwner requiring a skull ItemStack, etc.)
+	 *
+	 * @param item
+	 * @return
 	 */
-	private final ItemMeta meta;
+	public ItemCreator item(ItemStack item) {
+		this.item = item;
+
+		return this;
+	}
+
+	/**
+	 * Set the ItemMeta we use to start building. All other properties in this
+	 * class will build on this meta and take priority.
+	 *
+	 * @param meta
+	 * @return
+	 */
+	public ItemCreator meta(ItemMeta meta) {
+		this.meta = meta;
+
+		return this;
+	}
+
+	/**
+	 * Set the Material for the item. If {@link #item} is set,
+	 * this material will take priority.
+	 *
+	 * @param material
+	 * @return
+	 */
+	public ItemCreator material(CompMaterial material) {
+		this.material = material;
+
+		return this;
+	}
+
+	/**
+	 * Set the amount of ItemStack to create.
+	 *
+	 * @param amount
+	 * @return
+	 */
+	public ItemCreator amount(int amount) {
+		this.amount = amount;
+
+		return this;
+	}
+
+	/**
+	 * Set the damage to the ItemStack. Notice that this only
+	 * works for certain items, such as tools.
+	 *
+	 * See {@link Damageable#setDamage(int)}
+	 *
+	 * @param damage
+	 * @return
+	 */
+	public ItemCreator damage(int damage) {
+		this.damage = damage;
+
+		return this;
+	}
+
+	/**
+	 * Set the inventory slot the ItemStack will be placed in when calling
+	 * {@link #give(org.bukkit.entity.Player)}
+	 *
+	 * @param slot
+	 * @return
+	 */
+	public ItemCreator slot(int slot) {
+		this.slot = slot;
+
+		return this;
+	}
+
+	/**
+	 * Set a custom name for the item (& color codes are replaced automatically).
+	 *
+	 * @param name
+	 * @return
+	 */
+	public ItemCreator name(String name) {
+		this.name = name;
+
+		return this;
+	}
+
+	/**
+	 * Remove any previous lore from the item. Useful if you initiated this
+	 * class with an ItemStack or set {@link #item} already, to clear old lore off of it.
+	 *
+	 * @return
+	 */
+	public ItemCreator clearLore() {
+		this.lores.clear();
+
+		return this;
+	}
+
+	/**
+	 * Append the given lore to the end of existing item lore.
+	 *
+	 * @param lore
+	 * @return
+	 */
+	public ItemCreator lore(String... lore) {
+		return this.lore(Arrays.asList(lore));
+	}
+
+	/**
+	 * Append the given lore to the end of existing item lore.
+	 *
+	 * @param lore
+	 * @return
+	 */
+	public ItemCreator lore(List<String> lore) {
+		this.lores.addAll(lore);
+
+		return this;
+	}
+
+	/**
+	 * Add the given enchant to the item.
+	 *
+	 * @param enchantment
+	 * @return
+	 */
+	public ItemCreator enchant(Enchantment enchantment) {
+		return this.enchant(enchantment, 1);
+	}
+
+	/**
+	 * Add the given enchant to the item.
+	 *
+	 * @param enchantment
+	 * @param level
+	 * @return
+	 */
+	public ItemCreator enchant(Enchantment enchantment, int level) {
+		this.enchants.add(new SimpleEnchant(enchantment, level));
+
+		return this;
+	}
+
+	/**
+	 * Add the given flags to the item.
+	 *
+	 * @param flags
+	 * @return
+	 */
+	public ItemCreator flags(CompItemFlag... flags) {
+		this.flags.addAll(Arrays.asList(flags));
+
+		return this;
+	}
+
+	/**
+	 * Add the given flag to the item.
+	 *
+	 * @param flag
+	 * @return
+	 */
+	public ItemCreator flag(CompItemFlag flag) {
+		this.flags.add(flag);
+
+		return this;
+	}
+
+	/**
+	 * Add the given banner patterns to the item, only works if it's a banner.
+	 *
+	 * @param color
+	 * @param type
+	 * @return
+	 */
+	public ItemCreator pattern(DyeColor color, PatternType type) {
+		this.patterns.add(new Pattern(color, type));
+
+		return this;
+	}
+
+	/**
+	 * Add the given banner patterns to the item, only works if it's a banner.
+	 *
+	 * @param patterns
+	 * @return
+	 */
+	public ItemCreator patterns(Pattern... patterns) {
+		return this.patterns(Arrays.asList(patterns));
+	}
+
+	/**
+	 * Add the given banner patterns to the item, only works if it's a banner.
+	 *
+	 * @param patterns
+	 * @return
+	 */
+	public ItemCreator patterns(List<Pattern> patterns) {
+		this.patterns.addAll(patterns);
+
+		return this;
+	}
+
+	/**
+	 * Set the item to be unbreakable.
+	 *
+	 * @param unbreakable
+	 * @return
+	 */
+	public ItemCreator unbreakable(boolean unbreakable) {
+		this.unbreakable = unbreakable;
+
+		return this;
+	}
+
+	/**
+	 * Set the stained or dye color in case your item is either of {@link LeatherArmorMeta},
+	 * or from a selected list of compatible items such as stained glass, wool, etc.
+	 *
+	 * @param color
+	 * @return
+	 */
+	public ItemCreator color(CompColor color) {
+		this.color = color;
+
+		return this;
+	}
+
+	/**
+	 * Removes all enchantment, attribute and other tags appended
+	 * at the end of item lore, typically with blue color.
+	 *
+	 * @param hideTags
+	 * @return
+	 */
+	public ItemCreator hideTags(boolean hideTags) {
+		this.hideTags = hideTags;
+
+		return this;
+	}
+
+	/**
+	 * Makes this item glow. Ignored if enchantments exists. Call {@link #hideTags(boolean)}
+	 * to hide enchantment lores instead.
+	 *
+	 * @param glow
+	 * @return
+	 */
+	public ItemCreator glow(boolean glow) {
+		this.glow = glow;
+
+		return this;
+	}
+
+	/**
+	 * Set the skull owner for this item, only works if the item is a skull.
+	 *
+	 * See {@link SkullCreator}
+	 *
+	 * @param skullOwner
+	 * @return
+	 */
+	public ItemCreator skullOwner(String skullOwner) {
+		this.skullOwner = skullOwner;
+
+		return this;
+	}
+
+	/**
+	 * Set the custom skull skin in base64 for this item, only works
+	 * if the item is a skull.
+	 *
+	 * See {@link SkullCreator}
+	 *
+	 * @param skullSkin
+	 * @return
+	 */
+	public ItemCreator skullSkin(String skullSkin) {
+		this.skullSkin = skullSkin;
+
+		return this;
+	}
+
+	/**
+	 * Places an invisible custom tag to the item, for most server instances it
+	 * will persist across saves/restarts (you should check just to be safe).
+	 *
+	 * @param key
+	 * @param value
+	 * @return
+	 */
+	public ItemCreator tag(String key, String value) {
+		this.tags.put(key, value);
+
+		return this;
+	}
+
+	/**
+	 * If this is a book, set its pages.
+	 *
+	 * @param pages
+	 * @return
+	 */
+	public ItemCreator bookPages(BaseComponent[]... pages) {
+		return this.bookPages(Arrays.asList(pages));
+	}
+
+	/**
+	 * If this is a book, set its pages.
+	 *
+	 * @param pages
+	 * @return
+	 */
+	public ItemCreator bookPages(List<BaseComponent[]> pages) {
+		this.bookPages.addAll(pages);
+
+		return this;
+	}
+
+	/**
+	 * If this is a book, set its author.
+	 *
+	 * @param bookAuthor
+	 * @return
+	 */
+	public ItemCreator bookAuthor(String bookAuthor) {
+		this.bookAuthor = bookAuthor;
+
+		return this;
+	}
+
+	/**
+	 * If this is a book, set its title.
+	 *
+	 * @param bookTitle
+	 * @return
+	 */
+	public ItemCreator bookTitle(String bookTitle) {
+		this.bookTitle = bookTitle;
+
+		return this;
+	}
+
+	/**
+	 * Set the potion data, only works if the item is a potion.
+	 *
+	 * @param potionData
+	 * @return
+	 */
+	public ItemCreator potionData(SimplePotionData potionData) {
+		this.potionData = potionData;
+
+		return this;
+	}
+
+	/**
+	 * Add the given potion effects to this item, only works if it's a potion
+	 *
+	 * @param effects
+	 * @return
+	 */
+	public ItemCreator potionEffects(PotionEffect... effects) {
+		return this.potionEffects(Arrays.asList(effects));
+	}
+
+	/**
+	 * Add the given potion effects to this item, only works if it's a potion
+	 *
+	 * @param effects
+	 * @return
+	 */
+	public ItemCreator potionEffects(List<PotionEffect> effects) {
+		this.potionEffects.addAll(effects);
+
+		return this;
+	}
+
+	/**
+	 * Set the power of the firework, that changes the flight time of it
+	 *
+	 * @param fireworkPower
+	 * @return
+	 */
+	public ItemCreator fireworkPower(int fireworkPower) {
+		this.fireworkPower = fireworkPower;
+
+		return this;
+	}
+
+	/**
+	 * Add the given firework effects to this item, only works if it's a firework
+	 *
+	 * @param effects
+	 * @return
+	 */
+	public ItemCreator fireworkEffects(FireworkEffect... effects) {
+		return this.fireworkEffects(Arrays.asList(effects));
+	}
+
+	/**
+	 * Add the given firework effects to this item, only works if it's a firework
+	 *
+	 * @param effects
+	 * @return
+	 */
+	public ItemCreator fireworkEffects(List<FireworkEffect> effects) {
+		this.fireworkEffects.addAll(effects);
+
+		return this;
+	}
 
 	// ----------------------------------------------------------------------------------------
 	// Convenience give methods
@@ -229,7 +653,7 @@ public class ItemCreator implements ConfigSerializable {
 	}
 
 	/**
-	 * Adds this item into the player's inventory at the given slot
+	 * Adds this item into the player's inventory at the given slot.
 	 * <p>
 	 * See {@link org.bukkit.inventory.PlayerInventory#setItem(int, ItemStack)}
 	 * for information on slots.
@@ -255,21 +679,21 @@ public class ItemCreator implements ConfigSerializable {
 	 * @return
 	 */
 	public ItemCreator replaceVariables(@NonNull final Function<String, String> replacer) {
-		final ItemCreatorBuilder builder = of(make()).slot(this.slot);
+		final ItemCreator creator = this.copy();
 
 		if (this.name != null)
-			builder.name(replacer.apply(this.name));
+			creator.name = replacer.apply(this.name);
 
-		if (this.lores != null && !this.lores.isEmpty()) {
+		if (!this.lores.isEmpty()) {
 			final String joined = replacer.apply(String.join("\n", this.lores));
 
 			// Replace the variables again if the replacements had placeholders in them
 			final String[] split = StringUtils.splitPreserveAllTokens(replacer.apply(joined), '\n');
 
-			builder.clearLores().lores(Arrays.asList(split));
+			creator.clearLore().lore(split);
 		}
 
-		return builder.build();
+		return creator;
 	}
 
 	/**
@@ -308,28 +732,25 @@ public class ItemCreator implements ConfigSerializable {
 	 * @return the finished item
 	 */
 	public ItemStack make() {
-		//
+
 		// First, make sure the ItemStack is not null (it can be null if you create this class only using material)
-		//
-		Valid.checkBoolean(material != null || item != null, "Material or item must be set!");
+		Valid.checkBoolean(this.material != null || this.item != null, "Material or item must be set!");
 
-		if (material != null)
-			Valid.checkNotNull(material.getMaterial(), "Material#getMaterial cannot be null for " + material);
+		ItemStack compiledItem = this.item != null ? this.item.clone() : this.material.toItem();
 
-		final ItemStack compiledItem = item != null ? item.clone() : material.toItem(amount);
-		ItemMeta compiledMeta = meta != null ? meta.clone() : compiledItem.getItemMeta();
+		Object compiledMeta = Remain.hasItemMeta() ? this.meta != null ? this.meta.clone() : compiledItem.getItemMeta() : null;
+
+		// Override with given material
+		if (this.material != null) {
+			compiledItem.setType(this.material.getMaterial());
+
+			if (MinecraftVersion.olderThan(V.v1_13))
+				compiledItem.setData(new MaterialData(this.material.getMaterial(), this.material.getData()));
+		}
 
 		// Skip if air
 		if (CompMaterial.isAir(compiledItem.getType()))
 			return compiledItem;
-
-		// Override with given material
-		if (item != null && material != null) {
-			compiledItem.setType(material.getMaterial());
-
-			if (MinecraftVersion.olderThan(V.v1_13))
-				compiledItem.setData(new MaterialData(material.getMaterial(), material.getData()));
-		}
 
 		// Apply specific material color if possible
 		color:
@@ -416,8 +837,6 @@ public class ItemCreator implements ConfigSerializable {
 				compiledMeta = CompMonsterEgg.setEntity(compiledItem, entity).getItemMeta();
 		}
 
-		flags = Common.toList(flags);
-
 		if (damage != -1) {
 
 			try {
@@ -432,26 +851,33 @@ public class ItemCreator implements ConfigSerializable {
 			}
 		}
 
-		if (color != null && compiledItem.getType().toString().contains("LEATHER"))
-			((LeatherArmorMeta) compiledMeta).setColor(color.getColor());
-
 		if (skullOwner != null && compiledMeta instanceof SkullMeta)
 			((SkullMeta) compiledMeta).setOwner(skullOwner);
 
 		if (compiledMeta instanceof BookMeta) {
 			final BookMeta bookMeta = (BookMeta) compiledMeta;
 
-			if (bookPages != null)
+			if (!this.bookPages.isEmpty())
 				Remain.setPages(bookMeta, bookPages);
 
-			if (bookMeta.getAuthor() == null)
+			if (this.bookAuthor != null)
 				bookMeta.setAuthor(Common.colorize(bookAuthor));
 
-			if (bookMeta.getTitle() == null)
+			if (this.bookTitle != null)
 				bookMeta.setTitle(Common.colorize(bookTitle));
+
+			// Fix "Corrupted NBT tag" error when any of these fields are not set
+			if (bookMeta.getPages() == null)
+				bookMeta.setPages("");
+
+			if (bookMeta.getAuthor() == null)
+				bookMeta.setAuthor("Anonymous");
+
+			if (bookMeta.getTitle() == null)
+				bookMeta.setTitle("Book");
 		}
 
-		if (patterns != null && compiledMeta instanceof BannerMeta)
+		if (!patterns.isEmpty() && compiledMeta instanceof BannerMeta)
 			for (final Pattern pattern : patterns)
 				((BannerMeta) compiledMeta).addPattern(pattern);
 
@@ -461,89 +887,104 @@ public class ItemCreator implements ConfigSerializable {
 			if (fireworkPower != -1)
 				fireworkMeta.setPower(fireworkPower);
 
-			if (fireworkEffects != null && !fireworkEffects.isEmpty())
+			if (!fireworkEffects.isEmpty())
 				fireworkMeta.addEffects(fireworkEffects);
 		}
 
-		if (glow) {
-			compiledMeta.addEnchant(Enchantment.DURABILITY, 1, true);
+		if (compiledMeta instanceof ItemMeta) {
+			if (glow) {
+				((ItemMeta) compiledMeta).addEnchant(Enchantment.DURABILITY, 1, true);
 
-			flags.add(CompItemFlag.HIDE_ENCHANTS);
+				flags.add(CompItemFlag.HIDE_ENCHANTS);
+			}
+
+			if (!enchants.isEmpty())
+				for (final SimpleEnchant enchant : enchants)
+					if (compiledMeta instanceof EnchantmentStorageMeta)
+						((EnchantmentStorageMeta) compiledMeta).addStoredEnchant(enchant.getEnchant(), enchant.getLevel(), true);
+
+					else
+						((ItemMeta) compiledMeta).addEnchant(enchant.getEnchant(), enchant.getLevel(), true);
+
+			if (!potionEffects.isEmpty() && compiledMeta instanceof PotionMeta)
+				for (final PotionEffect effect : potionEffects)
+					((PotionMeta) compiledMeta).addCustomEffect(effect, true);
+
+			if (this.name != null && !"".equals(this.name))
+				((ItemMeta) compiledMeta).setDisplayName(Common.colorize("&r&f" + name));
+
+			if (!this.lores.isEmpty()) {
+				final List<String> coloredLores = new ArrayList<>();
+
+				for (final String lore : this.lores)
+					if (lore != null)
+						for (final String subLore : lore.split("\n"))
+							coloredLores.add(Common.colorize("&7" + subLore));
+
+				((ItemMeta) compiledMeta).setLore(coloredLores);
+			}
 		}
 
-		if (enchants != null)
-			for (final SimpleEnchant ench : enchants)
-				if (compiledMeta instanceof EnchantmentStorageMeta)
-					((EnchantmentStorageMeta) compiledMeta).addStoredEnchant(ench.getEnchant(), ench.getLevel(), true);
-				else
-					compiledMeta.addEnchant(ench.getEnchant(), ench.getLevel(), true);
-
-		if (name != null && !"".equals(name))
-			compiledMeta.setDisplayName(Common.colorize("&r&f" + name));
-
-		if (lores != null && !lores.isEmpty()) {
-			final List<String> coloredLores = new ArrayList<>();
-
-			for (final String lore : lores)
-				coloredLores.add(Common.colorize("&7" + lore));
-
-			compiledMeta.setLore(coloredLores);
-		}
-
-		if (potionEffects != null && !potionEffects.isEmpty() && compiledMeta instanceof PotionMeta)
-			for (final PotionEffect effect : potionEffects)
-				((PotionMeta) compiledMeta).addCustomEffect(effect, true);
-
-		if (unbreakable != null) {
-			flags.add(CompItemFlag.HIDE_ATTRIBUTES);
-			flags.add(CompItemFlag.HIDE_UNBREAKABLE);
+		if (this.unbreakable) {
+			this.flags.add(CompItemFlag.HIDE_ATTRIBUTES);
+			this.flags.add(CompItemFlag.HIDE_UNBREAKABLE);
 
 			CompProperty.UNBREAKABLE.apply(compiledMeta, true);
 		}
 
-		if (hideTags)
+		if (this.hideTags)
 			for (final CompItemFlag f : CompItemFlag.values())
-				if (!flags.contains(f))
-					flags.add(f);
+				if (!this.flags.contains(f))
+					this.flags.add(f);
 
-		for (final CompItemFlag flag : flags)
+		for (final CompItemFlag flag : this.flags)
 			try {
-				compiledMeta.addItemFlags(ItemFlag.valueOf(flag.toString()));
+				((ItemMeta) compiledMeta).addItemFlags(ItemFlag.valueOf(flag.toString()));
 			} catch (final Throwable t) {
 			}
 
+		// Override with custom amount if set
+		if (this.amount != -1)
+			compiledItem.setAmount(this.amount);
+
 		// Apply Bukkit metadata
-		compiledItem.setItemMeta(compiledMeta);
+		if (compiledMeta instanceof ItemMeta)
+			compiledItem.setItemMeta((ItemMeta) compiledMeta);
 
 		//
 		// From now on we have to re-set the item
 		//
 
 		// Apply custom enchantment lores
-		ItemStack finalItem = compiledItem;
-		final ItemStack enchantedIs = SimpleEnchantment.addEnchantmentLores(compiledItem);
-
-		if (enchantedIs != null)
-			finalItem = enchantedIs;
+		compiledItem = Common.getOrDefault(SimpleEnchantment.addEnchantmentLores(compiledItem), compiledItem);
 
 		// Apply the skull skin AFTER we applied the item meta
 		if (skullSkin != null && compiledMeta instanceof SkullMeta)
-			finalItem = SkullCreator.itemWithBase64(finalItem, skullSkin);
+			compiledItem = SkullCreator.itemWithBase64(compiledItem, skullSkin);
 
 		// SimplePotionData#apply also gets the ItemMeta from the item
 		if (potionData != null && compiledMeta instanceof PotionMeta)
 			potionData.apply(compiledItem);
 
+		// 1.7.10 hack to add glow, requires no enchants
+		if (this.glow && MinecraftVersion.equals(V.v1_7) && this.enchants.isEmpty()) {
+			final NBTItem nbtItem = new NBTItem(compiledItem);
+
+			nbtItem.removeKey("ench");
+			nbtItem.addCompound("ench");
+
+			compiledItem = nbtItem.getItem();
+		}
+
 		// Apply NBT tags
-		if (tags != null)
-			if (MinecraftVersion.atLeast(V.v1_8))
-				for (final Entry<String, String> entry : tags.entrySet())
-					finalItem = CompMetadata.setMetadata(finalItem, entry.getKey(), entry.getValue());
+		if (MinecraftVersion.atLeast(V.v1_8))
+			for (final Entry<String, String> entry : tags.entrySet())
+				compiledItem = CompMetadata.setMetadata(compiledItem, entry.getKey(), entry.getValue());
 
-			else if (!tags.isEmpty() && item != null)
-				Common.log("Item had unsupported tags " + tags + " that are not supported on MC " + MinecraftVersion.getServerVersion() + " Item: " + finalItem);
+		else if (!tags.isEmpty() && item != null)
+			Common.log("Item had unsupported tags " + tags + " that are not supported on MC " + MinecraftVersion.getServerVersion() + " Item: " + compiledItem);
 
-		return finalItem;
+		return compiledItem;
 	}
 
 	/**
@@ -551,9 +992,8 @@ public class ItemCreator implements ConfigSerializable {
 	 */
 	@Override
 	public SerializedMap serialize() {
-		//
+
 		// First, make sure the ItemStack is not null (it can be null if you create this class only using material)
-		//
 		Valid.checkBoolean(material != null || item != null, "Material or item must be set!");
 
 		if (material != null)
@@ -579,7 +1019,7 @@ public class ItemCreator implements ConfigSerializable {
 		if (!Valid.isNullOrEmpty(name))
 			map.put("Name", name);
 
-		if (lores != null && !lores.isEmpty())
+		if (!lores.isEmpty())
 			map.put("Lore", lores);
 
 		// -----------------------------------------------------------
@@ -597,7 +1037,7 @@ public class ItemCreator implements ConfigSerializable {
 				map.put("Main_Effect", mainEffectMap);
 			}
 
-			if (potionEffects != null && !potionEffects.isEmpty()) {
+			if (!potionEffects.isEmpty()) {
 				final SerializedMap effectsMap = new SerializedMap();
 
 				for (final PotionEffect effect : potionEffects) {
@@ -611,7 +1051,7 @@ public class ItemCreator implements ConfigSerializable {
 			}
 		}
 
-		if (meta instanceof EnchantmentStorageMeta && enchants != null && !enchants.isEmpty()) {
+		if (meta instanceof EnchantmentStorageMeta && !enchants.isEmpty()) {
 			final SerializedMap enchantsMap = new SerializedMap();
 
 			for (final SimpleEnchant enchant : enchants)
@@ -644,7 +1084,7 @@ public class ItemCreator implements ConfigSerializable {
 			map.put("Armor_Color", rawColor.getRed() + ", " + rawColor.getGreen() + ", " + rawColor.getBlue());
 		}
 
-		if (patterns != null && !patterns.isEmpty() && meta instanceof BannerMeta) {
+		if (!patterns.isEmpty() && meta instanceof BannerMeta) {
 			final List<SerializedMap> patterns = new ArrayList<>();
 
 			for (final Pattern pattern : this.patterns)
@@ -659,7 +1099,7 @@ public class ItemCreator implements ConfigSerializable {
 		if (meta instanceof FireworkMeta) {
 			final List<SerializedMap> effectsList = new ArrayList<>();
 
-			if (fireworkEffects != null && !fireworkEffects.isEmpty())
+			if (!fireworkEffects.isEmpty())
 				for (final FireworkEffect effect : fireworkEffects) {
 					final SerializedMap effectMap = new SerializedMap();
 
@@ -692,7 +1132,7 @@ public class ItemCreator implements ConfigSerializable {
 		// -----------------------------------------------------------
 
 		// Enchantments
-		if (!(meta instanceof EnchantmentStorageMeta) && enchants != null && !enchants.isEmpty()) {
+		if (!(meta instanceof EnchantmentStorageMeta) && !enchants.isEmpty()) {
 			final SerializedMap enchantsMap = new SerializedMap();
 
 			for (final SimpleEnchant enchant : enchants)
@@ -702,14 +1142,55 @@ public class ItemCreator implements ConfigSerializable {
 		}
 
 		// Flags
-		if (flags != null && !flags.isEmpty())
+		if (!flags.isEmpty())
 			map.put("Flags", flags);
 
 		// Unbreakable
-		if (unbreakable != null)
+		if (unbreakable)
 			map.put("Unbreakable", unbreakable);
 
 		return map;
+	}
+
+	/**
+	 * Makes a new ItemCreator with all attributes copied into it
+	 *
+	 * @return
+	 */
+	public ItemCreator copy() {
+		final ItemCreator creator = new ItemCreator();
+
+		creator.item = this.item != null ? this.item.clone() : null;
+		creator.meta = this.meta != null ? this.meta.clone() : null;
+		creator.material = material;
+		creator.amount = amount;
+		creator.damage = damage;
+		creator.slot = slot;
+		creator.name = name;
+
+		creator.lore(this.lores);
+		creator.enchants.addAll(this.enchants);
+		creator.flags.addAll(this.flags);
+		creator.patterns.addAll(this.patterns);
+
+		creator.unbreakable = this.unbreakable;
+		creator.color = this.color;
+		creator.hideTags = this.hideTags;
+		creator.skullOwner = this.skullOwner;
+		creator.skullSkin = this.skullSkin;
+
+		creator.tags.putAll(this.tags);
+		creator.bookPages.addAll(this.bookPages);
+		creator.bookAuthor = this.bookAuthor;
+		creator.bookTitle = this.bookTitle;
+
+		creator.potionData = this.potionData;
+		creator.potionEffects.addAll(this.potionEffects);
+
+		creator.fireworkPower = this.fireworkPower;
+		creator.fireworkEffects.addAll(this.fireworkEffects);
+
+		return creator;
 	}
 
 	// ----------------------------------------------------------------------------------------
@@ -722,11 +1203,10 @@ public class ItemCreator implements ConfigSerializable {
 	 * @param material
 	 * @param name
 	 * @param lore
-	 *
 	 * @return
 	 */
-	public static ItemCreatorBuilder of(final CompMaterial material, final String name, @NonNull final Collection<String> lore) {
-		return of(material, name, lore.toArray(new String[0]));
+	public static ItemCreator of(final CompMaterial material, final String name, @NonNull final Collection<String> lore) {
+		return of(material, name, Common.toArray(lore));
 	}
 
 	/**
@@ -735,63 +1215,137 @@ public class ItemCreator implements ConfigSerializable {
 	 * @param material
 	 * @param name
 	 * @param lore
-	 *
-	 * @return
-	 */
-	public static ItemCreatorBuilder of(final String material, final String name, @NonNull final Collection<String> lore) {
-		return of(CompMaterial.valueOf(material), name, lore.toArray(new String[0]));
-	}
-
-	/**
-	 * Convenience method to get a new item creator with material, name and lore set
-	 *
-	 * @param material
-	 * @param name
-	 * @param lore
-	 *
 	 * @return new item creator
 	 */
-	public static ItemCreatorBuilder of(final CompMaterial material, final String name, @NonNull final String... lore) {
-		return ItemCreator.builder().material(material).name("&r" + name).lores(Arrays.asList(lore)).hideTags(true);
-	}
-
-	/**
-	 * Convenience method to get a new item creator with material, name and lore set
-	 *
-	 * @param material
-	 * @param name
-	 * @param lore
-	 *
-	 * @return new item creator
-	 */
-	public static ItemCreatorBuilder of(final String material, final String name, @NonNull final String... lore) {
-		return ItemCreator.builder().material(CompMaterial.valueOf(material)).name("&r" + name).lores(Arrays.asList(lore)).hideTags(true);
+	public static ItemCreator of(final CompMaterial material, final String name, @NonNull final String... lore) {
+		return new ItemCreator().material(material).name(name).lore(lore).hideTags(true);
 	}
 
 	/**
 	 * Convenience method to get a wool
 	 *
 	 * @param color the wool color
-	 *
 	 * @return the new item creator
 	 */
-	public static ItemCreatorBuilder ofWool(final CompColor color) {
+	public static ItemCreator ofWool(final CompColor color) {
 		return of(CompMaterial.makeWool(color, 1)).color(color);
+	}
+
+	/**
+	 * Convenience method to get monster eggs
+	 *
+	 * @param entityType
+	 * @return
+	 */
+	public static ItemCreator ofEgg(final EntityType entityType) {
+		return of(CompMonsterEgg.makeEgg(entityType));
+	}
+
+	/**
+	 * Convenience method to get monster eggs
+	 *
+	 * @param entityType
+	 * @param name
+	 * @param lore
+	 * @return
+	 */
+	public static ItemCreator ofEgg(final EntityType entityType, String name, String... lore) {
+		return of(CompMonsterEgg.makeEgg(entityType)).name(name).lore(lore);
+	}
+
+	/**
+	 * Convenience method for creation potions
+	 *
+	 * @param potionEffect
+	 * @return
+	 */
+	public static ItemCreator ofPotion(final PotionEffectType potionEffect) {
+		return ofPotion(potionEffect, 1);
+	}
+
+	/**
+	 * Convenience method for creation potions
+	 *
+	 * @param potionEffect
+	 * @param durationTicks
+	 * @param level
+	 * @return
+	 */
+	public static ItemCreator ofPotion(final PotionEffectType potionEffect, int durationTicks, int level) {
+		return ofPotion(potionEffect, durationTicks, level, null);
+	}
+
+	/**
+	 * Convenience method for creation potions
+	 *
+	 * @param potionEffect
+	 * @param level
+	 * @return
+	 */
+	public static ItemCreator ofPotion(final PotionEffectType potionEffect, int level) {
+		return ofPotion(potionEffect, Integer.MAX_VALUE, level, null);
+	}
+
+	/**
+	 * Convenience method for creation potions
+	 *
+	 * @param potionEffect
+	 * @param name
+	 * @param lore
+	 * @return
+	 */
+	public static ItemCreator ofPotion(final PotionEffectType potionEffect, String name, String... lore) {
+		return ofPotion(potionEffect, Integer.MAX_VALUE, 1, name, lore);
+	}
+
+	/**
+	 * Convenience method for creation potions
+	 *
+	 * @param effect
+	 * @param name
+	 * @param lore
+	 * @return
+	 */
+	public static ItemCreator ofPotion(final PotionEffect effect, String name, String... lore) {
+		return ofPotion(effect.getType(), Integer.MAX_VALUE, effect.getAmplifier() + 1, name, lore);
+	}
+
+	/**
+	 * Convenience method for creation potions
+	 *
+	 * @param potionEffect
+	 * @param level
+	 * @param name
+	 * @param lore
+	 * @return
+	 */
+	public static ItemCreator ofPotion(final PotionEffectType potionEffect, int durationTicks, int level, String name, String... lore) {
+		final ItemStack item = new ItemStack(CompMaterial.POTION.getMaterial());
+		Remain.setPotion(item, potionEffect, durationTicks, level);
+
+		final ItemCreator builder = of(item);
+
+		if (name != null)
+			builder.name(name);
+
+		if (lore != null)
+			builder.lore(lore);
+
+		return builder;
 	}
 
 	/**
 	 * Convenience method to get the creator of an existing itemstack
 	 *
 	 * @param item existing itemstack
-	 *
 	 * @return the new item creator
 	 */
-	public static ItemCreatorBuilder of(final ItemStack item) {
-		final ItemCreatorBuilder builder = ItemCreator.builder();
+	public static ItemCreator of(final ItemStack item) {
+		final ItemCreator builder = new ItemCreator();
 		final ItemMeta meta = item.getItemMeta();
 
 		if (meta != null && meta.getLore() != null)
-			builder.lores(meta.getLore());
+			builder.lore(meta.getLore());
 
 		return builder.item(item);
 	}
@@ -800,13 +1354,12 @@ public class ItemCreator implements ConfigSerializable {
 	 * Get a new item creator from material
 	 *
 	 * @param mat existing material
-	 *
 	 * @return the new item creator
 	 */
-	public static ItemCreatorBuilder of(final CompMaterial mat) {
+	public static ItemCreator of(final CompMaterial mat) {
 		Valid.checkNotNull(mat, "Material cannot be null!");
 
-		return ItemCreator.builder().material(mat);
+		return new ItemCreator().material(mat);
 	}
 
 	/**
@@ -816,14 +1369,15 @@ public class ItemCreator implements ConfigSerializable {
 	 *
 	 * @return
 	 */
-	public static ItemCreatorBuilder of(final SerializedMap map) {
+	public static ItemCreator of(final SerializedMap map) {
 		final CompMaterial material = map.getMaterial("Material");
-		final ItemCreatorBuilder builder = ItemCreator.builder();
+		final ItemCreator builder = new ItemCreator();
 
 		if (material != null)
 			builder.material(material);
 
-		builder.amount(map.getInteger("Amount", 1));
+		if (map.containsKey("Amount"))
+			builder.amount(map.getInteger("Amount"));
 
 		// Player inventory slot
 		if (map.containsKey("Inventory_Slot"))
@@ -833,7 +1387,7 @@ public class ItemCreator implements ConfigSerializable {
 		builder.name(map.getString("Name"));
 
 		if (map.containsKey("Lore"))
-			builder.lores(map.getStringList("Lore"));
+			builder.lore(map.getStringList("Lore"));
 
 		// -----------------------------------------------------------
 		// ItemMeta
@@ -876,7 +1430,7 @@ public class ItemCreator implements ConfigSerializable {
 				try {
 					final PotionEffectType potion = ItemUtil.findPotion(effectType);
 
-					builder.potionEffect(new PotionEffect(potion, durationTicks, amplifier));
+					builder.potionEffects(new PotionEffect(potion, durationTicks, amplifier));
 
 				} catch (final Exception e) {
 					Common.error(e, "Error when adding potion effect from " + map.toStringFormatted());
@@ -894,7 +1448,7 @@ public class ItemCreator implements ConfigSerializable {
 				try {
 					final Enchantment enchantment = ItemUtil.findEnchantment(enchantType);
 
-					builder.enchant(new SimpleEnchant(enchantment, level));
+					builder.enchant(enchantment, level);
 
 				} catch (final Exception e) {
 					Common.error(e, "Error when adding stored enchant from " + map.toStringFormatted());
@@ -920,7 +1474,7 @@ public class ItemCreator implements ConfigSerializable {
 					// Convert pages to JSON if they are not already JSON
 					final BaseComponent[] components = Remain.toComponent(page.startsWith("[JSON]") ? page.substring(6) : Remain.toJson(page));
 
-					builder.bookPage(components);
+					builder.bookPages(components);
 
 				} catch (final Exception e) {
 					Common.error(e, "Error when trying to add a page from " + map.toStringFormatted());
@@ -944,7 +1498,7 @@ public class ItemCreator implements ConfigSerializable {
 					final PatternType patternType = ReflectionUtil.lookupEnumSilent(PatternType.class, patternMap.getString("Type"));
 					final CompColor color = CompColor.fromName(patternMap.getString("Color"));
 
-					builder.pattern(new Pattern(color.getDye(), patternType));
+					builder.patterns(new Pattern(color.getDye(), patternType));
 
 				} catch (final Exception e) {
 					Common.error(e, "Error when adding banner pattern from " + map.toStringFormatted());
@@ -982,7 +1536,8 @@ public class ItemCreator implements ConfigSerializable {
 							fadeColors.add(Color.fromRGB(Integer.parseInt(split[0]), Integer.parseInt(split[1]), Integer.parseInt(split[2])));
 						}
 
-					builder.fireworkEffect(FireworkEffect.builder()
+					builder.fireworkEffects(FireworkEffect.builder()
+							.with(type)
 							.flicker(flicker)
 							.trail(trail)
 							.withColor(colors)
@@ -1006,7 +1561,7 @@ public class ItemCreator implements ConfigSerializable {
 				final Enchantment enchant = ItemUtil.findEnchantment(enchantType);
 				final int level = enchants.getInteger(enchantType);
 
-				builder.enchant(new SimpleEnchant(enchant, level));
+				builder.enchant(enchant, level);
 
 			} catch (final Exception e) {
 				Common.error(e, "Error when adding enchantment from " + map.toStringFormatted());
@@ -1041,6 +1596,6 @@ public class ItemCreator implements ConfigSerializable {
 	 * @return
 	 */
 	public static ItemCreator deserialize(final SerializedMap map) {
-		return of(map).build();
+		return of(map);
 	}
 }

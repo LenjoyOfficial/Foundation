@@ -500,7 +500,7 @@ public abstract class YamlStaticConfig {
 		return TEMPORARY_INSTANCE.getItem(path);
 	}
 
-	protected static final ItemCreator.ItemCreatorBuilder getItemCreator(final String path) {
+	protected static final ItemCreator getItemCreator(final String path) {
 		return TEMPORARY_INSTANCE.getItemCreator(path);
 	}
 

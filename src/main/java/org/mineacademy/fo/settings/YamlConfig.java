@@ -1124,7 +1124,7 @@ public class YamlConfig {
 	 * @return
 	 */
 	public ItemStack getItem(final String path) {
-		return getItemCreator(path).build().make();
+		return getItemCreator(path).make();
 	}
 
 	/**
@@ -1133,7 +1133,7 @@ public class YamlConfig {
 	 * @param path
 	 * @return
 	 */
-	public ItemCreator.ItemCreatorBuilder getItemCreator(final String path) {
+	public ItemCreator getItemCreator(final String path) {
 		final SerializedMap map = getMap(path);
 
 		return !map.isEmpty() ? ItemCreator.of(map) : null;

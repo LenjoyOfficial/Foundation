@@ -247,7 +247,7 @@ public abstract class MenuPagged<T> extends Menu {
 				return ItemCreator
 						.of(canGo ? activePageButton : inactivePageButton)
 						.name(previousPage == 0 ? SimpleLocalization.Menu.PAGE_FIRST : SimpleLocalization.Menu.PAGE_PREVIOUS.replace("{page}", String.valueOf(previousPage)))
-						.build().make();
+						.make();
 			}
 		};
 	}
@@ -278,7 +278,7 @@ public abstract class MenuPagged<T> extends Menu {
 				return ItemCreator
 						.of(canGo ? activePageButton : inactivePageButton)
 						.name(lastPage ? SimpleLocalization.Menu.PAGE_LAST : SimpleLocalization.Menu.PAGE_NEXT.replace("{page}", String.valueOf(currentPage + 1)))
-						.build().make();
+						.make();
 			}
 		};
 	}

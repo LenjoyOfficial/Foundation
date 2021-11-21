@@ -71,7 +71,7 @@ public interface MenuQuantitable {
 								"",
 								"&7Left click to increase to &b" + getQuantity().next().getAmount() + "&7!",
 								"&7Right click to decrease to &b" + getQuantity().previous().getAmount() + "&7!")
-						.build().make();
+						.make();
 			}
 		};
 	}

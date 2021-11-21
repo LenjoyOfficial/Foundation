@@ -17,6 +17,7 @@ import org.mineacademy.fo.remain.nbt.NBTItem;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -77,6 +78,16 @@ public final class ItemUtil {
 	// ----------------------------------------------------------------------------------------------------
 	// Enumeration - fancy names
 	// ----------------------------------------------------------------------------------------------------
+
+	/**
+	 * See {@link #bountifyCapitalized(String)}
+	 *
+	 * @param type
+	 * @return
+	 */
+	public static String bountifyCapitalized(@NonNull PotionEffectType type) {
+		return PotionWrapper.getLocalizedName(type.getName());
+	}
 
 	/**
 	 * See {@link #bountifyCapitalized(CompChatColor)}

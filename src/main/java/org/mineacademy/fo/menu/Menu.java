@@ -462,7 +462,7 @@ public abstract class Menu {
 				final ItemStack item = drawer.getItem(slot);
 
 				if (item == null)
-					drawer.setItem(slot, ItemCreator.of(CompMaterial.LIGHT_GRAY_STAINED_GLASS_PANE, "Slot " + slot).build().make());
+					drawer.setItem(slot, ItemCreator.of(CompMaterial.LIGHT_GRAY_STAINED_GLASS_PANE, "Slot " + slot).make());
 			}
 	}
 

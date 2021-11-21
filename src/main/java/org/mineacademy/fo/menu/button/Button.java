@@ -80,7 +80,7 @@ public abstract class Button {
 		for (final String line : description)
 			lores.add("&7" + line);
 
-		return makeDummy(ItemCreator.of(infoButtonMaterial).name(infoButtonTitle).hideTags(true).lores(lores));
+		return makeDummy(ItemCreator.of(infoButtonMaterial).name(infoButtonTitle).hideTags(true).lore(lores));
 	}
 
 	/**
@@ -90,16 +90,6 @@ public abstract class Button {
 	 */
 	public static final DummyButton makeEmpty() {
 		return makeDummy(ItemCreator.of(CompMaterial.AIR));
-	}
-
-	/**
-	 * Creates a dummy button that does nothing when clicked
-	 *
-	 * @param builder the icon builder
-	 * @return the button
-	 */
-	public static final DummyButton makeDummy(final ItemCreator.ItemCreatorBuilder builder) {
-		return makeDummy(builder.build());
 	}
 
 	/**
@@ -137,7 +127,7 @@ public abstract class Button {
 
 			@Override
 			public ItemStack getItem() {
-				return ItemCreator.of(icon, title, "", label).build().makeMenuTool();
+				return ItemCreator.of(icon, title, "", label).makeMenuTool();
 			}
 
 			@Override
@@ -154,12 +144,12 @@ public abstract class Button {
 	 * @param onClickFunction
 	 * @return
 	 */
-	public static final Button makeSimple(ItemCreator.ItemCreatorBuilder builder, final Consumer<Player> onClickFunction) {
+	public static final Button makeSimple(ItemCreator builder, final Consumer<Player> onClickFunction) {
 		return new Button() {
 
 			@Override
 			public ItemStack getItem() {
-				return builder.build().makeMenuTool();
+				return builder.makeMenuTool();
 			}
 
 			@Override
@@ -184,7 +174,7 @@ public abstract class Button {
 
 			@Override
 			public ItemStack getItem() {
-				return ItemCreator.of(icon, title, "", label).build().makeMenuTool();
+				return ItemCreator.of(icon, title, "", label).makeMenuTool();
 			}
 
 			@Override
@@ -200,12 +190,12 @@ public abstract class Button {
 	 * @param question
 	 * @param successAction
 	 */
-	public static Button makeDecimalPrompt(final ItemCreator.ItemCreatorBuilder builder, final String question, final Consumer<Double> successAction) {
+	public static Button makeDecimalPrompt(final ItemCreator builder, final String question, final Consumer<Double> successAction) {
 		return new Button() {
 
 			@Override
 			public ItemStack getItem() {
-				return builder.build().make();
+				return builder.make();
 			}
 
 			@Override

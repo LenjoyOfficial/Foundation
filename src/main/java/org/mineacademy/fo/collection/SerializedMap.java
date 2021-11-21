@@ -491,7 +491,7 @@ public final class SerializedMap extends StrictCollection {
 		if (obj instanceof ItemStack)
 			return (ItemStack) obj;
 
-		return ItemCreator.of(SerializedMap.of(obj)).build().make();
+		return ItemCreator.of(SerializedMap.of(obj)).make();
 	}
 
 	/**
@@ -500,7 +500,7 @@ public final class SerializedMap extends StrictCollection {
 	 * @param key
 	 * @return
 	 */
-	public ItemCreator.ItemCreatorBuilder getItemCreator(final String key) {
+	public ItemCreator getItemCreator(final String key) {
 		final SerializedMap map = getMap(key);
 
 		return !map.isEmpty() ? ItemCreator.of(map) : null;

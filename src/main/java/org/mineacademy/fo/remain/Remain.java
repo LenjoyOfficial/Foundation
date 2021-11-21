@@ -81,6 +81,7 @@ import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.PlayerUtil;
 import org.mineacademy.fo.ReflectionUtil;
+import org.mineacademy.fo.TimeUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictMap;
@@ -2197,8 +2198,19 @@ public final class Remain {
 	 * @param level
 	 */
 	public static void setPotion(final ItemStack item, final PotionEffectType type, final int level) {
+		setPotion(item, type, 20 * 60 * 10, level);
+	}
+
+	/**
+	 * Attempts to insert a potion to the given item.
+	 *
+	 * @param item
+	 * @param type
+	 * @param level
+	 */
+	public static void setPotion(final ItemStack item, final PotionEffectType type, final int durationTicks, final int level) {
 		if (hasItemMeta)
-			PotionSetter.setPotion(item, type, level);
+			PotionSetter.setPotion(item, type, durationTicks, level);
 	}
 
 	/**
@@ -2794,7 +2806,7 @@ class PotionSetter {
 	 * @param type
 	 * @param level
 	 */
-	public static void setPotion(final ItemStack item, final PotionEffectType type, final int level) {
+	public static void setPotion(final ItemStack item, final PotionEffectType type, final int durationTicks, final int level) {
 		Valid.checkBoolean(item.getItemMeta() instanceof org.bukkit.inventory.meta.PotionMeta, "Can only use setPotion for items with PotionMeta not: " + item.getItemMeta());
 
 		final PotionType wrapped = PotionType.getByEffect(type);
@@ -2809,9 +2821,22 @@ class PotionSetter {
 			meta.setBasePotionData(data);
 
 		} catch (final NoSuchMethodError | NoClassDefFoundError ex) {
-			meta.setMainEffect(type);
-			meta.addCustomEffect(new PotionEffect(type, Integer.MAX_VALUE, level - 1), true);
 		}
+
+		// For some reason this does not get added so we have to add it manually on top of the lore
+		if (MinecraftVersion.olderThan(V.v1_9)) {
+			final List<String> lore = new ArrayList<>();
+
+			lore.add(Common.colorize("&7" + ItemUtil.bountifyCapitalized(type) + " (" + TimeUtil.formatTimeColon(durationTicks / 20) + ")"));
+
+			if (meta.getLore() != null)
+				lore.addAll(meta.getLore());
+
+			meta.setLore(lore);
+		}
+
+		meta.setMainEffect(type);
+		meta.addCustomEffect(new PotionEffect(type, durationTicks, level - 1), true);
 
 		item.setItemMeta(meta);
 	}

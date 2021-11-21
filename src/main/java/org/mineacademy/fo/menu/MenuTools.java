@@ -226,7 +226,7 @@ final class ToggleableTool {
 
 	// Return the dummy placeholder tool when the player already has it
 	private ItemStack getToolWhenHas() {
-		return ItemCreator.of(item).enchant(new SimpleEnchant(Enchantment.ARROW_INFINITE, 1)).flag(CompItemFlag.HIDE_ENCHANTS).lores(Arrays.asList("", "&cYou already have this item.", "&7Click to take it away.")).build().make();
+		return ItemCreator.of(item).enchant(Enchantment.ARROW_INFINITE, 1).flag(CompItemFlag.HIDE_ENCHANTS).lore(Arrays.asList("", "&cYou already have this item.", "&7Click to take it away.")).make();
 	}
 
 	// Return the actual working tool in case player does not have it yet

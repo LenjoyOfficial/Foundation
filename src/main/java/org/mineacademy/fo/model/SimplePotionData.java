@@ -79,7 +79,7 @@ public final class SimplePotionData {
 			item.setItemMeta(potionMeta);
 
 		} else {
-			final Potion data = new Potion(type, upgraded ? 1 : 2, splash, extended);
+			final Potion data = new Potion(type, upgraded ? 2 : 1, splash, extended);
 
 			data.apply(item);
 		}

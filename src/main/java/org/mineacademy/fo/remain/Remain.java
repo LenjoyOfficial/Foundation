@@ -86,11 +86,11 @@ import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictMap;
 import org.mineacademy.fo.exception.FoException;
+import org.mineacademy.fo.model.BoxedMessage;
 import org.mineacademy.fo.model.UUIDToNameConverter;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.internal.BossBarInternals;
 import org.mineacademy.fo.remain.internal.ChatInternals;
-import org.mineacademy.fo.remain.nbt.NBTInternals;
 import org.mineacademy.fo.settings.SimpleYaml;
 
 import com.google.gson.Gson;
@@ -241,9 +241,6 @@ public final class Remain {
 		try {
 			ChatInternals.callStatic();
 
-			if (MinecraftVersion.newerThan(V.v1_7))
-				NBTInternals.checkCompatible();
-
 			CompParticle.CRIT.getClass();
 
 			for (final Material bukkitMaterial : Material.values())
@@ -276,7 +273,7 @@ public final class Remain {
 						.getField(MinecraftVersion.atLeast(V.v1_17) ? "b" : hasNMS ? "playerConnection" : "netServerHandler");
 
 				sendPacket = getNMSClass(hasNMS ? "PlayerConnection" : "NetServerHandler", "net.minecraft.server.network.PlayerConnection")
-						.getMethod("sendPacket", getNMSClass("Packet", "net.minecraft.network.protocol.Packet"));
+						.getMethod(MinecraftVersion.atLeast(V.v1_18) ? "a" : "sendPacket", getNMSClass("Packet", "net.minecraft.network.protocol.Packet"));
 
 			} catch (final Throwable t) {
 				Bukkit.getLogger().warning("Unable to find setup some parts of reflection. Plugin will still function.");
@@ -1428,6 +1425,14 @@ public final class Remain {
 	 */
 	@Deprecated
 	public static void updateInventoryTitle(final Player player, String title) {
+
+		// TODO Workaround
+		if (MinecraftVersion.atLeast(V.v1_18)) {
+			CompSound.SUCCESSFUL_HIT.play(player);
+			BoxedMessage.tell(player, title);
+
+			return;
+		}
 
 		try {
 			final Class<?> packetOpenWindowClass = getNMSClass(MinecraftVersion.atLeast(V.v1_7) ? "PacketPlayOutOpenWindow" : "Packet100OpenWindow",

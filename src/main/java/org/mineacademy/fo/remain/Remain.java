@@ -1446,11 +1446,12 @@ public final class Remain {
 						containersClass, //containers
 						CHAT_COMPONENT_CLASS); //msg
 
-				final Object activeContainer = getFieldContent(nmsPlayer, "bV");
+				final Class<?> containerClass = lookupClass("net.minecraft.world.inventory.Container");
+				final Object activeContainer = getFieldContent(getDeclaredField(getNMSClass("EntityHuman", "net.minecraft.world.entity.player.EntityHuman"), containerClass, 1), (Object) null);
 				final int windowId = getFieldContent(activeContainer, "j");
 
 				Remain.sendPacket(player, instantiate(packetConstructor, windowId, container, chatComponent));
-				invoke("initMenu", nmsPlayer, activeContainer);
+				invoke(MinecraftVersion.atLeast(V.v1_18) ? "a" : "initMenu", nmsPlayer, activeContainer);
 
 				return;
 			}

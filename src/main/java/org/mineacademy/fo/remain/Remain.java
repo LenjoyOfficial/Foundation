@@ -85,7 +85,6 @@ import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictMap;
 import org.mineacademy.fo.exception.FoException;
-import org.mineacademy.fo.model.BoxedMessage;
 import org.mineacademy.fo.model.UUIDToNameConverter;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.internal.BossBarInternals;
@@ -833,7 +832,7 @@ public final class Remain {
 		// NMS Method to serialize a net.minecraft.server.ItemStack to a valid Json string
 		final Class<?> nmsItemStack = ReflectionUtil.getNMSClass("ItemStack", "net.minecraft.world.item.ItemStack");
 		final Class<?> nbtTagCompound = ReflectionUtil.getNMSClass("NBTTagCompound", "net.minecraft.nbt.NBTTagCompound");
-		final Method saveItemstackMethod = ReflectionUtil.getMethod(nmsItemStack, "save", nbtTagCompound);
+		final Method saveItemstackMethod = ReflectionUtil.getMethod(nmsItemStack, MinecraftVersion.atLeast(V.v1_18) ? "b" : "save", nbtTagCompound);
 
 		final Object nmsNbtTagCompoundObj = ReflectionUtil.instantiate(nbtTagCompound);
 		final Object nmsItemStackObj = ReflectionUtil.invoke(asNMSCopyMethod, null, item);
@@ -1480,16 +1479,11 @@ public final class Remain {
 	@Deprecated
 	public static void updateInventoryTitle(final Player player, String title) {
 
-		// TODO Workaround
-		if (MinecraftVersion.atLeast(V.v1_18)) {
-			CompSound.SUCCESSFUL_HIT.play(player);
-			BoxedMessage.tell(player, title);
-
-			return;
-		}
-
 		try {
-			if (MinecraftVersion.atLeast(V.v1_17)) {
+
+			if (MinecraftVersion.atLeast(V.v1_17) || MinecraftVersion.atLeast(V.v1_18)) {
+				final boolean is1_18 = MinecraftVersion.atLeast(V.v1_18);
+
 				final Object nmsPlayer = Remain.getHandleEntity(player);
 				final Object chatComponent = toIChatBaseComponentPlain(ChatColor.translateAlternateColorCodes('&', title));
 
@@ -1524,11 +1518,18 @@ public final class Remain {
 						container.getClass(),
 						ReflectionUtil.lookupClass("net.minecraft.network.chat.IChatBaseComponent"));
 
-				final Object activeContainer = ReflectionUtil.getFieldContent(nmsPlayer, "bV");
+				final Object activeContainer = ReflectionUtil.getFieldContent(nmsPlayer, is1_18 ? "bW" : "bV");
 				final int windowId = ReflectionUtil.getFieldContent(activeContainer, "j");
 
+				final Method method = is1_18 ? ReflectionUtil.getMethod(nmsPlayer.getClass(), "a", ReflectionUtil.lookupClass("net.minecraft.world.inventory.Container")) : null;
+
 				Remain.sendPacket(player, ReflectionUtil.instantiate(packetConstructor, windowId, container, chatComponent));
-				ReflectionUtil.invoke("initMenu", nmsPlayer, activeContainer);
+
+				if (is1_18)
+					ReflectionUtil.invoke(method, nmsPlayer, activeContainer);
+
+				else
+					ReflectionUtil.invoke("initMenu", nmsPlayer, activeContainer);
 
 				return;
 			}
@@ -2284,7 +2285,7 @@ public final class Remain {
 
 			// If this fails, try getting the entity to which the projectile was attached,
 			// imperfect, but mostly works.
-			final double radius = 0.01;
+			final double radius = 0.5;
 
 			for (final Entity nearby : event.getEntity().getNearbyEntities(radius, radius, radius))
 				if (nearby instanceof LivingEntity)

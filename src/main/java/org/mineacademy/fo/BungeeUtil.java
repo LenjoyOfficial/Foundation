@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.messaging.ChannelNotRegisteredException;
 import org.bukkit.plugin.messaging.MessageTooLargeException;
 import org.mineacademy.fo.Common.Stringer;
 import org.mineacademy.fo.bungee.BungeeAction;
@@ -30,10 +31,14 @@ import lombok.NonNull;
 public final class BungeeUtil {
 
 	/**
-	 * See {@link #tellBungee(BungeeChannel, Player, Object...)}
+	 * See {@link #tellBungee(String, BungeeAction, Object...)}
 	 * <p>
 	 * NB: This one uses the default channel name specified in {@link SimplePlugin}. By
 	 * default, nothing is specified there and so an exception will be thrown.
+	 *
+	 * @param <T>
+	 * @param action
+	 * @param datas
 	 */
 	@SafeVarargs
 	public static <T> void tellBungee(BungeeAction action, T... datas) {
@@ -46,14 +51,18 @@ public final class BungeeUtil {
 	/**
 	 * Sends message via a channel to the bungee network (upstreams). You need an
 	 * implementation in bungee to handle it, otherwise nothing will happen.
-	 * <p>
-	 * OBS! The data written:
-	 * <p>
-	 * 1. This server name specified in {@link SimplePlugin#getServerName()} 2. The
-	 * datas in the data parameter.
 	 *
-	 * @param channel the name of channel in an enum object
-	 * @param datas   the data
+	 * OBS! The data written always start with:
+	 *
+	 * 1. The recipient UUID
+	 * 2. {@link Remain#getServerName()}
+	 * 3. The action parameter
+	 *
+	 *
+	 * @param <T>
+	 * @param channel
+	 * @param action
+	 * @param datas
 	 */
 	@SafeVarargs
 	public static <T> void tellBungee(String channel, BungeeAction action, T... datas) {
@@ -114,13 +123,13 @@ public final class BungeeUtil {
 					Debugger.put("bungee", data.toString() + ", ");
 
 					moveHead(actionHead, action, String.class, datas);
-					out.writeUTF(CompressUtil.compressB64((String) data));
+					out.writeUTF((String) data);
 
 				} else if (data instanceof SerializedMap) {
 					Debugger.put("bungee", data.toString() + ", ");
 
 					moveHead(actionHead, action, String.class, datas);
-					out.writeUTF(CompressUtil.compressB64(((SerializedMap) data).toJson()));
+					out.writeUTF(((SerializedMap) data).toJson());
 
 				} else if (data instanceof UUID) {
 					Debugger.put("bungee", data.toString() + ", ");
@@ -159,6 +168,10 @@ public final class BungeeUtil {
 		try {
 			recipient.sendPluginMessage(SimplePlugin.getInstance(), channel, byteArray);
 
+		} catch (final ChannelNotRegisteredException ex) {
+			Common.log("Cannot send Bungee '" + action + "' message because channel '" + channel + "' is not registered. "
+					+ "Use @AutoRegister above your class extending BungeeListener and return its instance in getBungeeCord in your main plugin class.");
+
 		} catch (final MessageTooLargeException ex) {
 			Common.log("Outgoing bungee message '" + action + "' was oversized, not sending. Max length: 32766 bytes, got " + byteArray.length + " bytes.");
 		}
@@ -172,7 +185,7 @@ public final class BungeeUtil {
 	 * <p>
 	 * OBS! The data written:
 	 * <p>
-	 * 1. This server name specified in {@link SimplePlugin#getServerName()} 2. The
+	 * 1. This server name specified in {@link Remain#getServerName()} 2. The
 	 * datas in the data parameter.
 	 *
 	 * @param sender the player to send the message as

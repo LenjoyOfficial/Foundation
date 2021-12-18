@@ -10,7 +10,7 @@
 
 	<groupId>org.mineacademy</groupId>
 	<artifactId>Foundation</artifactId>
-	<version>6.0.0-DEV</version>
+	<version>6.0.0-DEV4b</version>
 	<packaging>jar</packaging>
 
 	<name>Foundation</name>
@@ -150,12 +150,12 @@
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>WorldEdit</artifactId>
-			<version>7.2.8-SNAPSHOT-6003</version>
+			<version>7.2.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.mineacademy.plugin</groupId>
 			<artifactId>WorldGuard</artifactId>
-			<version>7.0.7-SNAPSHOT-2165</version>
+			<version>7.0.5-SNAPSHOT-2109</version>
 		</dependency>
 	</dependencies>
 	<build>
@@ -173,6 +173,40 @@
 					<source>${java.version}</source>
 					<target>${java.version}</target>
 				</configuration>
+			</plugin>
+			<plugin>
+			    <groupId>org.projectlombok</groupId>
+			    <artifactId>lombok-maven-plugin</artifactId>
+			    <version>1.18.20.0</version>
+			    <configuration>
+			        <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
+			        <outputDirectory>${delombok.output}</outputDirectory>
+			        <addOutputDirectory>false</addOutputDirectory>
+			    </configuration>
+			    <executions>
+			        <execution>
+			            <phase>generate-sources</phase>
+			            <goals>
+			                <goal>delombok</goal>
+			            </goals>
+			        </execution>
+			    </executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>3.3.1</version>
+				<configuration>
+					<doclint>none</doclint>
+				</configuration>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

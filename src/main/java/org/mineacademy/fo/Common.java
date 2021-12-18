@@ -1279,7 +1279,7 @@ public final class Common {
 			return;
 
 		for (String message : messages) {
-			if (message.equals("none"))
+			if (message == null || "none".equals(message))
 				continue;
 
 			if (stripColors(message).replace(" ", "").isEmpty()) {

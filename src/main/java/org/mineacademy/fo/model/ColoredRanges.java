@@ -1,43 +1,35 @@
 package org.mineacademy.fo.model;
 
-import org.mineacademy.fo.collection.SerializedMap;
-import org.mineacademy.fo.remain.CompChatColor;
-
 import java.util.HashMap;
 import java.util.Map;
 
+import org.mineacademy.fo.collection.SerializedMap;
+import org.mineacademy.fo.remain.CompColor;
+
+import lombok.RequiredArgsConstructor;
+
 /**
- * A special class for pairing number ranges with chat colors
+ * A class for pairing number ranges with chat colors
  * and then getting the chat color for a value
  * <p>
  * Examples: coloring the time left in a countdown, displaying a mob's health
  */
-public class ColoredRanges {
+@RequiredArgsConstructor
+public class ColoredRanges implements ConfigSerializable {
+
 	/**
 	 * The default color to use for a value that isn't in any of the
 	 * specified ranges
 	 */
-	private final CompChatColor defaultColor;
+	private final CompColor defaultColor;
 
 	/**
 	 * The colors for the number ranges
 	 */
-	private final Map<RangedValue, CompChatColor> ranges = new HashMap<>();
+	private final Map<RangedValue, CompColor> ranges;
 
 	/**
-	 * Creates a new instance from the given serialized map
-	 *
-	 * @param map
-	 */
-	public ColoredRanges(final SerializedMap map) {
-		this.defaultColor = CompChatColor.of(map.getString("DefaultColor", "GREEN"));
-
-		for (final String range : map.keySet())
-			ranges.put(RangedValue.parse(range), CompChatColor.of(map.getString(range)));
-	}
-
-	/**
-	 * Formats the given number with its range color, or "" if value is null
+	 * Formats the given number with its range color. Returns "" if value is null
 	 *
 	 * @param value
 	 * @return
@@ -70,13 +62,13 @@ public class ColoredRanges {
 	 * @param value
 	 * @return
 	 */
-	public CompChatColor getColor(final Number value) {
+	public CompColor getColor(final Number value) {
 		if (value == null)
 			return defaultColor;
 
-		CompChatColor color = defaultColor;
+		CompColor color = defaultColor;
 
-		for (final Map.Entry<RangedValue, CompChatColor> range : ranges.entrySet())
+		for (final Map.Entry<RangedValue, CompColor> range : ranges.entrySet())
 			if (range.getKey().isWithin(value)) {
 				color = range.getValue();
 
@@ -84,5 +76,36 @@ public class ColoredRanges {
 			}
 
 		return color;
+	}
+
+	// -----------------------------------------------------------------------------------
+	// Serializing
+	// -----------------------------------------------------------------------------------
+
+	@Override
+	public SerializedMap serialize() {
+		final SerializedMap map = SerializedMap.of("Default_Color", defaultColor.getName());
+
+		for (final Map.Entry<RangedValue, CompColor> entry : ranges.entrySet())
+			map.put(entry.getKey().toLine(), entry.getValue().getName());
+
+		return map;
+	}
+
+	/**
+	 * Creates a new instance from the given serialized map
+	 *
+	 * @param map
+	 * @return
+	 */
+	public static ColoredRanges deserialize(final SerializedMap map) {
+		final CompColor defaultColor = CompColor.fromName(map.getString("Default_Color", "GREEN"));
+		final Map<RangedValue, CompColor> ranges = new HashMap<>();
+
+		for (final String range : map.keySet())
+			if (!"Default_Color".equals(range))
+				ranges.put(RangedValue.parse(range), CompColor.fromName(map.getString(range)));
+
+		return new ColoredRanges(defaultColor, ranges);
 	}
 }

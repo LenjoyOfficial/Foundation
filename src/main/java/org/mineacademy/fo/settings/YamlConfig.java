@@ -20,6 +20,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -47,6 +49,7 @@ import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.model.BoxedMessage;
 import org.mineacademy.fo.model.ColoredRanges;
 import org.mineacademy.fo.model.Replacer;
+import org.mineacademy.fo.model.SimpleProgressBar;
 import org.mineacademy.fo.model.SimpleSound;
 import org.mineacademy.fo.model.SimpleTime;
 import org.mineacademy.fo.plugin.SimplePlugin;
@@ -54,9 +57,6 @@ import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.settings.model.SimpleDisplay;
 import org.mineacademy.fo.settings.model.SimpleProgressDisplay;
-
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
 
 import lombok.Getter;
 import lombok.NonNull;
@@ -1087,7 +1087,7 @@ public class YamlConfig {
 	protected final ColoredRanges getColoredRanges(final String path, final SerializedMap def) {
 		forceSingleDefaults(path);
 
-		return isSet(path) ? getColoredRanges(path) : new ColoredRanges(def);
+		return isSet(path) ? getColoredRanges(path) : ColoredRanges.deserialize(def);
 	}
 
 	/**
@@ -1100,7 +1100,33 @@ public class YamlConfig {
 	protected final ColoredRanges getColoredRanges(final String path) {
 		final SerializedMap map = getMap(path);
 
-		return !map.isEmpty() ? new ColoredRanges(map) : null;
+		return !map.isEmpty() ? ColoredRanges.deserialize(map) : null;
+	}
+
+	/**
+	 * Get a SimpleProgressBar that can create progress bars from a progress
+	 *
+	 * @param path
+	 * @param def
+	 * @return
+	 */
+	protected final SimpleProgressBar getProgressBar(final String path, final SerializedMap def) {
+		forceSingleDefaults(path);
+
+		return isSet(path) ? getProgressBar(path) : SimpleProgressBar.deserialize(def);
+	}
+
+	/**
+	 * Get a SimpleProgressBar that can create progress bars from a progress
+	 * or null if the path isn't set
+	 *
+	 * @param path
+	 * @return
+	 */
+	protected final SimpleProgressBar getProgressBar(final String path) {
+		final SerializedMap map = getMap(path);
+
+		return !map.isEmpty() ? SimpleProgressBar.deserialize(map) : null;
 	}
 
 	/**

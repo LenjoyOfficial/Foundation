@@ -28,6 +28,7 @@ import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.model.BoxedMessage;
 import org.mineacademy.fo.model.ColoredRanges;
 import org.mineacademy.fo.model.Replacer;
+import org.mineacademy.fo.model.SimpleProgressBar;
 import org.mineacademy.fo.model.SimpleSound;
 import org.mineacademy.fo.model.SimpleTime;
 import org.mineacademy.fo.plugin.SimplePlugin;
@@ -490,6 +491,10 @@ public abstract class YamlStaticConfig {
 
 	protected static final ColoredRanges getColoredRanges(final String path) {
 		return TEMPORARY_INSTANCE.getColoredRanges(path);
+	}
+
+	protected static final SimpleProgressBar getProgressBar(final String path) {
+		return TEMPORARY_INSTANCE.getProgressBar(path);
 	}
 
 	protected static final CompMaterial getMaterial(final String path) {

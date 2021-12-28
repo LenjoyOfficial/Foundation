@@ -9,6 +9,7 @@ import org.mineacademy.fo.command.ReloadCommand;
 import org.mineacademy.fo.command.SimpleCommand;
 import org.mineacademy.fo.model.ChatPaginator;
 import org.mineacademy.fo.plugin.SimplePlugin;
+import org.mineacademy.fo.remain.CompMaterial;
 
 /**
  * A simple implementation of a basic localization file.
@@ -499,6 +500,7 @@ public class SimpleLocalization extends YamlStaticConfig {
 		 */
 		public static String TITLE_TOOLS = "Tools Menu";
 		public static String TOOLTIP_INFO = "&fMenu Information";
+		public static CompMaterial BUTTON_RETURN_MATERIAL = CompMaterial.OAK_DOOR;
 		public static String BUTTON_RETURN_TITLE = "&4&lReturn";
 		public static String[] BUTTON_RETURN_LORE = new String[] { "", "Return back." };
 
@@ -534,6 +536,9 @@ public class SimpleLocalization extends YamlStaticConfig {
 
 			if (isSetDefault("Tooltip_Info"))
 				TOOLTIP_INFO = getString("Tooltip_Info");
+
+			if (isSetDefault("Button_Return_Material"))
+				BUTTON_RETURN_MATERIAL = getMaterial("Button_Return_Material");
 
 			if (isSetDefault("Button_Return_Title"))
 				BUTTON_RETURN_TITLE = getString("Button_Return_Title");

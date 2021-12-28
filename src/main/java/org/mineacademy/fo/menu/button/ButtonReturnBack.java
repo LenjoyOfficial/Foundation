@@ -29,7 +29,7 @@ public final class ButtonReturnBack extends Button {
 	 */
 	@Getter
 	@Setter
-	private static CompMaterial material = CompMaterial.OAK_DOOR;
+	private static CompMaterial material = SimpleLocalization.Menu.BUTTON_RETURN_MATERIAL;
 
 	/**
 	 * The title of this button

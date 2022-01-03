@@ -123,8 +123,14 @@ public final class SerializeUtil {
 		else if (obj instanceof World)
 			return ((World) obj).getName();
 
+		else if (obj instanceof PotionEffectType)
+			return ((PotionEffectType) obj).getName();
+
 		else if (obj instanceof PotionEffect)
 			return serializePotionEffect((PotionEffect) obj);
+
+		else if (obj instanceof ItemCreator)
+			return ((ItemCreator) obj).make();
 
 		else if (obj instanceof SimpleTime)
 			return ((SimpleTime) obj).getRaw();
@@ -134,6 +140,12 @@ public final class SerializeUtil {
 
 		else if (obj instanceof Color)
 			return "#" + ((Color) obj).getRGB();
+
+		else if (obj instanceof RangedValue)
+			return ((RangedValue) obj).toLine();
+
+		else if (obj instanceof RangedSimpleTime)
+			return ((RangedSimpleTime) obj).toLine();
 
 		else if (obj instanceof BaseComponent)
 			return Remain.toJson((BaseComponent) obj);
@@ -266,6 +278,8 @@ public final class SerializeUtil {
 	 */
 	@SuppressWarnings("rawtypes")
 	public static <T> T deserialize(@NonNull final Class<T> classOf, @NonNull Object object, final Object... deserializeParameters) {
+		object = Remain.getRootOfSectionPathData(object);
+
 		final SerializedMap map = SerializedMap.of(object);
 
 		// Step 1 - Search for basic deserialize(SerializedMap) method

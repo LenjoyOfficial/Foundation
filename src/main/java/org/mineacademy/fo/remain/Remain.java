@@ -47,6 +47,7 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.SimpleCommandMap;
+import org.bukkit.configuration.MemorySection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
@@ -222,6 +223,11 @@ public final class Remain {
 	private final static StrictMap<UUID /*Player*/, StrictMap<Material, Integer>> cooldowns = new StrictMap<>();
 
 	/**
+	 * The internal private section path data class
+	 */
+	private static Class<?> sectionPathDataClass = null;
+
+	/**
 	 * The server-name from server.properties (is lacking on new Minecraft version so we have to readd it back)
 	 */
 	private static String serverName;
@@ -361,6 +367,13 @@ public final class Remain {
 
 			} catch (final Exception ex) {
 				hasItemMeta = false;
+			}
+
+			try {
+				sectionPathDataClass = ReflectionUtil.lookupClass("org.bukkit.configuration.SectionPathData");
+
+			} catch (final ReflectionException ex) {
+				// unsupported
 			}
 
 		} catch (final ReflectiveOperationException ex) {
@@ -716,11 +729,6 @@ public final class Remain {
 			// Do not catch our own exception
 			if (throwable instanceof InteractiveTextFoundException)
 				throw throwable;
-
-			/*Debugger.saveError(throwable,
-					"Unable to parse JSON message.",
-					"JSON: " + json,
-					"Error: %error");*/
 		}
 
 		return text.toString();
@@ -1226,7 +1234,6 @@ public final class Remain {
 
 		ReflectionUtil.setStaticField(Enchantment.class, "acceptingNew", true);
 		Enchantment.registerEnchantment(enchantment);
-
 	}
 
 	/**
@@ -1754,13 +1761,6 @@ public final class Remain {
 			meta.spigot().setPages(pages);
 
 		} catch (final NoSuchMethodError ex) {
-			/*final List<String> list = new ArrayList<>();
-
-			for (final BaseComponent[] page : pages)
-				list.add(TextComponent.toLegacyText(page));
-
-			meta.setPages(list);*/
-
 			try {
 				final List<Object> chatComponentPages = (List<Object>) ReflectionUtil.getFieldContent(ReflectionUtil.getOBCClass("inventory.CraftMetaBook"), "pages", meta);
 
@@ -2474,6 +2474,30 @@ public final class Remain {
 			// Unsupported
 			return 20;
 		}
+	}
+
+	/**
+	 * Converts the given object that may be a SectionPathData for MC 1.18 back into its root data
+	 * such as {@link MemorySection}
+	 *
+	 * @param objectOrSectionPathData
+	 * @return
+	 */
+	public static Object getRootOfSectionPathData(Object objectOrSectionPathData) {
+		if (objectOrSectionPathData != null && objectOrSectionPathData.getClass() == sectionPathDataClass)
+			objectOrSectionPathData = ReflectionUtil.invoke("getData", objectOrSectionPathData);
+
+		return objectOrSectionPathData;
+	}
+
+	/**
+	 * Return true if the given object is a memory section
+	 *
+	 * @param obj
+	 * @return
+	 */
+	public static boolean isMemorySection(Object obj) {
+		return obj != null && sectionPathDataClass == obj.getClass();
 	}
 
 	// ----------------------------------------------------------------------------------------------------

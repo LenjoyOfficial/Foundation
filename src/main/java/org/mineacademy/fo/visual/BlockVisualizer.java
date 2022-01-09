@@ -4,6 +4,8 @@ import java.util.HashSet;
 
 import org.bukkit.Location;
 import org.bukkit.block.Block;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.FallingBlock;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
@@ -40,13 +42,26 @@ public class BlockVisualizer {
 		Valid.checkBoolean(!isVisualized(block), "Block at " + block.getLocation() + " already visualized");
 		final Location location = block.getLocation();
 
-		final FallingBlock falling = spawnFallingBlock(location, mask, blockName);
+		if (MinecraftVersion.atLeast(V.v1_9)) {
+			final FallingBlock falling = spawnFallingBlock(location, mask, blockName);
+
+			visualizedBlocks.put(location, falling);
+
+		} else {
+			final ArmorStand stand = location.getWorld().spawn(location.clone().add(0.5, 1, 0.5), ArmorStand.class);
+
+			stand.setVisible(false);
+			stand.setMarker(true);
+
+			CompProperty.GRAVITY.apply(stand, false);
+			Remain.setCustomName(stand, blockName);
+
+			visualizedBlocks.put(location, stand);
+		}
 
 		// Also send the block change packet to barrier (fixes lightning glitches)
 		for (final Player player : block.getWorld().getPlayers())
 			Remain.sendBlockChange(2, player, location, MinecraftVersion.olderThan(V.v1_9) ? mask : CompMaterial.BARRIER);
-
-		visualizedBlocks.put(location, falling == null ? false : falling);
 	}
 
 	/*
@@ -80,8 +95,8 @@ public class BlockVisualizer {
 		final Object fallingBlock = visualizedBlocks.remove(block.getLocation());
 
 		// Mark the entity for removal on the next tick
-		if (fallingBlock instanceof FallingBlock)
-			((FallingBlock) fallingBlock).remove();
+		if (fallingBlock instanceof Entity)
+			((Entity) fallingBlock).remove();
 
 		// Then restore the client's block back to normal
 		for (final Player player : block.getWorld().getPlayers())

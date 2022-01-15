@@ -230,6 +230,12 @@ public abstract class SimpleHologram {
 		this.loreLines.clear();
 		this.loreLines.addAll(Arrays.asList(lore));
 
+		// Update lore on the spawned hologram
+		if (isSpawned()) {
+			removeLore();
+			drawLore(getLastTeleportLocation());
+		}
+
 		return this;
 	}
 

@@ -61,12 +61,9 @@ import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.remain.nbt.NBTItem;
 
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import lombok.Singular;
-import lombok.SneakyThrows;
 
 /**
  * ItemCreator allows you to create highly customized {@link ItemStack}
@@ -765,8 +762,8 @@ public final class ItemCreator implements ConfigSerializable {
 			} else {
 
 				// Hack: If you put WHITE_WOOL and a color, we automatically will change the material to the colorized version
-				final List<String> colorableMaterials = Arrays.asList("BANNER", "BED", "CARPET", "CONCRETE", "GLAZED_TERRACOTTA", "SHULKER_BOX", "STAINED_GLASS",
-						"STAINED_GLASS_PANE", "TERRACOTTA", "WALL_BANNER", "WOOL");
+				final List<String> colorableMaterials = Arrays.asList("BANNER", "BED", "CARPET", "CONCRETE", "GLAZED_TERRACOTTA", "SHULKER_BOX", "STAINED_CLAY",
+						"STAINED_GLASS", "STAINED_GLASS_PANE", "TERRACOTTA", "WALL_BANNER", "WOOL");
 
 				if (MinecraftVersion.atLeast(V.v1_13)) {
 					final String dye = color.getDye().toString();

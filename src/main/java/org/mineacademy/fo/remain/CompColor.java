@@ -60,14 +60,14 @@ public final class CompColor {
 	public static final CompColor DARK_GRAY = new CompColor("DARK_GRAY", DyeColor.GRAY);
 
 	/**
-	 * The dark green color, called green for dyecolor
-	 */
-	public static final CompColor DARK_GREEN = new CompColor("DARK_GREEN", DyeColor.GREEN);
-
-	/**
 	 * The green color, called lime for dyecolor
 	 */
 	public static final CompColor GREEN = new CompColor("GREEN", DyeColor.LIME);
+
+	/**
+	 * The dark green color, called green for dyecolor
+	 */
+	public static final CompColor DARK_GREEN = new CompColor("DARK_GREEN", DyeColor.GREEN);
 
 	/**
 	 * The gold color, called orange for dyecolor
@@ -83,14 +83,14 @@ public final class CompColor {
 	public static final CompColor BROWN = new CompColor("BROWN", DyeColor.BROWN, ChatColor.GOLD);
 
 	/**
-	 * The dark red color, called red for dyecolor
-	 */
-	public static final CompColor DARK_RED = new CompColor("DARK_RED", DyeColor.RED);
-
-	/**
 	 * The red color
 	 */
 	public static final CompColor RED = new CompColor("RED", DyeColor.RED);
+
+	/**
+	 * The dark red color, called red for dyecolor
+	 */
+	public static final CompColor DARK_RED = new CompColor("DARK_RED", DyeColor.RED);
 
 	/**
 	 * The white
@@ -241,7 +241,7 @@ public final class CompColor {
 		name = name.toUpperCase();
 
 		for (final CompColor comp : values())
-			if (comp.chatColor.toString().equals(name) || comp.dye.toString().equals(name) || comp.legacyName.equals(name) || comp.name.equals(name))
+			if (comp.name.equals(name) || comp.chatColor.toString().equals(name) || comp.dye.toString().equals(name) || comp.legacyName.equals(name))
 				return comp;
 
 		throw new IllegalArgumentException("Could not get CompColor from name: " + name);

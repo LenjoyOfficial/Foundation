@@ -212,7 +212,7 @@ public final class VisualizedRegion extends Region {
 	 * @return
 	 */
 	public static VisualizedRegion deserialize(final SerializedMap map) {
-		Valid.checkBoolean(map.containsKey("Primary") && map.containsKey("Secondary"), "The region must have Primary and a Secondary location");
+		//Valid.checkBoolean(map.containsKey("Primary") && map.containsKey("Secondary"), "The region must have Primary and a Secondary location");
 
 		final String name = map.getString("Name");
 		final Location prim = SerializeUtil.deserializeLocationD(map.getString("Primary"));

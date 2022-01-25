@@ -236,19 +236,22 @@ public final class CompChatColor {
 	 * the code, colorized
 	 * @return
 	 */
-	public String toReadableString() {
+	public String toEscapedString() {
 		return isHex() ? toString + "\\" + getName() : ItemUtil.bountify(getName());
 	}
 
 	/**
-	 * Return a string that can be used in saving yml files
+	 * Return a string you can save to YAML config
 	 *
 	 * @return
 	 */
 	public String toSaveableString() {
-		return isHex() ? getName() : getName();
+		return this.getName();
 	}
 
+	/**
+	 * This will translate the color into the actual color, use getName to get the saveable color!
+	 */
 	@Override
 	public String toString() {
 		return toString;

@@ -1,8 +1,8 @@
 package org.mineacademy.fo.model;
 
+import org.bukkit.ChatColor;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.collection.SerializedMap;
-import org.mineacademy.fo.remain.CompColor;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,7 @@ public final class SimpleProgressBar implements ConfigSerializable {
 	/**
 	 * The color of the remaining part
 	 */
-	private final CompColor remainingColor;
+	private final ChatColor remainingColor;
 
 	/**
 	 * The colors of the progressed parts in ranges
@@ -37,29 +37,28 @@ public final class SimpleProgressBar implements ConfigSerializable {
 	private final ColoredRanges ranges;
 
 	/**
-	 * Returns a progress bar text with progress equal to {@code progress / max}
+	 * Returns a progress bar text with the given progress that's <= this progress bar's size,
 	 * colored as defined in this SimpleProgressBar
 	 *
 	 * @param progress
-	 * @param max
 	 * @return
 	 */
-	public String getProgressBar(final int progress, final int max) {
-		return getProgressBar(progress / max * 100);
+	public String getProgressBar(final int progress) {
+		return getProgressBar((float) progress / size);
 	}
 
 	/**
 	 * Returns a progress bar text with progress equal to the given percentage,
 	 * colored as defined in this SimpleProgressBar
 	 *
-	 * @param percent the percentage from 0 to 100
+	 * @param percent the percentage from 0 to 1
 	 * @return
 	 */
-	public String getProgressBar(final int percent) {
-		final int finalProgress = size * percent / 100;
-		final CompColor color = ranges.getColor(finalProgress);
+	public String getProgressBar(final float percent) {
+		final int finalProgress = (int) (size * percent);
+		final ChatColor color = ranges.getColor(finalProgress);
 
-		return color.getChatColor().toString() + Common.fancyBar(finalProgress, progressChar, size, remainingChar, remainingColor.getChatColor());
+		return color.toString() + Common.fancyBar(finalProgress, progressChar, size, remainingChar, remainingColor);
 	}
 
 	// -----------------------------------------------------------------------------------
@@ -75,7 +74,7 @@ public final class SimpleProgressBar implements ConfigSerializable {
 				"Size", size,
 				"Progress_Char", progressChar,
 				"Remaining_Char", remainingChar,
-				"Remaining_Color", remainingColor.getChatColor(),
+				"Remaining_Color", remainingColor,
 				"Range_Colors", ranges
 		);
 	}
@@ -89,8 +88,8 @@ public final class SimpleProgressBar implements ConfigSerializable {
 	public static SimpleProgressBar deserialize(SerializedMap map) {
 		final int size = map.getInteger("Size");
 		final char progressChar = map.getString("Progress_Char").charAt(0);
-		final char remainingChar = map.getString("Remaining_Char").charAt(2);
-		final CompColor remainingColor = CompColor.fromName(map.getString("Remaining_Color"));
+		final char remainingChar = map.getString("Remaining_Char").charAt(0);
+		final ChatColor remainingColor = ChatColor.valueOf(map.getString("Remaining_Color"));
 
 		final ColoredRanges ranges = ColoredRanges.deserialize(map.getMap("Range_Colors"));
 

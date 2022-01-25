@@ -40,25 +40,25 @@ public class SimpleProgressDisplay extends SimpleDisplay {
 	 * Shows this display with the progress bar formatted with the given progress
 	 *
 	 * @param players
-	 * @param percent the progress percent from 0 to 100
+	 * @param progress the progress, <= this progress bar's size
 	 */
-	public void showProgress(final Iterable<Player> players, final int percent, final Function<String, String> replacer) {
+	public void showProgress(final Iterable<Player> players, final int progress, final Function<String, String> replacer) {
 		for (final Player player : players)
-			showProgress(player, percent, replacer);
+			showProgress(player, progress, replacer);
 	}
 
 	/**
 	 * Shows this display with the progress bar formatted with the given progress
 	 *
 	 * @param player
-	 * @param percent the progress percent from 0 to 100
+	 * @param progress the progress percent from 0 to 100
 	 */
-	public void showProgress(final Player player, final int percent, final Function<String, String> replacer) {
-		final String progressBar = this.progressBar.getProgressBar(percent);
+	public void showProgress(final Player player, final int progress, final Function<String, String> replacer) {
+		final String progressBar = this.progressBar.getProgressBar(progress);
 
 		final Function<String, String> notNullReplacer = Common.getOrDefault(replacer, Function.identity());
 
-		show(player, message -> percent == 0 && !emptyMessage.isEmpty() ?
+		show(player, message -> progress == 0 && !emptyMessage.isEmpty() ?
 				notNullReplacer.apply(emptyMessage) :
 				notNullReplacer.apply(Replacer.replaceArray(message, "progressBar", progressBar)));
 	}

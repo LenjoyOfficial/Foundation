@@ -3,8 +3,8 @@ package org.mineacademy.fo.model;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.bukkit.ChatColor;
 import org.mineacademy.fo.collection.SerializedMap;
-import org.mineacademy.fo.remain.CompColor;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,12 +21,12 @@ public class ColoredRanges implements ConfigSerializable {
 	 * The default color to use for a value that isn't in any of the
 	 * specified ranges
 	 */
-	private final CompColor defaultColor;
+	private final ChatColor defaultColor;
 
 	/**
 	 * The colors for the number ranges
 	 */
-	private final Map<RangedValue, CompColor> ranges;
+	private final Map<RangedValue, ChatColor> ranges;
 
 	/**
 	 * Formats the given number with its range color. Returns "" if value is null
@@ -62,13 +62,13 @@ public class ColoredRanges implements ConfigSerializable {
 	 * @param value
 	 * @return
 	 */
-	public CompColor getColor(final Number value) {
+	public ChatColor getColor(final Number value) {
 		if (value == null)
 			return defaultColor;
 
-		CompColor color = defaultColor;
+		ChatColor color = defaultColor;
 
-		for (final Map.Entry<RangedValue, CompColor> range : ranges.entrySet())
+		for (final Map.Entry<RangedValue, ChatColor> range : ranges.entrySet())
 			if (range.getKey().isWithin(value)) {
 				color = range.getValue();
 
@@ -82,12 +82,15 @@ public class ColoredRanges implements ConfigSerializable {
 	// Serializing
 	// -----------------------------------------------------------------------------------
 
+	/**
+	 * @see ConfigSerializable#serialize()
+	 */
 	@Override
 	public SerializedMap serialize() {
-		final SerializedMap map = SerializedMap.of("Default_Color", defaultColor.getName());
+		final SerializedMap map = SerializedMap.of("Default_Color", defaultColor);
 
-		for (final Map.Entry<RangedValue, CompColor> entry : ranges.entrySet())
-			map.put(entry.getKey().toLine(), entry.getValue().getName());
+		for (final Map.Entry<RangedValue, ChatColor> entry : ranges.entrySet())
+			map.put(entry.getKey().toLine(), entry.getValue());
 
 		return map;
 	}
@@ -99,12 +102,12 @@ public class ColoredRanges implements ConfigSerializable {
 	 * @return
 	 */
 	public static ColoredRanges deserialize(final SerializedMap map) {
-		final CompColor defaultColor = CompColor.fromName(map.getString("Default_Color", "GREEN"));
-		final Map<RangedValue, CompColor> ranges = new HashMap<>();
+		final ChatColor defaultColor = ChatColor.valueOf(map.getString("Default_Color", "GREEN"));
+		final Map<RangedValue, ChatColor> ranges = new HashMap<>();
 
 		for (final String range : map.keySet())
 			if (!"Default_Color".equals(range))
-				ranges.put(RangedValue.parse(range), CompColor.fromName(map.getString(range)));
+				ranges.put(RangedValue.parse(range), ChatColor.valueOf(map.getString(range)));
 
 		return new ColoredRanges(defaultColor, ranges);
 	}

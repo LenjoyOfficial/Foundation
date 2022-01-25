@@ -1,21 +1,18 @@
 package org.mineacademy.fo.settings.model;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+import java.util.function.Function;
 
 import org.bukkit.entity.Player;
 import org.mineacademy.fo.Common;
-import org.mineacademy.fo.MinecraftVersion;
-import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.remain.CompBarColor;
 import org.mineacademy.fo.remain.CompBarStyle;
 import org.mineacademy.fo.remain.Remain;
 
-import java.lang.reflect.Constructor;
-import java.util.function.Function;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * A class holding different optional display messages that can be shown to a player
@@ -67,11 +64,11 @@ public class SimpleDisplay {
 	 */
 	public SimpleDisplay(final SerializedMap map) {
 		this.message = Common.colorize(map.getString("Message"));
-		this.addPrefix = map.getBoolean("AddPrefix", true);
+		this.addPrefix = map.getBoolean("Add_Prefix", true);
 
 		this.title = map.containsKey("Title") ? new TitleHelper(map.getMap("Title")) : null;
-		this.actionBar = map.containsKey("ActionBar") ? new ActionBarHelper(map.getMap("ActionBar")) : null;
-		this.bossBar = map.containsKey("BossBar") ? new BossBarHelper(map.getMap("BossBar")) : null;
+		this.actionBar = map.containsKey("Action_Bar") ? new ActionBarHelper(map.getMap("Action_Bar")) : null;
+		this.bossBar = map.containsKey("Boss_Bar") ? new BossBarHelper(map.getMap("Boss_Bar")) : null;
 	}
 
 	/**
@@ -182,8 +179,8 @@ public class SimpleDisplay {
 		private final int fadeOut;
 
 		private TitleHelper(final SerializedMap map) {
-			this(map.getString("Title"),
-					map.getString("Subtitle"),
+			this(map.getString("Title", ""),
+					map.getString("Subtitle", ""),
 					map.getInteger("FadeIn", 20),
 					map.getInteger("Stay", 40),
 					map.getInteger("FadeOut", 20));

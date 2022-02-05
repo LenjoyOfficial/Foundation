@@ -14,6 +14,9 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.HoverEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -34,6 +37,7 @@ import org.mineacademy.fo.exception.InvalidWorldException;
 import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.model.ConfigSerializable;
 import org.mineacademy.fo.model.IsInList;
+import org.mineacademy.fo.model.RangedValue;
 import org.mineacademy.fo.model.SimpleSound;
 import org.mineacademy.fo.model.SimpleTime;
 import org.mineacademy.fo.remain.CompChatColor;
@@ -44,9 +48,6 @@ import org.mineacademy.fo.settings.YamlConfig;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.HoverEvent;
 
 /**
  * Utility class for serializing objects to writeable YAML data and back.
@@ -143,9 +144,6 @@ public final class SerializeUtil {
 
 		else if (obj instanceof RangedValue)
 			return ((RangedValue) obj).toLine();
-
-		else if (obj instanceof RangedSimpleTime)
-			return ((RangedSimpleTime) obj).toLine();
 
 		else if (obj instanceof BaseComponent)
 			return Remain.toJson((BaseComponent) obj);

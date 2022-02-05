@@ -1,7 +1,5 @@
 package org.mineacademy.fo.remain;
 
-import static org.mineacademy.fo.ReflectionUtil.*;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -27,6 +25,12 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.chat.ComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameRule;
@@ -47,8 +51,8 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.SimpleCommandMap;
-import org.bukkit.configuration.MemorySection;
 import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.MemorySection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
@@ -93,13 +97,7 @@ import org.mineacademy.fo.remain.internal.BossBarInternals;
 import org.mineacademy.fo.remain.internal.ChatInternals;
 import org.mineacademy.fo.settings.SimpleYaml;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.chat.ComponentSerializer;
+import static org.mineacademy.fo.ReflectionUtil.*;
 
 /**
  * Our main cross-version compatibility class.

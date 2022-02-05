@@ -152,16 +152,12 @@ public class SimpleDisplay {
 		/**
 		 * The title
 		 */
-		@Getter
-		@Setter
-		private String title;
+		private final String title;
 
 		/**
 		 * The subtitle under the title
 		 */
-		@Getter
-		@Setter
-		private String subtitle;
+		private final String subtitle;
 
 		/**
 		 * Fade in of the title in ticks
@@ -201,8 +197,7 @@ public class SimpleDisplay {
 		/**
 		 * The message of the action bar
 		 */
-		@Setter
-		private String message;
+		private final String message;
 
 		private ActionBarHelper(final SerializedMap map) {
 			this.message = Common.colorize(map.getString("Message"));
@@ -220,6 +215,7 @@ public class SimpleDisplay {
 
 	@AllArgsConstructor
 	private final class BossBarHelper {
+
 		/**
 		 * The message above the bar
 		 */

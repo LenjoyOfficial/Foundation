@@ -166,6 +166,11 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	private boolean startingReloadables = false;
 
 	/**
+	 * Internal boolean indicating if we can proceed to loading the plugin.
+	 */
+	private boolean canLoad = true;
+
+	/**
 	 * A temporary main command to be set in {@link #setMainCommand(SimpleCommandGroup)}
 	 * automatically by us.
 	 */
@@ -208,12 +213,43 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		source = instance.getFile();
 		data = instance.getDataFolder();
 
+		if (!Bukkit.getVersion().contains("Paper") && !Bukkit.getVersion().contains("NachoSpigot") && MinecraftVersion.atLeast(V.v1_8)) {
+
+			if (MinecraftVersion.atLeast(V.v1_18) && Bukkit.getVersion().contains("CraftBukkit") || Bukkit.getVersion().contains("-Spigot-")) {
+				Bukkit.getLogger().severe(Common.consoleLine());
+				Bukkit.getLogger().severe("Error loading " + named + ": Unsupported server software");
+				Bukkit.getLogger().severe("");
+				Bukkit.getLogger().severe("Minecraft 1.18+ require Paper from PaperMC.io");
+				Bukkit.getLogger().severe("to run our software properly. Shutting down...");
+				Bukkit.getLogger().severe("Your version: " + Bukkit.getVersion());
+				Bukkit.getLogger().severe(Common.consoleLine());
+
+				this.canLoad = false;
+				throw new RuntimeException("Unsupported server version, see above.");
+			}
+
+			Bukkit.getLogger().severe(Common.consoleLine());
+			Bukkit.getLogger().warning("Warning about " + named + ": You're not using Paper! (Detected: " + Bukkit.getVersion() + ")");
+			Bukkit.getLogger().warning("");
+			Bukkit.getLogger().warning("Third party forks such as BeerSpigot are known to alter");
+			Bukkit.getLogger().warning("server's behavior. If you have issues with this plugin,");
+			Bukkit.getLogger().warning("please test using Paper from PaperMC.io first!");
+			Bukkit.getLogger().severe(Common.consoleLine());
+		}
+
 		// Call parent
 		onPluginLoad();
 	}
 
 	@Override
 	public final void onEnable() {
+
+		// Disabled upstream
+		if (!this.canLoad) {
+			Bukkit.getLogger().severe("Not loading, the plugin is disabled (look for console errors above)");
+
+			return;
+		}
 
 		// Solve reloading issues with PlugMan
 		for (final StackTraceElement element : new Throwable().getStackTrace()) {
@@ -245,11 +281,11 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		// Print startup logo early before onPluginPreStart
 		// Disable logging prefix if logo is set
 		if (getStartupLogo() != null) {
-			final boolean hadLogPrefix = Common.ADD_LOG_PREFIX;
+			final String oldLogPrefix = Common.getLogPrefix();
 
-			Common.ADD_LOG_PREFIX = false;
+			Common.setLogPrefix("");
 			Common.log(getStartupLogo());
-			Common.ADD_LOG_PREFIX = hadLogPrefix;
+			Common.setLogPrefix(oldLogPrefix);
 		}
 
 		// Inject server-name to newer MC versions that lack it
@@ -280,8 +316,8 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			// --------------------------------------------
 
 			// Hide plugin name before console messages
-			final boolean hadLogPrefix = Common.ADD_LOG_PREFIX;
-			Common.ADD_LOG_PREFIX = false;
+			final String oldLogPrefix = Common.getLogPrefix();
+			Common.setLogPrefix("");
 
 			startingReloadables = true;
 
@@ -341,7 +377,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			Common.setTellPrefix(SimpleSettings.PLUGIN_PREFIX);
 
 			// Finally, place plugin name before console messages after plugin has (re)loaded
-			Common.runLater(() -> Common.ADD_LOG_PREFIX = hadLogPrefix);
+			Common.runLater(() -> Common.setLogPrefix(oldLogPrefix));
 
 		} catch (final Throwable t) {
 			displayError0(t);
@@ -633,8 +669,8 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 * Attempts to reload the plugin
 	 */
 	public final void reload() {
-		final boolean hadLogPrefix = Common.ADD_LOG_PREFIX;
-		Common.ADD_LOG_PREFIX = false;
+		final String oldLogPrefix = Common.getLogPrefix();
+		Common.setLogPrefix("");
 
 		Common.log(Common.consoleLineSmooth());
 		Common.log(" ");
@@ -696,7 +732,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			Common.throwError(t, "Error reloading " + getName() + " " + getVersion());
 
 		} finally {
-			Common.ADD_LOG_PREFIX = hadLogPrefix;
+			Common.setLogPrefix(oldLogPrefix);
 
 			reloading = false;
 		}

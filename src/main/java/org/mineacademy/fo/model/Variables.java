@@ -23,7 +23,9 @@ import org.mineacademy.fo.TimeUtil;
 import org.mineacademy.fo.collection.StrictList;
 import org.mineacademy.fo.collection.StrictMap;
 import org.mineacademy.fo.collection.expiringmap.ExpiringMap;
+import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.Remain;
+import org.mineacademy.fo.settings.SimpleLocalization;
 import org.mineacademy.fo.settings.SimpleSettings;
 
 /**
@@ -260,11 +262,12 @@ public final class Variables {
 			}
 		}
 
-		if (senderIsPlayer) {
-
-			// PlaceholderAPI and MvdvPlaceholderAPI
+		// PlaceholderAPI and MvdvPlaceholderAPI
+		if (senderIsPlayer)
 			message = HookManager.replacePlaceholders((Player) sender, message);
-		}
+
+		else if (sender instanceof DiscordSender)
+			message = HookManager.replacePlaceholders(((DiscordSender) sender).getOfflinePlayer(), message);
 
 		// Default
 		message = replaceHardVariables0(sender, message);
@@ -459,7 +462,7 @@ public final class Variables {
 				return player == null ? "" : geoResponse.getIsp();
 
 			case "label":
-				return SimpleSettings.MAIN_COMMAND_ALIASES.isEmpty() ? "noMainCommandLabel" : SimpleSettings.MAIN_COMMAND_ALIASES.get(0);
+				return SimplePlugin.getInstance().getMainCommand() != null ? SimplePlugin.getInstance().getMainCommand().getLabel() : SimpleLocalization.NONE;
 			case "sender_is_player":
 				return player != null ? "true" : "false";
 			case "sender_is_discord":

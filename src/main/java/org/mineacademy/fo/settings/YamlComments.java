@@ -6,7 +6,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -40,25 +39,7 @@ import lombok.NonNull;
  * Source: https://github.com/tchristofferson/Config-Updater
  * Modified by MineAcademy.org
  */
-public final class YamlComments {
-
-	/**
-	 * Update a yaml file from a resource inside your plugin jar
-	 *
-	 * @param jarPath The yaml file name to update from, typically config.yml
-	 * @param diskFile The yaml file to update
-	 */
-	public static void writeComments(@NonNull String jarPath, @NonNull File diskFile) {
-		try {
-			writeComments(jarPath, diskFile, null, new ArrayList<>());
-
-		} catch (final IOException ex) {
-			Common.error(ex,
-					"Failed writing comments!",
-					"Path in plugin jar wherefrom comments are fetched: " + jarPath,
-					"Disk file where comments are written: " + diskFile);
-		}
-	}
+final class YamlComments {
 
 	/**
 	 * Update a yaml file from a resource inside your plugin jar
@@ -70,11 +51,11 @@ public final class YamlComments {
 	 *
 	 * @throws IOException If an IOException occurs
 	 */
-	public static void writeComments(@NonNull String jarPath, @NonNull File diskFile, @Nullable String oldContents, @NonNull List<String> ignoredSections) throws IOException {
+	static void writeComments(@NonNull String jarPath, @NonNull File diskFile, @Nullable String oldContents, @NonNull List<String> ignoredSections) throws IOException {
 
-		final List<String> newLines = FileUtil.getInternalResource(jarPath);
+		final List<String> newLines = FileUtil.getInternalFileContent(jarPath);
 
-		final SimpleYaml oldConfig = new SimpleYaml();
+		final YamlConfiguration oldConfig = new YamlConfiguration();
 
 		try {
 			if (oldContents != null)
@@ -86,7 +67,14 @@ public final class YamlComments {
 			Remain.sneaky(t);
 		}
 
-		final SimpleYaml newConfig = SimpleYaml.loadInternalConfiguration(jarPath);
+		final YamlConfiguration newConfig = new YamlConfiguration(); //.loadInternalConfiguration(jarPath);
+
+		try {
+			newConfig.loadFromString(String.join("\n", newLines));
+
+		} catch (final Throwable t) {
+			Remain.sneaky(t);
+		}
 
 		final BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(diskFile), StandardCharsets.UTF_8));
 
@@ -291,7 +279,26 @@ public final class YamlComments {
 		for (int i = 0; i < list.size(); i++) {
 			final Object o = list.get(i);
 
-			if (o instanceof String || o instanceof Character) {
+			if (o instanceof Map) {
+				int entryIndex = 0;
+				final int mapSize = ((Map<?, ?>) o).size();
+
+				for (final Map.Entry<?, ?> entry : ((Map<?, ?>) o).entrySet()) {
+					builder.append(prefixSpaces);
+
+					if (entryIndex == 0)
+						builder.append("- ");
+					else
+						builder.append("  ");
+
+					builder.append(entry.getKey()).append(": ").append(yaml.dump(entry.getValue()));
+					entryIndex++;
+
+					if (entryIndex != mapSize)
+						builder.append("\n");
+				}
+
+			} else if (o instanceof String || o instanceof Character) {
 				builder.append(prefixSpaces).append("- '").append(o.toString().replace("'", "''")).append("'");
 
 			} else if (o instanceof List) {

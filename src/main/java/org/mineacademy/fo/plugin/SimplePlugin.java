@@ -58,11 +58,11 @@ import org.mineacademy.fo.model.SimpleScoreboard;
 import org.mineacademy.fo.model.SpigotUpdater;
 import org.mineacademy.fo.remain.CompMetadata;
 import org.mineacademy.fo.remain.Remain;
+import org.mineacademy.fo.settings.FileConfig;
 import org.mineacademy.fo.settings.Lang;
 import org.mineacademy.fo.settings.SimpleLocalization;
 import org.mineacademy.fo.settings.SimpleSettings;
 import org.mineacademy.fo.settings.YamlConfig;
-import org.mineacademy.fo.settings.YamlStaticConfig;
 import org.mineacademy.fo.visual.BlockVisualizer;
 
 import lombok.Getter;
@@ -168,7 +168,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	/**
 	 * Internal boolean indicating if we can proceed to loading the plugin.
 	 */
-	private boolean canLoad = true;
+	private final boolean canLoad = true;
 
 	/**
 	 * A temporary main command to be set in {@link #setMainCommand(SimpleCommandGroup)}
@@ -209,13 +209,13 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 		// Cache results for best performance
 		version = instance.getDescription().getVersion();
-		named = instance.getName();
+		named = instance.getDataFolder().getName();
 		source = instance.getFile();
 		data = instance.getDataFolder();
 
-		if (!Bukkit.getVersion().contains("Paper") && !Bukkit.getVersion().contains("NachoSpigot") && MinecraftVersion.atLeast(V.v1_8)) {
+		if (!Bukkit.getVersion().contains("Paper") && !Bukkit.getVersion().contains("NachoSpigot") && !Bukkit.getVersion().contains("-Spigot") && MinecraftVersion.atLeast(V.v1_8)) {
 
-			if (MinecraftVersion.atLeast(V.v1_18) && Bukkit.getVersion().contains("CraftBukkit") || Bukkit.getVersion().contains("-Spigot-")) {
+			/*if (MinecraftVersion.atLeast(V.v1_18) && Bukkit.getVersion().contains("CraftBukkit") || Bukkit.getVersion().contains("-Spigot-")) {
 				Bukkit.getLogger().severe(Common.consoleLine());
 				Bukkit.getLogger().severe("Error loading " + named + ": Unsupported server software");
 				Bukkit.getLogger().severe("");
@@ -226,14 +226,15 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 				this.canLoad = false;
 				throw new RuntimeException("Unsupported server version, see above.");
-			}
+			}*/
 
 			Bukkit.getLogger().severe(Common.consoleLine());
-			Bukkit.getLogger().warning("Warning about " + named + ": You're not using Paper! (Detected: " + Bukkit.getVersion() + ")");
+			Bukkit.getLogger().warning("Warning about " + named + ": You're not using Paper!");
+			Bukkit.getLogger().warning("Detected: " + Bukkit.getVersion());
 			Bukkit.getLogger().warning("");
-			Bukkit.getLogger().warning("Third party forks such as BeerSpigot are known to alter");
-			Bukkit.getLogger().warning("server's behavior. If you have issues with this plugin,");
-			Bukkit.getLogger().warning("please test using Paper from PaperMC.io first!");
+			Bukkit.getLogger().warning("Third party forks are known to alter server in unwanted");
+			Bukkit.getLogger().warning("ways. If you have issues with " + named + " use Paper");
+			Bukkit.getLogger().warning("from PaperMC.io otherwise you may not receive our support.");
 			Bukkit.getLogger().severe(Common.consoleLine());
 		}
 
@@ -296,7 +297,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			HookManager.loadDependencies();
 
 		} catch (final Throwable throwable) {
-			Common.throwError(throwable, "Error while loading " + getName() + " dependencies!");
+			Common.throwError(throwable, "Error while loading " + getDataFolder().getName() + " dependencies!");
 		}
 
 		// Return if plugin pre start indicated a fatal problem
@@ -304,9 +305,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			return;
 
 		try {
-
-			// Load our main static settings classes
-			YamlStaticConfig.load(getSettings());
 
 			if (!isEnabled())
 				return;
@@ -471,7 +469,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		if (!md_5 || !gson) {
 			Bukkit.getLogger().severe(Common.consoleLine());
 			Bukkit.getLogger().severe("Your Minecraft version (" + MinecraftVersion.getCurrent() + ")");
-			Bukkit.getLogger().severe("lacks libraries " + getName() + " needs:");
+			Bukkit.getLogger().severe("lacks libraries " + getDataFolder().getName() + " needs:");
 			Bukkit.getLogger().severe("JSON Chat (by md_5) found: " + md_5);
 			Bukkit.getLogger().severe("Gson (by Google) found: " + gson);
 			Bukkit.getLogger().severe(" ");
@@ -506,7 +504,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 		if (minimumVersion != null && MinecraftVersion.olderThan(minimumVersion)) {
 			Common.logFramed(false,
-					getName() + " requires Minecraft " + minimumVersion + " or newer to run.",
+					getDataFolder().getName() + " requires Minecraft " + minimumVersion + " or newer to run.",
 					"Please upgrade your server.");
 
 			return false;
@@ -517,7 +515,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 		if (maximumVersion != null && MinecraftVersion.newerThan(maximumVersion)) {
 			Common.logFramed(false,
-					getName() + " requires Minecraft " + maximumVersion + " or older to run.",
+					getDataFolder().getName() + " requires Minecraft " + maximumVersion + " or older to run.",
 					"Please downgrade your server or",
 					"wait for the new version.");
 
@@ -535,6 +533,8 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	protected final void displayError0(Throwable throwable) {
 		Debugger.printStackTrace(throwable);
 
+		final boolean privateDistro = getServer().getBukkitVersion().contains("1.8.8-R0.2");
+
 		Common.log(
 				"&4    ___                  _ ",
 				"&4   / _ \\  ___  _ __  ___| |",
@@ -544,7 +544,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 				"&4             |_|          ",
 				"&4!-----------------------------------------------------!",
 				" &cError loading " + getDescription().getName() + " v" + getDescription().getVersion() + ", plugin is disabled!",
-				" &cRunning on " + getServer().getBukkitVersion() + " (" + MinecraftVersion.getServerVersion() + ") & Java " + System.getProperty("java.version"),
+				(privateDistro ? null : " &cRunning on " + getServer().getBukkitVersion() + " (" + MinecraftVersion.getServerVersion() + ") & Java " + System.getProperty("java.version")),
 				"&4!-----------------------------------------------------!");
 
 		if (throwable instanceof InvalidConfigurationException) {
@@ -615,7 +615,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			t.printStackTrace();
 		}
 
-		Objects.requireNonNull(instance, "Instance of " + getName() + " already nulled!");
+		Objects.requireNonNull(instance, "Instance of " + getDataFolder().getName() + " already nulled!");
 		instance = null;
 	}
 
@@ -674,7 +674,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 		Common.log(Common.consoleLineSmooth());
 		Common.log(" ");
-		Common.log("Reloading plugin " + this.getName() + " v" + getVersion());
+		Common.log("Reloading plugin " + getDataFolder().getName() + " v" + getVersion());
 		Common.log(" ");
 
 		reloading = true;
@@ -684,19 +684,18 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 			unregisterReloadables();
 
+			FileConfig.clearLoadedSections();
+
 			// Load our dependency system
 			try {
 				HookManager.loadDependencies();
 
 			} catch (final Throwable throwable) {
-				Common.throwError(throwable, "Error while loading " + getName() + " dependencies!");
+				Common.throwError(throwable, "Error while loading " + getDataFolder().getName() + " dependencies!");
 			}
 
 			onPluginPreReload();
 			reloadables.reload();
-
-			YamlStaticConfig.load(getSettings());
-			Lang.loadPrefixes();
 
 			final YamlConfig metadata = CompMetadata.MetadataFile.getInstance();
 			metadata.save();
@@ -716,6 +715,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			// Register classes
 			AutoRegisterScanner.scanAndRegister();
 
+			Lang.reloadLang();
+			Lang.loadPrefixes();
+
 			onReloadablesStart();
 
 			startingReloadables = false;
@@ -729,7 +731,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			Common.log(Common.consoleLineSmooth());
 
 		} catch (final Throwable t) {
-			Common.throwError(t, "Error reloading " + getName() + " " + getVersion());
+			Common.throwError(t, "Error reloading " + getDataFolder().getName() + " " + getVersion());
 
 		} finally {
 			Common.setLogPrefix(oldLogPrefix);
@@ -944,17 +946,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 * @return
 	 */
 	public MinecraftVersion.V getMaximumVersion() {
-		return null;
-	}
-
-	/**
-	 * Return your main setting classes extending {@link YamlStaticConfig}.
-	 * <p>
-	 * TIP: Extend {@link SimpleSettings} and {@link SimpleLocalization}
-	 *
-	 * @return
-	 */
-	public List<Class<? extends YamlStaticConfig>> getSettings() {
 		return null;
 	}
 
@@ -1180,10 +1171,10 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	@Deprecated
 	@Override
 	public final void reloadConfig() {
-		throw new FoException("Cannot call reloadConfig in " + getName() + ", use reload()!");
+		throw new FoException("Cannot call reloadConfig in " + getDataFolder().getName() + ", use reload()!");
 	}
 
 	private final FoException unsupported(final String method) {
-		return new FoException("Cannot call " + method + " in " + getName() + ", use YamlConfig or SimpleCommand classes in Foundation for that!");
+		return new FoException("Cannot call " + method + " in " + getDataFolder().getName() + ", use YamlConfig or SimpleCommand classes in Foundation for that!");
 	}
 }

@@ -46,11 +46,6 @@ public final class BossBarInternals implements Listener {
 	private final Class<?> entityClass;
 
 	/**
-	 * Does the current MC version require us to spawn the dragon below ground?
-	 */
-	private final boolean isBelowGround;
-
-	/**
 	 * The player currently viewing the boss bar
 	 */
 	private final HashMap<UUID, NMSDragon> players = new HashMap<>();
@@ -63,31 +58,23 @@ public final class BossBarInternals implements Listener {
 	// Singleton
 	private BossBarInternals() {
 
-		if (MinecraftVersion.olderThan(V.v1_6)) {
+		if (MinecraftVersion.olderThan(V.v1_6))
 			this.entityClass = null;
-			this.isBelowGround = false;
-		}
 
-		else if (Remain.isProtocol18Hack()) {
+		else if (Remain.isProtocol18Hack())
 			this.entityClass = NMSDragon_v1_8Hack.class;
-			this.isBelowGround = false;
 
-		} else if (MinecraftVersion.equals(V.v1_6)) {
+		else if (MinecraftVersion.equals(V.v1_6))
 			this.entityClass = NMSDragon_v1_6.class;
-			this.isBelowGround = true;
 
-		} else if (MinecraftVersion.equals(V.v1_7)) {
+		else if (MinecraftVersion.equals(V.v1_7))
 			this.entityClass = NMSDragon_v1_7.class;
-			this.isBelowGround = true;
 
-		} else if (MinecraftVersion.equals(V.v1_8)) {
+		else if (MinecraftVersion.equals(V.v1_8))
 			this.entityClass = NMSDragon_v1_8.class;
-			this.isBelowGround = false;
 
-		} else {
+		else
 			this.entityClass = NMSDragon_v1_9.class;
-			this.isBelowGround = true;
-		}
 
 		if (MinecraftVersion.atLeast(V.v1_6)) {
 			Valid.checkNotNull(entityClass, "Compatible does not support Boss bar on MC version " + MinecraftVersion.getServerVersion() + "!");
@@ -192,7 +179,7 @@ public final class BossBarInternals implements Listener {
 	 * @throws IllegalArgumentException If the percentage is not within valid
 	 *                                  bounds.
 	 */
-	public void setMessage(final Player player, final String message, final float percent, final CompBarColor color, final CompBarStyle style) {
+	public void setMessage(Player player, String message, float percent, CompBarColor color, CompBarStyle style) {
 		Valid.checkBoolean(0F <= percent && percent <= 100F, "Percent must be between 0F and 100F, but was: " + percent);
 
 		if (this.entityClass == null)
@@ -200,6 +187,8 @@ public final class BossBarInternals implements Listener {
 
 		if (hasBar(player))
 			removeBar(player);
+
+		message = Common.colorize(message);
 
 		final NMSDragon dragon = getDragon(player, message);
 
@@ -357,21 +346,16 @@ public final class BossBarInternals implements Listener {
 	}
 
 	private Location getDragonLocation(Location loc) {
-		if (this.isBelowGround) {
-			loc.subtract(0, 300, 0);
-			return loc;
-		}
-
 		final float pitch = loc.getPitch();
 
 		if (pitch >= 55)
-			loc.add(0, -300, 0);
+			loc.add(0, -3, 0);
 		else if (pitch <= -55)
-			loc.add(0, 300, 0);
+			loc.add(0, 3, 0);
 		else
 			loc = loc.getBlock().getRelative(getDirection(loc), Bukkit.getViewDistance() * 16).getLocation();
 
-		loc.subtract(0, 150, 0);
+		loc.subtract(0, 10, 0);
 
 		return loc;
 	}

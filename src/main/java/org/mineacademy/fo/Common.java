@@ -2,6 +2,7 @@ package org.mineacademy.fo;
 
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -52,6 +53,7 @@ import org.mineacademy.fo.model.Replacer;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompChatColor;
 import org.mineacademy.fo.remain.Remain;
+import org.mineacademy.fo.settings.ConfigSection;
 import org.mineacademy.fo.settings.SimpleLocalization;
 import org.mineacademy.fo.settings.SimpleSettings;
 
@@ -327,6 +329,17 @@ public final class Common {
 
 			tell(sender, messages);
 		});
+	}
+
+	/**
+	 * Sends the sender a bunch of messages, colors & are supported
+	 * without {@link #getTellPrefix()} prefix
+	 *
+	 * @param sender
+	 * @param messages
+	 */
+	public static void tellNoPrefix(final CommandSender sender, final Collection<String> messages) {
+		tellNoPrefix(sender, Common.toArray(messages));
 	}
 
 	/**
@@ -1260,7 +1273,7 @@ public final class Common {
 			throw new FoException("Failed to initialize Console Sender, are you running Foundation under a Bukkit/Spigot server?");
 
 		for (String message : messages) {
-			if (message.equals("none"))
+			if (message == null || message.equals("none"))
 				continue;
 
 			if (stripColors(message).replace(" ", "").isEmpty()) {
@@ -1323,15 +1336,19 @@ public final class Common {
 	 * Saves the error, prints the stack trace and logs it in frame.
 	 * Possible to use %error variable
 	 *
-	 * @param t
+	 * @param throwable
 	 * @param messages
 	 */
-	public static void error(final Throwable t, final String... messages) {
-		if (!(t instanceof FoException))
-			Debugger.saveError(t, messages);
+	public static void error(@NonNull Throwable throwable, String... messages) {
 
-		Debugger.printStackTrace(t);
-		logFramed(replaceErrorVariable(t, messages));
+		if (throwable instanceof InvocationTargetException && throwable.getCause() != null)
+			throwable = throwable.getCause();
+
+		if (!(throwable instanceof FoException))
+			Debugger.saveError(throwable, messages);
+
+		Debugger.printStackTrace(throwable);
+		logFramed(replaceErrorVariable(throwable, messages));
 	}
 
 	/**
@@ -1344,10 +1361,6 @@ public final class Common {
 	 * @param messages
 	 */
 	public static void throwError(Throwable t, final String... messages) {
-
-		// Get to the root cause of this problem
-		while (t.getCause() != null)
-			t = t.getCause();
 
 		// Delegate to only print out the relevant stuff
 		if (t instanceof FoException)
@@ -2589,7 +2602,10 @@ public final class Common {
 	public static Map<String, Object> getMapFromSection(@NonNull Object mapOrSection) {
 		mapOrSection = Remain.getRootOfSectionPathData(mapOrSection);
 
-		final Map<String, Object> map = mapOrSection instanceof Map ? (Map<String, Object>) mapOrSection : mapOrSection instanceof MemorySection ? ReflectionUtil.getFieldContent(mapOrSection, "map") : null;
+		final Map<String, Object> map = mapOrSection instanceof ConfigSection ? ((ConfigSection) mapOrSection).getValues(false)
+				: mapOrSection instanceof Map ? (Map<String, Object>) mapOrSection
+						: mapOrSection instanceof MemorySection ? ReflectionUtil.getFieldContent(mapOrSection, "map") : null;
+
 		Valid.checkNotNull(map, "Unexpected " + mapOrSection.getClass().getSimpleName() + " '" + mapOrSection + "'. Must be Map or MemorySection! (Do not just send config name here, but the actual section with get('section'))");
 
 		final Map<String, Object> copy = new LinkedHashMap<>();

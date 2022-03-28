@@ -10,7 +10,6 @@ import org.mineacademy.fo.collection.StrictList;
 import org.mineacademy.fo.constants.FoConstants;
 import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.debug.LagCatcher;
-import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.model.SpigotUpdater;
 import org.mineacademy.fo.plugin.SimplePlugin;
 
@@ -37,8 +36,8 @@ public class SimpleSettings extends YamlStaticConfig {
 	// --------------------------------------------------------------------
 
 	@Override
-	protected final void load() throws Exception {
-		createFileAndLoad(getSettingsFileName());
+	protected final void onLoad() throws Exception {
+		loadConfiguration(getSettingsFileName());
 	}
 
 	/**
@@ -69,7 +68,7 @@ public class SimpleSettings extends YamlStaticConfig {
 	@Override
 	protected void preLoad() {
 		// Load version first so we can use it later
-		pathPrefix(null);
+		setPathPrefix(null);
 
 		if ((VERSION = getInteger("Version")) != getConfigVersion())
 			set("Version", getConfigVersion());
@@ -110,8 +109,7 @@ public class SimpleSettings extends YamlStaticConfig {
 	public static StrictList<String> DEBUG_SECTIONS = new StrictList<>();
 
 	/**
-	 * The plugin prefix in front of chat/console messages, added automatically unless
-	 * disabled in {@link Common#ADD_LOG_PREFIX} and {@link Common#ADD_TELL_PREFIX}.
+	 * The plugin prefix in front of chat/console messages.
 	 * <p>
 	 * Typically for ChatControl:
 	 * <p>
@@ -176,7 +174,7 @@ public class SimpleSettings extends YamlStaticConfig {
 	private static void init() {
 		Valid.checkBoolean(!settingsClassCalled, "Settings class already loaded!");
 
-		pathPrefix(null);
+		setPathPrefix(null);
 		upgradeOldSettings();
 
 		if (isSetDefault("Timestamp_Format"))
@@ -212,11 +210,7 @@ public class SimpleSettings extends YamlStaticConfig {
 		// -------------------------------------------------------------------
 
 		{ // Load localization
-			final boolean hasLocalization = hasLocalization();
 			final boolean keySet = isSetDefault("Locale");
-
-			if (hasLocalization && !keySet)
-				throw new FoException("Since you have your Localization class you must set the 'Locale' key in " + getFileName());
 
 			LOCALE_PREFIX = keySet ? getString("Locale") : LOCALE_PREFIX;
 		}
@@ -237,50 +231,33 @@ public class SimpleSettings extends YamlStaticConfig {
 	}
 
 	/**
-	 * Inspect if some settings classes extend localization and make sure only one does, if any
-	 *
-	 * @return
-	 */
-	private static boolean hasLocalization() {
-		final SimplePlugin plugin = SimplePlugin.getInstance();
-		int localeClasses = 0;
-
-		if (plugin.getSettings() != null)
-			for (final Class<?> clazz : plugin.getSettings())
-				if (SimpleLocalization.class.isAssignableFrom(clazz))
-					localeClasses++;
-
-		Valid.checkBoolean(localeClasses < 2, "You cannot have more than 1 class extend SimpleLocalization!");
-		return localeClasses == 1;
-	}
-
-	/**
 	 * Upgrade some of the old and ancient settings from our premium plugins.
 	 */
 	private static void upgradeOldSettings() {
+
 		{ // Debug
-			if (isSetAbsolute("Debugger"))
+			if (isSet("Debugger"))
 				move("Debugger", "Debug");
 
-			if (isSetAbsolute("Serialization_Number"))
+			if (isSet("Serialization_Number"))
 				move("Serialization_Number", "Serialization");
 
 			// ChatControl
-			if (isSetAbsolute("Debugger.Keys")) {
+			if (isSet("Debugger.Keys")) {
 				move("Debugger.Keys", "Serialization");
 				move("Debugger.Sections", "Debug");
 			}
 
 			// Archaic
-			if (isSetAbsolute("Debug") && !(getObject("Debug") instanceof List))
+			if (isSet("Debug") && !(getObject("Debug") instanceof List))
 				set("Debug", null);
 		}
 
 		{ // Prefix
-			if (isSetAbsolute("Plugin_Prefix"))
+			if (isSet("Plugin_Prefix"))
 				move("Plugin_Prefix", "Prefix");
 
-			if (isSetAbsolute("Check_Updates"))
+			if (isSet("Check_Updates"))
 				move("Check_Updates", "Notify_Updates");
 		}
 	}

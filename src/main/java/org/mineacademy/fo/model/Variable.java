@@ -12,7 +12,6 @@ import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.PlayerUtil;
 import org.mineacademy.fo.Valid;
-import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.settings.ConfigItems;
 import org.mineacademy.fo.settings.YamlConfig;
 
@@ -114,26 +113,12 @@ public final class Variable extends YamlConfig {
 	private String runCommand;
 
 	/*
-	 * Shall we save comments for this file?
-	 */
-	private final boolean saveComments;
-
-	/*
 	 * Create and load a new variable (automatically called)
 	 */
 	private Variable(String file) {
 		final String prototypePath = PROTOTYPE_PATH.apply(file);
 
-		this.saveComments = prototypePath != null;
 		this.loadConfiguration(prototypePath, "variables/" + file + ".yml");
-	}
-
-	/**
-	 * @see org.mineacademy.fo.settings.YamlConfig#saveComments()
-	 */
-	@Override
-	protected boolean saveComments() {
-		return saveComments;
 	}
 
 	// ----------------------------------------------------------------------------------
@@ -141,10 +126,10 @@ public final class Variable extends YamlConfig {
 	// ----------------------------------------------------------------------------------
 
 	/**
-	 * @see org.mineacademy.fo.settings.YamlConfig#onLoadFinish()
+	 * @see org.mineacademy.fo.settings.YamlConfig#onLoad()
 	 */
 	@Override
-	protected void onLoadFinish() {
+	protected void onLoad() {
 
 		this.type = get("Type", Type.class);
 		this.key = getString("Key");
@@ -183,38 +168,29 @@ public final class Variable extends YamlConfig {
 
 		// Check for known mistakes
 		if (this.key == null || this.key.isEmpty())
-			throw new NullPointerException("(DO NOT REPORT, PLEASE FIX YOURSELF) Please set 'Key' as variable name in " + getFile());
+			throw new NullPointerException("(DO NOT REPORT, PLEASE FIX YOURSELF) Please set 'Key' as variable name in " + getFileName());
 
 		if (this.value == null || this.value.isEmpty())
-			throw new NullPointerException("(DO NOT REPORT, PLEASE FIX YOURSELF) Please set 'Value' key as what the variable shows in " + getFile() + " (this can be a JavaScript code)");
+			throw new NullPointerException("(DO NOT REPORT, PLEASE FIX YOURSELF) Please set 'Value' key as what the variable shows in " + getFileName() + " (this can be a JavaScript code)");
 
 		// Test for key validity
 		if (!Common.regExMatch("^\\w+$", this.key))
-			throw new IllegalArgumentException("(DO NOT REPORT, PLEASE FIX YOURSELF) The 'Key' variable in " + getFile() + " must only contains letters, numbers or underscores. Do not write [] or {} there!");
+			throw new IllegalArgumentException("(DO NOT REPORT, PLEASE FIX YOURSELF) The 'Key' variable in " + getFileName() + " must only contains letters, numbers or underscores. Do not write [] or {} there!");
 	}
 
-	/**
-	 * Return this class as a map
-	 *
-	 * @return
-	 */
 	@Override
-	public SerializedMap serialize() {
-		final SerializedMap map = new SerializedMap();
-
-		map.putIf("Type", this.type);
-		map.putIf("Key", this.key);
-		map.putIf("Sender_Condition", this.senderCondition);
-		map.putIf("Receiver_Condition", this.receiverCondition);
-		map.putIf("Hover", this.hoverText);
-		map.putIf("Hover_Item", this.hoverItem);
-		map.putIf("Open_Url", this.openUrl);
-		map.putIf("Suggest_Command", this.suggestCommand);
-		map.putIf("Run_Command", this.runCommand);
-		map.putIf("Sender_Permission", this.senderPermission);
-		map.putIf("Receiver_Permission", this.receiverPermission);
-
-		return map;
+	public void onSave() {
+		this.set("Type", this.type);
+		this.set("Key", this.key);
+		this.set("Sender_Condition", this.senderCondition);
+		this.set("Receiver_Condition", this.receiverCondition);
+		this.set("Hover", this.hoverText);
+		this.set("Hover_Item", this.hoverItem);
+		this.set("Open_Url", this.openUrl);
+		this.set("Suggest_Command", this.suggestCommand);
+		this.set("Run_Command", this.runCommand);
+		this.set("Sender_Permission", this.senderPermission);
+		this.set("Receiver_Permission", this.receiverPermission);
 	}
 
 	// ----------------------------------------------------------------------------------
@@ -269,7 +245,7 @@ public final class Variable extends YamlConfig {
 			final Object result = JavaScriptExecutor.run(this.senderCondition, sender);
 
 			if (result != null) {
-				Valid.checkBoolean(result instanceof Boolean, "Variable '" + getName() + "' option Condition must return boolean not " + (result == null ? "null" : result.getClass()));
+				Valid.checkBoolean(result instanceof Boolean, "Variable '" + getFileName() + "' option Condition must return boolean not " + (result == null ? "null" : result.getClass()));
 
 				if ((boolean) result == false)
 					return SimpleComponent.of("");
@@ -291,7 +267,7 @@ public final class Variable extends YamlConfig {
 
 		if (this.hoverItem != null && !this.hoverItem.isEmpty()) {
 			final Object result = JavaScriptExecutor.run(Variables.replace(this.hoverItem, sender, replacements), sender);
-			Valid.checkBoolean(result instanceof ItemStack, "Variable '" + getName() + "' option Hover_Item must return ItemStack not " + result.getClass());
+			Valid.checkBoolean(result instanceof ItemStack, "Variable '" + getFileName() + "' option Hover_Item must return ItemStack not " + result.getClass());
 
 			component.onHover((ItemStack) result);
 		}
@@ -306,14 +282,6 @@ public final class Variable extends YamlConfig {
 			component.onClickRunCmd(Variables.replace(this.runCommand, sender, replacements));
 
 		return component;
-	}
-
-	/**
-	 * @see org.mineacademy.fo.settings.YamlConfig#toString()
-	 */
-	@Override
-	public String toString() {
-		return serialize().toStringFormatted();
 	}
 
 	/**

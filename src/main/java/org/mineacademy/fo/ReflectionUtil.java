@@ -86,7 +86,7 @@ public final class ReflectionUtil {
 	 * Find a class in net.minecraft.server package, adding the version
 	 * automatically
 	 *
-	 * @deprecated Minecraft 1.17 has a different path name,
+	 * @deprecated Minecraft 1.17+ has a different path name,
 	 *             use {@link #getNMSClass(String, String)} instead
 	 *
 	 * @param name
@@ -463,6 +463,19 @@ public final class ReflectionUtil {
 	}
 
 	/**
+	 * Makes a new instance of a class by its full path name
+	 *
+	 * @param <T>
+	 * @param classPath
+	 * @return
+	 */
+	public static <T> T instantiate(final String classPath) {
+		final Class<T> clazz = lookupClass(classPath);
+
+		return instantiate(clazz);
+	}
+
+	/**
 	 * Makes a new instance of a class
 	 *
 	 * @param clazz
@@ -625,8 +638,8 @@ public final class ReflectionUtil {
 	 */
 	public static <T extends Enum<T>> T lookupLegacyEnum(final Class<T> enumClass, String... names) {
 
-		for (String name : names) {
-			T foundEnum = lookupEnumSilent(enumClass, name);
+		for (final String name : names) {
+			final T foundEnum = lookupEnumSilent(enumClass, name);
 
 			if (foundEnum != null)
 				return foundEnum;
@@ -896,7 +909,7 @@ public final class ReflectionUtil {
 	 * @return
 	 */
 	@SneakyThrows
-	public static <T> TreeSet<Class<T>> getClasses(final Plugin plugin, Class<T> extendingClass) {
+	public static <T> TreeSet<Class<T>> getClasses(@NonNull Plugin plugin, Class<T> extendingClass) {
 		Valid.checkNotNull(plugin, "Plugin is null!");
 		Valid.checkBoolean(JavaPlugin.class.isAssignableFrom(plugin.getClass()), "Plugin must be a JavaPlugin");
 
@@ -915,7 +928,7 @@ public final class ReflectionUtil {
 				String name = entries.nextElement().getName();
 
 				if (name.endsWith(".class")) {
-					name = name.replace("/", ".").replaceFirst(".class", "");
+					name = name.replaceFirst("\\.class", "").replace("/", ".");
 
 					Class<?> clazz = null;
 
@@ -1091,16 +1104,16 @@ public final class ReflectionUtil {
 		/*public Method getDeclaredMethod(final String name, final Class<?>... paramTypes) throws NoSuchMethodException {
 			if (methodCache.containsKey(name)) {
 				final Collection<Method> methods = methodCache.get(name);
-
+		
 				for (final Method method : methods)
 					if (Arrays.equals(paramTypes, method.getParameterTypes()))
 						return method;
 			}
-
+		
 			final Method method = clazz.getDeclaredMethod(name, paramTypes);
-
+		
 			cacheMethod(method);
-
+		
 			return method;
 		}*/
 

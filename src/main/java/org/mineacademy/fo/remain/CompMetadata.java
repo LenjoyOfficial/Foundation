@@ -31,7 +31,7 @@ import org.mineacademy.fo.model.ConfigSerializable;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.nbt.NBTCompound;
 import org.mineacademy.fo.remain.nbt.NBTItem;
-import org.mineacademy.fo.settings.YamlSectionConfig;
+import org.mineacademy.fo.settings.YamlConfig;
 
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -374,7 +374,7 @@ public final class CompMetadata {
 	 * internal use only
 	 */
 	@AutoRegister
-	public static final class MetadataFile extends YamlSectionConfig {
+	public static final class MetadataFile extends YamlConfig {
 
 		private static volatile Object LOCK = new Object();
 
@@ -385,19 +385,25 @@ public final class CompMetadata {
 		private final StrictMap<Location, BlockCache> blockMetadataMap = new StrictMap<>();
 
 		private MetadataFile() {
-			super("Metadata");
+			setPathPrefix("Metadata");
+			setSaveEmptyValues(false);
 
 			loadConfiguration(NO_DEFAULT, FoConstants.File.DATA);
 		}
 
 		@Override
-		protected void onLoadFinish() {
+		protected void onLoad() {
 			synchronized (LOCK) {
 				loadEntities();
-				loadBlockStates();
 
-				save();
+				loadBlockStates();
 			}
+		}
+
+		@Override
+		protected void onSave() {
+			this.set("Entity", this.entityMetadataMap);
+			this.set("Block", this.blockMetadataMap);
 		}
 
 		private void loadEntities() {
@@ -409,7 +415,7 @@ public final class CompMetadata {
 
 					// Remove broken key
 					if (!(getObject("Entity." + uuidName) instanceof List)) {
-						setNoSave("Entity." + uuidName, null);
+						set("Entity." + uuidName, null);
 
 						continue;
 					}
@@ -425,7 +431,7 @@ public final class CompMetadata {
 					}
 				}
 
-				save("Entity", this.entityMetadataMap);
+				set("Entity", this.entityMetadataMap);
 			}
 		}
 
@@ -447,7 +453,7 @@ public final class CompMetadata {
 					}
 				}
 
-				save("Block", this.blockMetadataMap);
+				set("Block", this.blockMetadataMap);
 			}
 		}
 
@@ -508,7 +514,7 @@ public final class CompMetadata {
 
 				{ // Save
 					for (final Map.Entry<Location, BlockCache> entry : blockMetadataMap.entrySet())
-						setNoSave("Block." + SerializeUtil.serializeLoc(entry.getKey()), entry.getValue().serialize());
+						set("Block." + SerializeUtil.serializeLoc(entry.getKey()), entry.getValue().serialize());
 
 					save();
 				}

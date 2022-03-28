@@ -1,5 +1,7 @@
 package org.mineacademy.fo.database;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -60,6 +62,11 @@ public class SimpleDatabase {
 	 * Indicates that {@link #batchUpdate(List)} is ongoing
 	 */
 	private boolean batchUpdateGoingOn = false;
+
+	/**
+	 * Optional Hikari data source (you plugin needs to include com.zaxxer.HikariCP library in its plugin.yml (MC 1.16+ required)
+	 */
+	private Object hikariDataSource;
 
 	// --------------------------------------------------------------------
 	// Connecting
@@ -132,22 +139,82 @@ public class SimpleDatabase {
 	public final void connect(final String url, final String user, final String password, final String table) {
 
 		// Close any open connection
-		close();
+		this.close();
 
 		try {
-			if (ReflectionUtil.isClassAvailable("com.mysql.cj.jdbc.Driver"))
-				Class.forName("com.mysql.cj.jdbc.Driver");
 
+			// Avoid using imports so that Foundation users don't have to include Hikari, you can
+			// optionally load the library using "libraries" feature in plugin.yml such as the below (requires MC 1.16+)
+			//
+			// libraries:
+			// - com.zaxxer:HikariCP:5.0.1
+			if (ReflectionUtil.isClassAvailable("com.zaxxer.hikari.HikariConfig")) {
+
+				final Object hikariConfig = ReflectionUtil.instantiate("com.zaxxer.hikari.HikariConfig");
+
+
+				if (url.startsWith("jdbc:mysql://")) {
+					Common.warning("Not using MariaDB JDBC Driver, switching to MySQL JDBC Driver. You can safely ignore this warning.");
+
+					ReflectionUtil.invoke("setDriverClassName", hikariConfig, "com.mysql.cj.jdbc.Driver");
+				}
+
+				if (url.startsWith("jdbc:mariadb://")) {
+					Common.warning("Using MariaDB JDBC Driver. You can safely ignore this warning.");
+
+					ReflectionUtil.invoke("setDriverClassName", hikariConfig, "org.mariadb.jdbc.Driver");
+				}
+
+
+				ReflectionUtil.invoke("setJdbcUrl", hikariConfig, url);
+				ReflectionUtil.invoke("setUsername", hikariConfig, user);
+				ReflectionUtil.invoke("setPassword", hikariConfig, password);
+
+				final Constructor<?> dataSourceConst = ReflectionUtil.getConstructor("com.zaxxer.hikari.HikariDataSource", hikariConfig.getClass());
+				final Object hikariSource = ReflectionUtil.instantiate(dataSourceConst, hikariConfig);
+
+				this.hikariDataSource = hikariSource;
+
+				final Method getConnection = hikariSource.getClass().getDeclaredMethod("getConnection");
+
+				try {
+					this.connection = ReflectionUtil.invoke(getConnection, hikariSource);
+
+				} catch (final Throwable t) {
+					Common.warning("Could not get HikariCP connection, please report this with the information below to github.com/kangarko/foundation");
+					Common.warning("Method: " + getConnection);
+					Common.warning("Arguments: " + Common.join(getConnection.getParameters()));
+
+					t.printStackTrace();
+				}
+			}
+
+			/*
+			Check for JDBC Drivers (MariaDB, MySQL or Legacy MySQL)
+			 */
 			else {
-				Common.warning("Your database driver is outdated. If you encounter issues, use MariaDB instead. You can safely ignore this warning.");
+				if (url.startsWith("jdbc:mariadb://") && ReflectionUtil.isClassAvailable("org.mariadb.jdbc.Driver")) {
+					Common.warning("Using MariaDB JDBC Driver. You can safely ignore this warning.");
 
-				Class.forName("com.mysql.jdbc.Driver");
+					Class.forName("org.mariadb.jdbc.Driver");
+				}
+
+				if (url.startsWith("jdbc:mysql://") && ReflectionUtil.isClassAvailable("com.mysql.cj.jdbc.Driver")) {
+					Common.warning("Can't use MariaDB JDBC Driver, switching to MySQL JDBC Driver. You can safely ignore this warning.");
+
+					Class.forName("com.mysql.cj.jdbc.Driver");
+
+				} else {
+					Common.warning("Your database driver is outdated, switching to MySQL legacy JDBC Driver. If you encounter issues, consider updating your database or switching to MariaDB. You can safely ignore this warning");
+
+					Class.forName("com.mysql.jdbc.Driver");
+
+				}
+				this.connection = DriverManager.getConnection(url, user, password);
 			}
 
 			this.lastCredentials = new LastCredentials(url, user, password, table);
-			this.connection = DriverManager.getConnection(url, user, password);
-
-			onConnected();
+			this.onConnected();
 
 		} catch (final Exception ex) {
 
@@ -158,7 +225,7 @@ public class SimpleDatabase {
 						"this is normal - just restart.",
 						"",
 						"You have have access to your server machine, try installing",
-						"https://dev.mysql.com/downloads/connector/j/5.1.html#downloads",
+						"https://mariadb.com/downloads/connectors/connectors-data-access/",
 						"",
 						"If this problem persists after a restart, please contact",
 						"your hosting provider.");
@@ -195,13 +262,16 @@ public class SimpleDatabase {
 	 * Attempts to close the connection, if not null
 	 */
 	public final void close() {
-		if (connection != null)
-			try {
+		try {
+			if (connection != null)
 				connection.close();
 
-			} catch (final SQLException e) {
-				Common.error(e, "Error closing MySQL connection!");
-			}
+			if (hikariDataSource != null)
+				ReflectionUtil.invoke("close", hikariDataSource);
+
+		} catch (final SQLException e) {
+			Common.error(e, "Error closing MySQL connection!");
+		}
 	}
 
 	// --------------------------------------------------------------------

@@ -44,7 +44,6 @@ import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.CompSound;
 import org.mineacademy.fo.settings.SimpleLocalization;
 
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -154,7 +153,6 @@ public abstract class Menu {
 	/**
 	 * A one way boolean set to true in {@link #handleClose(Inventory)}
 	 */
-	@Getter(value = AccessLevel.PACKAGE)
 	private boolean closed = false;
 
 	/**
@@ -836,11 +834,12 @@ public abstract class Menu {
 	 * @param slot     the slot
 	 * @param clicked  the clicked item
 	 * @param cursor   the cursor
+	 * @param action   the inventory action
 	 *
 	 * @return if the action is cancelled in the {@link InventoryClickEvent}, false
 	 * by default
 	 */
-	protected boolean isActionAllowed(final MenuClickLocation location, final int slot, @Nullable final ItemStack clicked, @Nullable final ItemStack cursor) {
+	protected boolean isActionAllowed(final MenuClickLocation location, final int slot, @Nullable final ItemStack clicked, @Nullable final ItemStack cursor, InventoryAction action) {
 		return false;
 	}
 

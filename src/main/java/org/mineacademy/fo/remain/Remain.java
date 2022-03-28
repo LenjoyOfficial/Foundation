@@ -91,7 +91,6 @@ import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.internal.BossBarInternals;
 import org.mineacademy.fo.remain.internal.ChatInternals;
 import org.mineacademy.fo.remain.nbt.NBTEntity;
-import org.mineacademy.fo.settings.SimpleYaml;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -674,6 +673,7 @@ public final class Remain {
 	public static void setData(final Block block, final int data) {
 		try {
 			Block.class.getMethod("setData", byte.class).invoke(block, (byte) data);
+
 		} catch (final NoSuchMethodException ex) {
 			block.setBlockData(Bukkit.getUnsafe().fromLegacy(block.getType(), (byte) data), true);
 
@@ -689,19 +689,8 @@ public final class Remain {
 	 * @param material
 	 * @param data
 	 */
-	public static void setTypeAndData(final Block block, final CompMaterial material, final byte data) {
-		setTypeAndData(block, material.getMaterial(), data);
-	}
-
-	/**
-	 * Sets a block type and its data, applying physics.
-	 *
-	 * @param block
-	 * @param material
-	 * @param data
-	 */
 	public static void setTypeAndData(final Block block, final Material material, final byte data) {
-		setTypeAndData(block, material, data, true);
+		setTypeAndData(block, CompMaterial.fromLegacy(material.name(), data));
 	}
 
 	/**
@@ -709,17 +698,14 @@ public final class Remain {
 	 *
 	 * @param block
 	 * @param material
-	 * @param data
-	 * @param physics
 	 */
-	public static void setTypeAndData(final Block block, final Material material, final byte data, final boolean physics) {
+	public static void setTypeAndData(final Block block, final CompMaterial material) {
 		if (MinecraftVersion.atLeast(V.v1_13)) {
-			block.setType(material);
-			block.setBlockData(Bukkit.getUnsafe().fromLegacy(material, data), physics);
+			block.setType(material.getMaterial());
 
 		} else
 			try {
-				block.getClass().getMethod("setTypeIdAndData", int.class, byte.class, boolean.class).invoke(block, material.getId(), data, physics);
+				block.getClass().getMethod("setTypeIdAndData", int.class, byte.class, boolean.class).invoke(block, material.getId(), material.getData(), true);
 			} catch (final ReflectiveOperationException ex) {
 				ex.printStackTrace();
 			}
@@ -1455,10 +1441,12 @@ public final class Remain {
 		if (meta.getTitle() == null)
 			meta.setTitle("");
 
+		if (meta.getPageCount() == 0)
+			meta.setPages(""); // Empty book
+
 		book.setItemMeta(meta);
 
 		try {
-
 			player.openBook(book);
 
 		} catch (final NoSuchMethodError ex) {
@@ -1529,7 +1517,8 @@ public final class Remain {
 						container.getClass(),
 						ReflectionUtil.lookupClass("net.minecraft.network.chat.IChatBaseComponent"));
 
-				final Object activeContainer = ReflectionUtil.getFieldContent(nmsPlayer, is1_18 ? "bW" : "bV");
+				final String version = MinecraftVersion.getServerVersion(); // special fix for MC 1.18.2
+				final Object activeContainer = ReflectionUtil.getFieldContent(nmsPlayer, is1_18 ? version.contains("R2") ? "bV" : "bW" : "bV");
 				final int windowId = ReflectionUtil.getFieldContent(activeContainer, "j");
 
 				final Method method = is1_18 ? ReflectionUtil.getMethod(nmsPlayer.getClass(), "a", ReflectionUtil.lookupClass("net.minecraft.world.inventory.Container")) : null;
@@ -1607,10 +1596,7 @@ public final class Remain {
 	 * @param material   the material
 	 */
 	public static void sendBlockChange(final int delayTicks, final Player player, final Location location, final CompMaterial material) {
-		if (delayTicks > 0)
-			Common.runLater(delayTicks, () -> sendBlockChange0(player, location, material));
-		else
-			sendBlockChange0(player, location, material);
+		Common.runLater(delayTicks, () -> sendBlockChange0(player, location, material));
 	}
 
 	private static void sendBlockChange0(final Player player, final Location location, final CompMaterial material) {
@@ -1630,10 +1616,7 @@ public final class Remain {
 	 * @param block
 	 */
 	public static void sendBlockChange(final int delayTicks, final Player player, final Block block) {
-		if (delayTicks > 0)
-			Common.runLater(delayTicks, () -> sendBlockChange0(player, block));
-		else
-			sendBlockChange0(player, block);
+		Common.runLater(delayTicks, () -> sendBlockChange0(player, block));
 	}
 
 	private static void sendBlockChange0(final Player player, final Block block) {
@@ -1953,12 +1936,11 @@ public final class Remain {
 	 * Calls NMS to find out if the entity is invisible, works for any entity,
 	 * better than Bukkit since it has extreme downwards compatibility and does not require LivingEntity
 	 *
-	 * @deprecated use {@link PlayerUtil#isVanished(Player)} to check for vanish from other plugins also
+	 * USE WITH CAUTION, returns true for spectator mode and vanish potions
 	 *
 	 * @param entity
 	 * @return
 	 */
-	@Deprecated
 	public static boolean isInvisible(Entity entity) {
 		if (entity instanceof LivingEntity && MinecraftVersion.atLeast(V.v1_16))
 			return ((LivingEntity) entity).isInvisible();
@@ -2090,25 +2072,55 @@ public final class Remain {
 	}
 
 	/**
-	 * Send a "toast" notification. This is an advancement notification that cannot
-	 * be modified that much. It imposes a slight performance penalty.
+	 * Send a "toast" notification. This is an advancement notification that cannot be
+	 * modified on its first screen. It imposes a slight performance penalty.
 	 *
 	 * @param receiver
 	 * @param message
 	 */
-	public static void sendToast(final Player receiver, final String message) {
-		sendToast(receiver, message, CompMaterial.BOOK);
+	public static void sendToast(Player receiver, String message) {
+		sendToast(receiver, message, CompMaterial.BOOK, CompToastStyle.TASK);
+	}
+
+	/**
+	 * Send a "toast" notification. This is an advancement notification that cannot be
+	 * modified on its first screen. It imposes a slight performance penalty.
+	 *
+	 * You can pick the first screen from precreated Minecraft screens here.
+	 *
+	 * @param receiver
+	 * @param message
+	 * @param toastStyle
+	 */
+	public static void sendToast(Player receiver, String message, CompToastStyle toastStyle) {
+		sendToast(receiver, message, CompMaterial.BOOK, toastStyle);
+	}
+
+	/**
+	 * Send a "toast" notification. This is an advancement notification that cannot be
+	 * modified on its first screen. It imposes a slight performance penalty.
+	 *
+	 * You can change the icon appearing on the first screen here.
+	 *
+	 * @param receiver
+	 * @param message
+	 */
+	public static void sendToast(final Player receiver, final String message, final CompMaterial icon) {
+		sendToast(receiver, message, icon, CompToastStyle.TASK);
 	}
 
 	/**
 	 * Send a "toast" notification. This is an advancement notification that cannot
 	 * be modified that much. It imposes a slight performance penalty.
 	 *
+	 * You can change the icon appearing on the first screen here.
+	 * You can also pick the first screen from precreated Minecraft screens here.
+	 *
 	 * @param receiver
 	 * @param message
 	 * @param icon
 	 */
-	public static void sendToast(final Player receiver, final String message, final CompMaterial icon) {
+	public static void sendToast(final Player receiver, final String message, final CompMaterial icon, final CompToastStyle toastStyle) {
 		if (message != null && !message.isEmpty()) {
 			final String colorized = Common.colorize(message);
 
@@ -2116,7 +2128,7 @@ public final class Remain {
 				Valid.checkSync("Toasts may only be sent from the main thread");
 
 				if (hasAdvancements)
-					new AdvancementAccessor(colorized, icon.toString().toLowerCase()).show(receiver);
+					new AdvancementAccessor(colorized, icon.toString().toLowerCase(), toastStyle).show(receiver);
 
 				else
 					receiver.sendMessage(colorized);
@@ -2147,7 +2159,7 @@ public final class Remain {
 						final String colorized = Common.colorize(message.apply(receiver));
 
 						if (!colorized.isEmpty()) {
-							final AdvancementAccessor accessor = new AdvancementAccessor(colorized, icon.toString().toLowerCase());
+							final AdvancementAccessor accessor = new AdvancementAccessor(colorized, icon.toString().toLowerCase(), CompToastStyle.GOAL);
 
 							if (receiver.isOnline())
 								accessor.show(receiver);
@@ -2515,7 +2527,7 @@ public final class Remain {
 		String previousName = null;
 
 		if (settingsFile.exists()) {
-			final SimpleYaml settings = SimpleYaml.loadConfiguration(settingsFile);
+			final YamlConfiguration settings = YamlConfiguration.loadConfiguration(settingsFile);
 			final String previousNameRaw = settings.getString("Bungee_Server_Name");
 
 			if (previousNameRaw != null && !previousNameRaw.isEmpty() && !"none".equals(previousNameRaw) && !"undefined".equals(previousNameRaw)) {
@@ -2612,7 +2624,10 @@ public final class Remain {
 	 *
 	 * @param objectOrSectionPathData
 	 * @return
+	 *
+	 * @deprecated legacy code, will be removed
 	 */
+	@Deprecated
 	public static Object getRootOfSectionPathData(Object objectOrSectionPathData) {
 		if (objectOrSectionPathData != null && objectOrSectionPathData.getClass() == sectionPathDataClass)
 			objectOrSectionPathData = ReflectionUtil.invoke("getData", objectOrSectionPathData);
@@ -2882,11 +2897,13 @@ class AdvancementAccessor {
 	private final NamespacedKey key;
 	private final String icon;
 	private final String message;
+	private final CompToastStyle toastStyle;
 
-	AdvancementAccessor(final String message, final String icon) {
+	AdvancementAccessor(final String message, final String icon, CompToastStyle toastStyle) {
 		this.key = new NamespacedKey(SimplePlugin.getInstance(), UUID.randomUUID().toString());
 		this.message = message;
 		this.icon = icon;
+		this.toastStyle = toastStyle;
 	}
 
 	public void show(final Player player) {
@@ -2914,7 +2931,7 @@ class AdvancementAccessor {
 		display.addProperty("title", message);
 		display.addProperty("description", "");
 		display.addProperty("background", "minecraft:textures/gui/advancements/backgrounds/adventure.png");
-		display.addProperty("frame", "goal");
+		display.addProperty("frame", this.toastStyle.getKey());
 		display.addProperty("announce_to_chat", false);
 		display.addProperty("show_toast", true);
 		display.addProperty("hidden", true);

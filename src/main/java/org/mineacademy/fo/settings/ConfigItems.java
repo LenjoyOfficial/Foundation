@@ -232,7 +232,7 @@ public final class ConfigItems<T extends YamlConfig> {
 			item.save("", null);
 
 		} else
-			item.delete();
+			item.deleteFile();
 
 		loadedItemsMap.remove(name);
 	}

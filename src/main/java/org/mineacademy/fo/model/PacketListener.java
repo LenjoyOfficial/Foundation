@@ -4,13 +4,13 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import org.bukkit.entity.Player;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
-import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.exception.EventHandledException;
@@ -52,7 +52,7 @@ public abstract class PacketListener {
 	 * @param adapter
 	 */
 	protected void addPacketListener(final SimpleAdapter adapter) {
-		Valid.checkBoolean(HookManager.isVaultLoaded(), "ProtocolLib integration requires Vault to be installed. Please install that plugin before continuing.");
+		//Valid.checkBoolean(HookManager.isVaultLoaded(), "ProtocolLib integration requires Vault to be installed. Please install that plugin before continuing.");
 
 		HookManager.addPacketListener(adapter);
 	}
@@ -141,8 +141,19 @@ public abstract class PacketListener {
 		final List<WrappedGameProfile> profiles = new ArrayList<>();
 
 		int count = 0;
-		for (final String hoverText : hoverTexts)
-			profiles.add(new WrappedGameProfile(String.valueOf(count++), Common.colorize(hoverText)));
+
+		for (final String hoverText : hoverTexts) {
+			WrappedGameProfile profile;
+
+			try {
+				profile = new WrappedGameProfile(UUID.randomUUID(), Common.colorize(hoverText));
+
+			} catch (final Throwable t) {
+				profile = new WrappedGameProfile(String.valueOf(count++), Common.colorize(hoverText));
+			}
+
+			profiles.add(profile);
+		}
 
 		return profiles;
 	}

@@ -54,7 +54,7 @@ public class SimpleProgressDisplay extends SimpleDisplay {
 	 * @param progress the progress percent from 0 to 100
 	 */
 	public void showProgress(final Player player, final int progress, final Function<String, String> replacer) {
-		final String progressBar = this.progressBar.getProgressBar(progress);
+		final String progressBar = this.progressBar.getProgressBar(progress / 100F);
 
 		final Function<String, String> notNullReplacer = Common.getOrDefault(replacer, Function.identity());
 

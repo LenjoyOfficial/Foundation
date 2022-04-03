@@ -190,7 +190,7 @@ public final class BossBarInternals implements Listener {
 	 * @throws IllegalArgumentException If the percentage is not within valid
 	 *                                  bounds.
 	 */
-	public void setMessage(final Player player, final String message, final float percent, final CompBarColor color, final CompBarStyle style) {
+	public void setMessage(final Player player, String message, final float percent, final CompBarColor color, final CompBarStyle style) {
 		Valid.checkBoolean(0F <= percent && percent <= 100F, "Percent must be between 0F and 100F, but was: " + percent);
 
 		if (this.entityClass == null)
@@ -198,6 +198,8 @@ public final class BossBarInternals implements Listener {
 
 		if (hasBar(player))
 			removeBar(player);
+
+		message = Common.colorize(message);
 
 		final NMSDragon dragon = getDragon(player, message);
 

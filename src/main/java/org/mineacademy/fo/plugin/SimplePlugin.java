@@ -177,6 +177,12 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 */
 	private SimpleCommandGroup mainCommand;
 
+	/**
+	 * A temporary bungee listener, see {@link #setBungeeCord(BungeeListener)}
+	 * set automatically by us.
+	 */
+	private BungeeListener bungeeListener;
+
 	// ----------------------------------------------------------------------------------------
 	// Main methods
 	// ----------------------------------------------------------------------------------------
@@ -226,8 +232,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		}
 
 		// Load libraries where Spigot does not do this automatically
-		if (MinecraftVersion.olderThan(V.v1_16))
-			loadLibraries();
+		loadLibraries();
 
 		// Call parent
 		onPluginLoad();
@@ -297,12 +302,13 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 		try {
 
-			if (!isEnabled())
-				return;
-
 			// --------------------------------------------
 			// Call the main start method
 			// --------------------------------------------
+
+			final Messenger messenger = getServer().getMessenger();
+			if (!messenger.isOutgoingChannelRegistered(this, "BungeeCord"))
+				messenger.registerOutgoingPluginChannel(this, "BungeeCord");
 
 			// Hide plugin name before console messages
 			final String oldLogPrefix = Common.getLogPrefix();
@@ -338,9 +344,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			registerEvents(this);
 			registerEvents(new MenuListener());
 			registerEvents(new FoundationListener());
-
-			if (getUpdateCheck() != null)
-				registerEvents(new FoundationListener.UpdateCheckListener());
 
 			if (areToolsEnabled())
 				registerEvents(new ToolsListener());
@@ -378,27 +381,76 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 */
 	private void loadLibraries() {
 		final List<Library> libraries = new ArrayList<>();
-		final YamlConfig pluginFile = YamlConfig.fromInternalPathFast("plugin.yml");
 
-		for (final String libraryPath : pluginFile.getStringList("legacy-libraries")) {
+		if (MinecraftVersion.olderThan(V.v1_16)) {
+			final YamlConfig pluginFile = YamlConfig.fromInternalPathFast("plugin.yml");
 
-			if (Remain.getJavaVersion() < 15 && libraryPath.contains("org.openjdk.nashorn:nashorn-core"))
-				continue;
+			for (final String libraryPath : pluginFile.getStringList("legacy-libraries")) {
+				if (Remain.getJavaVersion() < 15 && libraryPath.contains("org.openjdk.nashorn:nashorn-core"))
+					continue;
 
-			final Library library = Library.fromMavenRepo(libraryPath);
+				final Library library = Library.fromMavenRepo(libraryPath);
 
-			libraries.add(library);
+				libraries.add(library);
+			}
+
+			// Load normally
+			if (!libraries.isEmpty() && Remain.getJavaVersion() >= 9)
+				Common.logFramed(
+						"Warning: Unsupported Java version: " + Remain.getJavaVersion() + " for your server",
+						"version! Minecraft " + MinecraftVersion.getServerVersion() + " was designed for Java 8",
+						"and we're unable unable to load 'legacy-libraries'",
+						"that this plugin uses:",
+						Common.join(libraries, ", ", Library::getGroupId),
+						"",
+						"To fix this, start your server using Java 8 or",
+						"upgrade to Minecraft 1.16 or greater.");
+
+			else
+				for (final Library library : libraries)
+					library.load();
 		}
 
-		// Load normally
-		for (final Library library : libraries)
-			library.load();
+		// Always load user-defined libraries
+		final List<Library> manualLibraries = getLibraries();
+
+		// But only on Java 8 (for now)
+		if (!manualLibraries.isEmpty() && Remain.getJavaVersion() > 8)
+			Common.warning("The getLibraries() feature only supports Java 8 for now and does not work on Java " + Remain.getJavaVersion() + ". To load the following libraries, "
+					+ "install Java 8 or upgrade to Minecraft 16 where you use the 'libraries' feature of plugin.yml to load. Skipping loading: " + manualLibraries);
+
+		else
+			methodLibraryLoader:
+			for (final Library library : manualLibraries) {
+
+				// Detect conflicts
+				for (final Library otherLibrary : libraries)
+					if (library.getArtifactId().equals(otherLibrary.getArtifactId()) && library.getGroupId().equals(otherLibrary.getGroupId())) {
+						Common.warning("Detected library conflict: '" + library.getGroupId() + "." + library.getArtifactId() + "' is defined both in getLibraries() and plugin.yml! "
+								+ "We'll prefer the version from plugin.yml, if you want to use the one from getLibraries() then remove it from your plugin.yml file.");
+
+						continue methodLibraryLoader;
+					}
+
+				library.load();
+			}
 	}
 
 	/**
-	 * Register a simple bungee class as a custom bungeecord listener,
-	 * for sample implementation you can see the SimpleBungee field at:
-	 * https://github.com/kangarko/PluginTemplate/blob/main/src/main/java/org/mineacademy/template/PluginTemplate.java
+	 * A list of libraries to automatically download and load.
+	 *
+	 * **REQUIRES JAVA 8 FOR THE TIME BEING**
+	 *
+	 * @deprecated requires Java 8 thus only works on Minecraft 1.16 or lower with such Java version installed
+	 * @return
+	 */
+	@Deprecated
+	protected List<Library> getLibraries() {
+		return new ArrayList<>();
+	}
+
+	/**
+	 * Register a simple bungee class as a custom bungeecord listener.
 	 *
 	 * DO NOT use this if you only have that one field there with a getter, we already register it automatically,
 	 * this method is intended to be used if you have multiple fields there and want to register multiple channels.
@@ -1091,13 +1143,26 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	}
 
 	/**
-	 * Returns the default or "main" bungee listener you use. This is checked from {@link BungeeUtil#tellBungee(org.mineacademy.fo.bungee.BungeeAction, Object...)}
+	 * Returns the default or "main" bungee listener you use. This is checked from {@link BungeeUtil#sendPluginMessage(org.mineacademy.fo.bungee.BungeeMessageType, Object...)}
 	 * so that you won't have to pass in channel name each time and we use channel name from this listener instead.
 	 *
+	 * @deprecated only returns the first found bungee listener, if you have multiple, do not use, order not guaranteed
 	 * @return
 	 */
-	public BungeeListener getBungeeCord() {
-		return null;
+	@Deprecated
+	public final BungeeListener getBungeeCord() {
+		return this.bungeeListener;
+	}
+
+	/**
+	 * Sets the first valid bungee listener
+	 *
+	 * @deprecated INTERNAL USE ONLY, DO NOT USE! can only set one bungee listener, if you have multiple, order not guaranteed
+	 * @param bungeeListener
+	 */
+	@Deprecated
+	public final void setBungeeCord(BungeeListener bungeeListener) {
+		this.bungeeListener = bungeeListener;
 	}
 
 	/**
@@ -1114,6 +1179,10 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	// ----------------------------------------------------------------------------------------
 	// Prevention
 	// ----------------------------------------------------------------------------------------
+
+	public final ClassLoader getClazzLoader() {
+		return this.getClassLoader();
+	}
 
 	/**
 	 * Get the plugins jar file

@@ -15,7 +15,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang.WordUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -100,7 +99,10 @@ public final class SerializeUtil {
 			if (serializers.containsKey(object.getClass()))
 				return serializers.get(object.getClass()).apply(object);
 
-			if (object instanceof ConfigSerializable)
+			if (object instanceof ConfigurationSerializable)
+				return object;
+
+			else if (object instanceof ConfigSerializable)
 				return serialize(((ConfigSerializable) object).serialize().serialize());
 
 			else if (object instanceof StrictCollection)
@@ -113,7 +115,7 @@ public final class SerializeUtil {
 				return ((CompChatColor) object).toSaveableString();
 
 			else if (object instanceof net.md_5.bungee.api.ChatColor) {
-				final net.md_5.bungee.api.ChatColor color = ((net.md_5.bungee.api.ChatColor) object);
+				final net.md_5.bungee.api.ChatColor color = (net.md_5.bungee.api.ChatColor) object;
 
 				return MinecraftVersion.atLeast(V.v1_16) ? color.toString() : color.name();
 			}
@@ -230,9 +232,6 @@ public final class SerializeUtil {
 			else if (object instanceof Integer || object instanceof Double || object instanceof Float || object instanceof Long || object instanceof Short
 					|| object instanceof String || object instanceof Boolean || object instanceof Character)
 				return object;
-
-			else if (object instanceof ConfigurationSerializable)
-				return ((ConfigurationSerializable) object).serialize();
 
 			throw new SerializeFailedException("Does not know how to serialize " + object.getClass().getSimpleName() + "! Does it extends ConfigSerializable? Data: " + object);
 		}
@@ -736,7 +735,7 @@ public final class SerializeUtil {
 					break;
 				}
 
-			return WordUtils.capitalizeFully(localizedName.replace("_", " "));
+			return ChatUtil.capitalizeFully(localizedName.replace("_", " "));
 		}
 
 		protected static String getBukkitName(String name) {
@@ -802,7 +801,7 @@ public final class SerializeUtil {
 				if (name.equals(e.bukkitName))
 					return ItemUtil.bountifyCapitalized(e);
 
-			return WordUtils.capitalizeFully(name);
+			return ChatUtil.capitalizeFully(name);
 		}
 
 		public String getBukkitName() {

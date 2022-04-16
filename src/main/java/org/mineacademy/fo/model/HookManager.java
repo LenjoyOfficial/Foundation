@@ -683,27 +683,33 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return true if the given player is vanished in EssentialsX or CMI, or false if neither plugin is present
+	 * Return true if the given player is vanished in EssentialsX
 	 *
 	 * @deprecated this does not call metadata check for most plugins nor NMS check, see {@link PlayerUtil#isVanished(Player)}
 	 * @param player
 	 * @return
 	 */
 	@Deprecated
-	public static boolean isVanished(final Player player) {
-		if (isEssentialsLoaded() && essentialsHook.isVanished(player.getName()))
-			return true;
+	public static boolean isVanishedEssentials(final Player player) {
+		return isEssentialsLoaded() && essentialsHook.isVanished(player.getName());
+	}
 
-		if (isCMILoaded() && CMIHook.isVanished(player))
-			return true;
-
-		return false;
+	/**
+	 * Return true if the given player is vanished in CMI
+	 *
+	 * @deprecated this does not call metadata check for most plugins nor NMS check, see {@link PlayerUtil#isVanished(Player)}
+	 * @param player
+	 * @return
+	 */
+	@Deprecated
+	public static boolean isVanishedCMI(final Player player) {
+		return isCMILoaded() && CMIHook.isVanished(player);
 	}
 
 	/**
 	 * Sets the vanish status for player in CMI and Essentials
 	 *
-	 * @deprecated this does not remove vanish metadata and NMS invisibility, use {@link PlayerUtil#isVanished(Player)} for that
+	 * @deprecated this does not remove vanish metadata and NMS invisibility, use {@link PlayerUtil#setVanished(Player, boolean)} for that
 	 * @param player
 	 * @param vanished
 	 */
@@ -1543,25 +1549,6 @@ public final class HookManager {
 		if (isDiscordSRVLoaded() && !Common.stripColors(message).isEmpty())
 			discordSRVHook.sendMessage(channel, message);
 	}
-
-	// ------------------------------------------------------------------------------------------------------------
-	// Class helpers
-	// ------------------------------------------------------------------------------------------------------------
-
-	/**
-	 * Represents a PlaceholderAPI placeholder replacer with the given
-	 * variable (will be prepended with the name of your plugin, such as
-	 * <p>
-	 * chatcontrol_ + this variable
-	 * <p>
-	 * and the value that is callable so that you can return updated value each time.
-	 */
-	/*@Data
-	static class PAPIPlaceholder {
-	
-		private final String variable;
-		private final BiFunction<Player, String, String> value;
-	}*/
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -3159,12 +3146,6 @@ class DiscordSRVHook {
 		return DiscordSRV.getPlugin().getChannels().keySet();
 	}
 
-	/*boolean sendMessage(final String sender, final String channel, final String message) {
-		final DiscordSender discordSender = new DiscordSender(sender);
-	
-		return sendMessage(discordSender, channel, message);
-	}*/
-
 	boolean sendMessage(final String channel, final String message) {
 		return sendMessage((CommandSender) null, channel, message);
 	}
@@ -3263,11 +3244,38 @@ class BossHook {
 
 class MythicMobsHook {
 
+	private Boolean legacyVersion = null;
+
+	MythicMobsHook() {
+		final Plugin mythicMobs = Bukkit.getPluginManager().getPlugin("MythicMobs");
+		final String version = mythicMobs.getDescription().getVersion();
+
+		if (version.startsWith("4."))
+			legacyVersion = true;
+
+		else if (version.startsWith("5."))
+			legacyVersion = false;
+
+		else
+			Common.warning("Skipping hooking into unsupported MythicMob version " + version + "! Only 4.X.X and 5.X.X are supported.");
+
+	}
+
 	/*
 	 * Attempt to return a MythicMob name from the given entity
 	 * or null if the entity is not a MythicMob
 	 */
-	final String getBossName(Entity entity) {
+	String getBossName(Entity entity) {
+		if (legacyVersion == null)
+			return null;
+
+		if (legacyVersion)
+			return getBossNameV4(entity);
+
+		return getBossNameV5(entity);
+	}
+
+	private String getBossNameV4(Entity entity) {
 		try {
 			final Class<?> mythicMobs = ReflectionUtil.lookupClass("io.lumine.xikage.mythicmobs.MythicMobs");
 			final Object instance = ReflectionUtil.invokeStatic(mythicMobs, "inst");
@@ -3283,6 +3291,22 @@ class MythicMobsHook {
 			}
 
 		} catch (final NoSuchElementException ex) {
+		}
+
+		return null;
+	}
+
+	private String getBossNameV5(Entity entity) {
+
+		final Object mythicPlugin = ReflectionUtil.invokeStatic(ReflectionUtil.lookupClass("io.lumine.mythic.api.MythicProvider"), "get");
+		final Object mobManager = ReflectionUtil.invoke("getMobManager", mythicPlugin);
+		final Collection<?> activeMobs = ReflectionUtil.invoke("getActiveMobs", mobManager);
+
+		for (final Object mob : activeMobs) {
+			final UUID uniqueId = ReflectionUtil.invoke("getUniqueId", mob);
+
+			if (uniqueId.equals(entity.getUniqueId()))
+				return ReflectionUtil.invoke("getName", mob);
 		}
 
 		return null;

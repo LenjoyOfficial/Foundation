@@ -13,7 +13,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
-import org.apache.commons.lang.ArrayUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -140,6 +139,22 @@ public final class PlayerUtil {
 		}
 
 		return statistics;
+	}
+
+	/**
+	 * Return the total amount of time the player has spent on the server.
+	 * This will get reset if you delete the playerdata folder inside your main world folder.
+	 *
+	 * **For Minecraft 1.12 and older this returns a tick value, otherwise this returns the
+	 * amount of minutes!**
+	 *
+	 * @param player
+	 * @return
+	 */
+	public static long getPlayTimeTicksOrSeconds(OfflinePlayer player) {
+		final Statistic playTime = Remain.getPlayTimeStatisticName();
+
+		return getStatistic(player, playTime);
 	}
 
 	/**
@@ -420,7 +435,7 @@ public final class PlayerUtil {
 		final ItemStack[] inv = player.getInventory().getContents();
 		final ItemStack[] armor = player.getInventory().getArmorContents();
 
-		final ItemStack[] everything = (ItemStack[]) ArrayUtils.addAll(inv, armor);
+		final ItemStack[] everything = (ItemStack[]) Common.joinArrays(inv, armor);
 
 		for (final ItemStack i : everything)
 			if (i != null && i.getType() != Material.AIR)
@@ -448,8 +463,8 @@ public final class PlayerUtil {
 	}
 
 	/**
-	 * Return true if the player is vanished. We check for Essentials and CMI vanish and also "vanished"
-	 * metadata value which is supported by most plugins
+	 * Return true if the player is vanished. We check for "vanished"
+	 * metadata value which is supported by most plugins (CMI, Essentials, etc.)
 	 *
 	 * Does NOT return true for vanish potions or spectator mode.
 	 *
@@ -457,9 +472,6 @@ public final class PlayerUtil {
 	 * @return
 	 */
 	public static boolean isVanished(final Player player) {
-		if (HookManager.isVanished(player))
-			return true;
-
 		final List<MetadataValue> list = player.getMetadata("vanished");
 
 		for (final MetadataValue meta : list)

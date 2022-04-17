@@ -1,14 +1,14 @@
 package org.mineacademy.fo.slider;
 
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.remain.CompMaterial;
-import org.mineacademy.fo.slider.Slider;
 
-import java.util.HashMap;
-import java.util.Map;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class ItemFrameClockwiseSlider implements Slider<Map<Integer, ItemStack>> {
@@ -121,9 +121,9 @@ public class ItemFrameClockwiseSlider implements Slider<Map<Integer, ItemStack>>
 	 * @param highlighted
 	 * @return
 	 */
-	public static ItemFrameClockwiseSlider from(final ItemCreator.ItemCreatorBuilder filler,
-												final ItemCreator.ItemCreatorBuilder highlighted) {
-		return from(filler.build().make(), highlighted.build().make());
+	public static ItemFrameClockwiseSlider from(final ItemCreator filler,
+												final ItemCreator highlighted) {
+		return from(filler.make(), highlighted.make());
 	}
 
 	/**

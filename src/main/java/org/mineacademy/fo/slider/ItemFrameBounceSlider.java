@@ -1,14 +1,14 @@
 package org.mineacademy.fo.slider;
 
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.remain.CompMaterial;
-import org.mineacademy.fo.slider.Slider;
 
-import java.util.HashMap;
-import java.util.Map;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 
 /**
  * An example slider iterating through items and highlighting one.
@@ -138,8 +138,8 @@ public final class ItemFrameBounceSlider implements Slider<Map<Integer, ItemStac
 	 * @param highlighted
 	 * @return
 	 */
-	public static ItemFrameBounceSlider from(final ItemCreator.ItemCreatorBuilder filler, final ItemCreator.ItemCreatorBuilder highlighted, final ItemCreator.ItemCreatorBuilder side, final ItemCreator.ItemCreatorBuilder corner) {
-		return from(filler.build().make(), highlighted.build().make(), side.build().make(), corner.build().make());
+	public static ItemFrameBounceSlider from(final ItemCreator filler, final ItemCreator highlighted, final ItemCreator side, final ItemCreator corner) {
+		return from(filler.make(), highlighted.make(), side.make(), corner.make());
 	}
 
 	/**

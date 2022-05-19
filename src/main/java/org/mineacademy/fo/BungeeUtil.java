@@ -4,13 +4,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.util.UUID;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.ChannelNotRegisteredException;
 import org.bukkit.plugin.messaging.MessageTooLargeException;
 import org.mineacademy.fo.Common.Stringer;
-import org.mineacademy.fo.bungee.BungeeMessageType;
 import org.mineacademy.fo.bungee.BungeeListener;
+import org.mineacademy.fo.bungee.BungeeMessageType;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.exception.FoException;
@@ -66,16 +67,39 @@ public final class BungeeUtil {
 	 */
 	@SafeVarargs
 	public static <T> void sendPluginMessage(String channel, BungeeMessageType action, T... data) {
+		sendPluginMessage(null, channel, action, data);
+	}
+
+	/**
+	 * Sends message via a channel to the bungee network (upstreams). You need an
+	 * implementation in bungee to handle it, otherwise nothing will happen.
+	 *
+	 * OBS! The data written always start with:
+	 *
+	 * 1. The recipient UUID
+	 * 2. {@link Remain#getServerName()}
+	 * 3. The action parameter
+	 *
+	 *
+	 * @param <T>
+	 * @param sender through which sender to send
+	 * @param channel
+	 * @param action
+	 * @param data
+	 */
+	@SafeVarargs
+	public static <T> void sendPluginMessage(Player sender, String channel, BungeeMessageType action, T... data) {
 		Valid.checkBoolean(data.length == action.getContent().length, "Data count != valid values count in " + action + "! Given data: " + data.length + " vs needed: " + action.getContent().length);
 		Valid.checkBoolean(Remain.isServerNameChanged(), "Please configure your 'server-name' in server.properties according to mineacademy.org/server-properties first before using BungeeCord features");
 
 		if (!action.name().equals("PLAYERS_CLUSTER_DATA"))
 			Debugger.put("bungee", "Server '" + Remain.getServerName() + "' sent bungee message [" + channel + ", " + action + "]: ");
 
-		final Player recipient = findFirstPlayer();
+		if (sender == null)
+			sender = findFirstPlayer();
 
 		// This server is empty, do not send
-		if (recipient == null) {
+		if (sender == null) {
 			Debugger.put("bungee", "Cannot send " + action + " bungee channel '" + channel + "' message because this server has no players");
 
 			return;
@@ -83,13 +107,13 @@ public final class BungeeUtil {
 
 		final ByteArrayDataOutput out = ByteStreams.newDataOutput();
 
-		out.writeUTF(recipient.getUniqueId().toString());
+		out.writeUTF(sender.getUniqueId().toString());
 		out.writeUTF(Remain.getServerName());
 		out.writeUTF(action.toString());
 
 		int actionHead = 0;
 
-		for (Object datum : data) {
+		for (Object datum : data)
 			try {
 				Valid.checkNotNull(datum, "Bungee object in array is null! Array: " + Common.join(data, ", ", (Stringer<T>) t -> t == null ? "null" : t.toString() + " (" + t.getClass().getSimpleName() + ")"));
 
@@ -160,14 +184,13 @@ public final class BungeeUtil {
 
 				return;
 			}
-		}
 
 		Debugger.push("bungee");
 
 		final byte[] byteArray = out.toByteArray();
 
 		try {
-			recipient.sendPluginMessage(SimplePlugin.getInstance(), channel, byteArray);
+			Bukkit.getServer().sendPluginMessage(SimplePlugin.getInstance(), channel, byteArray);
 
 		} catch (final ChannelNotRegisteredException ex) {
 			Common.log("Cannot send Bungee '" + action + "' message because channel '" + channel + "' is not registered. "
@@ -190,7 +213,7 @@ public final class BungeeUtil {
 	 * @param sender the player to send the message as
 	 * @param data  the data
 	 */
-	public static void sendPluginMessage(@NonNull Player sender, Object... data) {
+	public static void sendMessage(@NonNull Player sender, Object... data) {
 		Valid.checkBoolean(data != null && data.length >= 1, "");
 
 		final ByteArrayDataOutput out = ByteStreams.newDataOutput();

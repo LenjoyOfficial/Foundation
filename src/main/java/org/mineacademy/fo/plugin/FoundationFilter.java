@@ -33,7 +33,7 @@ final class FoundationFilter {
 	/**
 	 * Start filtering the console
 	 */
-	public static void inject() {
+	static void inject() {
 
 		// Set filter for System out
 		System.setOut(new FilterSystem());
@@ -158,22 +158,22 @@ class FilterLog4j implements org.apache.logging.log4j.core.Filter {
 
 	@Override
 	public Result filter(LogEvent record) {
-		return checkMessage(record.getMessage().getFormattedMessage());
+		return this.checkMessage(record.getMessage().getFormattedMessage());
 	}
 
 	@Override
 	public Result filter(Logger arg0, Level arg1, Marker arg2, String message, Object... arg4) {
-		return checkMessage(message);
+		return this.checkMessage(message);
 	}
 
 	@Override
 	public Result filter(Logger arg0, Level arg1, Marker arg2, Object message, Throwable arg4) {
-		return checkMessage(message.toString());
+		return this.checkMessage(message.toString());
 	}
 
 	@Override
 	public Result filter(Logger arg0, Level arg1, Marker arg2, Message message, Throwable arg4) {
-		return checkMessage(message.getFormattedMessage());
+		return this.checkMessage(message.getFormattedMessage());
 	}
 
 	/*

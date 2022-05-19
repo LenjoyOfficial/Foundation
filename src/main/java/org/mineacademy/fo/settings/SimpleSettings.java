@@ -8,9 +8,6 @@ import org.mineacademy.fo.Common;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.StrictList;
 import org.mineacademy.fo.constants.FoConstants;
-import org.mineacademy.fo.debug.Debugger;
-import org.mineacademy.fo.debug.LagCatcher;
-import org.mineacademy.fo.model.SpigotUpdater;
 import org.mineacademy.fo.plugin.SimplePlugin;
 
 /**
@@ -37,7 +34,7 @@ public class SimpleSettings extends YamlStaticConfig {
 
 	@Override
 	protected final void onLoad() throws Exception {
-		loadConfiguration(getSettingsFileName());
+		this.loadConfiguration(this.getSettingsFileName());
 	}
 
 	/**
@@ -70,8 +67,8 @@ public class SimpleSettings extends YamlStaticConfig {
 		// Load version first so we can use it later
 		setPathPrefix(null);
 
-		if ((VERSION = getInteger("Version")) != getConfigVersion())
-			set("Version", getConfigVersion());
+		if ((VERSION = getInteger("Version")) != this.getConfigVersion())
+			set("Version", this.getConfigVersion());
 	}
 
 	/**

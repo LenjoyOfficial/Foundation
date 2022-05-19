@@ -34,8 +34,6 @@ import org.mineacademy.fo.SerializeUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictList;
-import org.mineacademy.fo.command.SimpleCommand;
-import org.mineacademy.fo.command.SimpleCommandGroup;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.model.BoxedMessage;
 import org.mineacademy.fo.model.ConfigSerializable;
@@ -874,8 +872,7 @@ public abstract class FileConfig {
 	public final <K, V> List<Tuple<K, V>> getTupleList(final String path, final Class<K> tupleKey, final Class<V> tupleValue) {
 		final List<Tuple<K, V>> list = new ArrayList<>();
 
-		for (final Object object : this.getList(path)) {
-
+		for (final Object object : this.getList(path))
 			if (object == null)
 				list.add(null);
 			else {
@@ -883,7 +880,6 @@ public abstract class FileConfig {
 
 				list.add(tuple);
 			}
-		}
 
 		return list;
 	}
@@ -1239,7 +1235,7 @@ public abstract class FileConfig {
 	public final void save() {
 		Valid.checkNotNull(this.file, "Cannot call save() for " + this + " when no file was set! Call load first!");
 
-		this.save(file);
+		this.save(this.file);
 	}
 
 	/**
@@ -1255,6 +1251,8 @@ public abstract class FileConfig {
 
 					return;
 				}
+
+				this.onPreSave();
 
 				if (this.canSaveFile()) {
 					this.onSave();
@@ -1288,14 +1286,23 @@ public abstract class FileConfig {
 	}
 
 	/**
+	 * Called automatically before {@link #canSaveFile()}
+	 */
+	protected void onPreSave() {
+	}
+
+	/**
 	 * Called automatically on saving the configuration, you can call "set(path, value)" methods here
 	 * to save your class fields. We automatically save what you have in {@link #saveToMap()} if not null.
+	 *
+	 * Called after {@link #canSaveFile()}
 	 */
 	protected void onSave() {
 		final SerializedMap map = this.saveToMap();
 
 		if (map != null)
-			this.set("", map);
+			for (final Map.Entry<String, Object> entry : map.entrySet())
+				this.set(entry.getKey(), entry.getValue());
 	}
 
 	/**

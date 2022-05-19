@@ -46,11 +46,11 @@ public final class ChatImage {
 	 * @return
 	 */
 	public ChatImage appendText(String... text) {
-		for (int y = 0; y < lines.length; y++)
+		for (int y = 0; y < this.lines.length; y++)
 			if (text.length > y) {
 				final String line = text[y];
 
-				lines[y] += " " + line;
+				this.lines[y] += " " + line;
 			}
 
 		return this;
@@ -63,11 +63,11 @@ public final class ChatImage {
 	 * @return
 	 */
 	public ChatImage appendCenteredText(String... text) {
-		for (int y = 0; y < lines.length; y++)
+		for (int y = 0; y < this.lines.length; y++)
 			if (text.length > y) {
-				final int len = ChatPaginator.AVERAGE_CHAT_PAGE_WIDTH - lines[y].length();
+				final int len = ChatPaginator.AVERAGE_CHAT_PAGE_WIDTH - this.lines[y].length();
 
-				lines[y] = lines[y] + center(text[y], len);
+				this.lines[y] = this.lines[y] + this.center(text[y], len);
 
 			} else
 				return this;
@@ -102,7 +102,7 @@ public final class ChatImage {
 	 * @param sender
 	 */
 	public void sendToPlayer(CommandSender sender) {
-		for (final String line : lines)
+		for (final String line : this.lines)
 			sender.sendMessage(Variables.replace(line, sender));
 	}
 
@@ -127,13 +127,27 @@ public final class ChatImage {
 
 		if (image == null)
 			throw new NullPointerException("Unable to load image size " + file.length() + " bytes from " + file.toPath());
+		else {
 
-		final CompChatColor[][] chatColors = parseImage(image, height);
-		final ChatImage chatImage = new ChatImage();
+			final BufferedImage newImage = new BufferedImage(
+					image.getWidth(),
+					image.getHeight(),
+					BufferedImage.TYPE_INT_RGB);
 
-		chatImage.lines = parseColors(chatColors, characterType);
+			newImage.createGraphics()
+					.drawImage(image,
+							0,
+							0,
+							Color.WHITE,
+							null);
 
-		return chatImage;
+			final CompChatColor[][] chatColors = parseImage(newImage, height);
+			final ChatImage chatImage = new ChatImage();
+
+			chatImage.lines = parseColors(chatColors, characterType);
+
+			return chatImage;
+		}
 	}
 
 	/**
@@ -152,14 +166,14 @@ public final class ChatImage {
 	/*
 	 * Parse the given image into chat colors
 	 */
-	private static CompChatColor[][] parseImage(BufferedImage image, int height) {
-		final double ratio = (double) image.getHeight() / image.getWidth();
+	private static CompChatColor[][] parseImage(BufferedImage newImage, int height) {
+		final double ratio = (double) newImage.getHeight() / newImage.getWidth();
 		int width = (int) (height / ratio);
 
 		if (width > 10)
 			width = 10;
 
-		final BufferedImage resized = resizeImage(image, (int) (height / ratio), height);
+		final BufferedImage resized = resizeImage(newImage, (int) (height / ratio), height);
 		final CompChatColor[][] chatImg = new CompChatColor[resized.getWidth()][resized.getHeight()];
 
 		for (int x = 0; x < resized.getWidth(); x++)
@@ -197,10 +211,10 @@ public final class ChatImage {
 		for (int y = 0; y < colors[0].length; y++) {
 			String line = "";
 
-			for (int x = 0; x < colors.length; x++) {
-				final CompChatColor color = colors[x][y];
+			for (final CompChatColor[] color2 : colors) {
+				final CompChatColor color = color2[y];
 
-				line += color != null ? colors[x][y].toString() + imgchar : TRANSPARENT_CHAR;
+				line += color != null ? color2[y].toString() + imgchar : TRANSPARENT_CHAR;
 			}
 
 			lines[y] = line + ChatColor.RESET;
@@ -241,7 +255,7 @@ public final class ChatImage {
 		 */
 		@Override
 		public String toString() {
-			return String.valueOf(character);
+			return String.valueOf(this.character);
 		}
 	}
 }

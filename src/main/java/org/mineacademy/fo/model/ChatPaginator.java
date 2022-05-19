@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -15,7 +16,6 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.Plugin;
 import org.mineacademy.fo.ChatUtil;
 import org.mineacademy.fo.Common;
-import org.mineacademy.fo.command.PermsCommand;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.settings.SimpleLocalization;
 
@@ -215,6 +215,13 @@ public final class ChatPaginator {
 	 * @param page
 	 */
 	public void send(CommandSender sender, int page) {
+		if (Bukkit.isPrimaryThread())
+			this.send0(sender, page);
+		else
+			Common.runLater(() -> this.send0(sender, page));
+	}
+
+	private void send0(CommandSender sender, int page) {
 		if (sender instanceof Player) {
 			final Player player = (Player) sender;
 

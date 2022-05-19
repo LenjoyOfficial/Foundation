@@ -8,6 +8,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
+
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -88,7 +90,7 @@ public abstract class DiscordListener implements Listener {
 	private final void handleMessageReceived(DiscordGuildMessagePreProcessEvent event) {
 		this.message = event.getMessage();
 
-		onMessageReceived(event);
+		this.onMessageReceived(event);
 	}
 
 	/*
@@ -97,7 +99,7 @@ public abstract class DiscordListener implements Listener {
 	private final void handleMessageReceivedLate(DiscordGuildMessagePostProcessEvent event) {
 		this.message = event.getMessage();
 
-		onMessageReceivedLate(event);
+		this.onMessageReceivedLate(event);
 	}
 
 	/**
@@ -138,7 +140,7 @@ public abstract class DiscordListener implements Listener {
 	protected final Player findPlayer(String playerName, String offlineMessage) {
 		final Player player = Bukkit.getPlayer(playerName);
 
-		checkBoolean(player != null, offlineMessage);
+		this.checkBoolean(player != null, offlineMessage);
 		return player;
 	}
 
@@ -168,10 +170,26 @@ public abstract class DiscordListener implements Listener {
 		final JDA jda = DiscordUtil.getJda();
 
 		// JDA can be null when server is starting or connecting
-		if (jda != null)
-			return jda.getTextChannelsByName(channelName, true);
+		if (jda != null) {
+			final List<TextChannel> channels = new ArrayList<>();
+
+			for (final TextChannel channel : jda.getTextChannels())
+				if (channel.getName().equalsIgnoreCase(channelName))
+					channels.add(channel);
+
+			return channels;
+		}
 
 		return new ArrayList<>();
+	}
+
+	/**
+	 * Return list of all linked channel names
+	 *
+	 * @return
+	 */
+	protected final Set<String> getChannelsNames() {
+		return HookManager.getDiscordChannels();
 	}
 
 	/**
@@ -186,18 +204,7 @@ public abstract class DiscordListener implements Listener {
 	 */
 	protected final void checkBoolean(boolean value, String warningMessage) throws RemovedMessageException {
 		if (!value)
-			returnHandled(warningMessage);
-	}
-
-	/**
-	 * Remove the message, send a warning and stop executing your code below this
-	 *
-	 * @param message
-	 */
-	protected final void returnHandled(String message) {
-		removeAndWarn(message);
-
-		throw new RemovedMessageException();
+			this.removeAndWarn(warningMessage);
 	}
 
 	/**
@@ -207,7 +214,7 @@ public abstract class DiscordListener implements Listener {
 	 * @param warningMessage
 	 */
 	protected final void removeAndWarn(String warningMessage) {
-		removeAndWarn(this.message, warningMessage);
+		this.removeAndWarn(this.message, warningMessage);
 	}
 
 	/**
@@ -218,7 +225,7 @@ public abstract class DiscordListener implements Listener {
 	 * @param warningMessage
 	 */
 	protected final void removeAndWarn(Message message, String warningMessage) {
-		removeAndWarn(message, warningMessage, 2);
+		this.removeAndWarn(message, warningMessage, 2);
 	}
 
 	/**
@@ -236,6 +243,20 @@ public abstract class DiscordListener implements Listener {
 		final Message channelWarningMessage = channel.sendMessage(warningMessage).complete();
 
 		channel.deleteMessageById(channelWarningMessage.getIdLong()).completeAfter(warningDurationSeconds, TimeUnit.SECONDS);
+
+		throw new RemovedMessageException();
+	}
+
+	/**
+	 * Sends a message to the chat making it disappear after 2 seconds and returns your code
+	 *
+	 * @param message
+	 */
+	protected final void returnHandled(String message) {
+		final Message notifyMessage = this.message.getChannel().sendMessage(message).complete();
+		notifyMessage.delete().completeAfter(2, TimeUnit.SECONDS);
+
+		throw new RemovedMessageException();
 	}
 
 	/**
@@ -284,7 +305,7 @@ public abstract class DiscordListener implements Listener {
 	 * @param channelName
 	 * @param message
 	 */
-	protected final void sendWebhookMessage(CommandSender sender, String channelName, String message) {
+	protected final void sendWebhookMessage(@Nullable CommandSender sender, String channelName, String message) {
 		final List<TextChannel> channels = this.findChannels(channelName);
 		final TextChannel channel = channels.isEmpty() ? null : channels.get(0);
 
@@ -301,7 +322,7 @@ public abstract class DiscordListener implements Listener {
 					WebhookUtil.deliverMessage(channel, (Player) sender, message);
 
 				else
-					channel.sendMessage(message).complete();
+					HookManager.sendDiscordMessage(sender, channelName, message);
 
 			} catch (final ErrorResponseException ex) {
 				Debugger.debug("discord", "Unable to send message to Discord channel " + channelName + ", message: " + message);
@@ -382,7 +403,7 @@ public abstract class DiscordListener implements Listener {
 
 					// Send a new one
 					final Message newSentMessage = channel
-							.sendMessage(format.replace("{player}", message.getAuthor().getName()).replace("*", "\\*").replace("_", "\\_").replace("@", "\\@"))
+							.sendMessage(format.replace("{player}", message.getAuthor().getName()))
 							.complete();
 
 					this.editedMessages.put(messageId, newSentMessage.getIdLong());
@@ -439,15 +460,6 @@ public abstract class DiscordListener implements Listener {
 				Common.log("Unable to kick " + discordSender.getName() + " because he appears to be Discord administrator");
 			}
 		});
-	}
-
-	/**
-	 * Convenience method for getting all linked DiscordSRV channels
-	 *
-	 * @return
-	 */
-	protected final Set<String> getChannels() {
-		return HookManager.getDiscordChannels();
 	}
 
 	/**

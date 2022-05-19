@@ -6,7 +6,6 @@ import static org.mineacademy.fo.ReflectionUtil.getOBCClass;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -45,7 +44,6 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.SimpleCommandMap;
-import org.bukkit.configuration.MemorySection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
@@ -63,8 +61,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BookMeta;
-import org.bukkit.inventory.meta.SpawnEggMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -72,7 +68,6 @@ import org.bukkit.potion.PotionType;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
 import org.mineacademy.fo.Common;
-import org.mineacademy.fo.EntityUtil;
 import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.MathUtil;
@@ -300,10 +295,14 @@ public final class Remain {
 				sendPacket = getNMSClass(hasNMS ? "PlayerConnection" : "NetServerHandler", "net.minecraft.server.network.PlayerConnection")
 						.getMethod(MinecraftVersion.atLeast(V.v1_18) ? "a" : "sendPacket", getNMSClass("Packet", "net.minecraft.network.protocol.Packet"));
 
-				if (MinecraftVersion.olderThan(V.v1_12)) {
-					fieldEntityInvulnerable = ReflectionUtil.getNMSClass("Entity").getDeclaredField("invulnerable");
-					fieldEntityInvulnerable.setAccessible(true);
-				} else
+				if (MinecraftVersion.olderThan(V.v1_12))
+					try {
+						fieldEntityInvulnerable = ReflectionUtil.getNMSClass("Entity").getDeclaredField("invulnerable");
+						fieldEntityInvulnerable.setAccessible(true);
+					} catch (final Throwable t) {
+						// Unavailable
+					}
+				else
 					fieldEntityInvulnerable = null;
 
 			} catch (final Throwable t) {
@@ -332,13 +331,13 @@ public final class Remain {
 
 			try {
 				World.class.getMethod("spawnParticle", org.bukkit.Particle.class, Location.class, int.class);
-			} catch (final NoClassDefFoundError | ReflectiveOperationException ex) {
+			} catch (final Throwable ex) {
 				hasParticleAPI = false;
 			}
 
 			try {
 				Class.forName("net.md_5.bungee.chat.ComponentSerializer");
-			} catch (final ClassNotFoundException ex) {
+			} catch (final Throwable ex) {
 				bungeeApiPresent = false;
 
 				throw new FoException(
@@ -350,67 +349,62 @@ public final class Remain {
 
 			try {
 				Objective.class.getMethod("getScore", String.class);
-			} catch (final NoClassDefFoundError | NoSuchMethodException e) {
+			} catch (final Throwable e) {
 				newScoreboardAPI = false;
 			}
 
 			try {
 				Class.forName("org.bukkit.event.player.PlayerEditBookEvent").getName();
-			} catch (final ClassNotFoundException ex) {
+			} catch (final Throwable ex) {
 				hasBookEvent = false;
 			}
 
 			try {
 				Inventory.class.getMethod("getLocation");
-			} catch (final ReflectiveOperationException ex) {
+			} catch (final Throwable ex) {
 				hasInventoryLocation = false;
 			}
 
 			try {
 				Entity.class.getMethod("getScoreboardTags");
-			} catch (final ReflectiveOperationException ex) {
+			} catch (final Throwable ex) {
 				hasScoreboardTags = false;
 			}
 
 			try {
 				Class.forName("org.bukkit.inventory.meta.SpawnEggMeta");
-			} catch (final ClassNotFoundException err) {
+			} catch (final Throwable err) {
 				hasSpawnEggMeta = false;
 			}
 
 			try {
 				Class.forName("org.bukkit.advancement.Advancement");
 				Class.forName("org.bukkit.NamespacedKey");
-
-			} catch (final ClassNotFoundException err) {
+			} catch (final Throwable err) {
 				hasAdvancements = false;
 			}
 
 			try {
 				YamlConfiguration.class.getMethod("load", java.io.Reader.class);
-
-			} catch (final NoSuchMethodException err) {
+			} catch (final Throwable err) {
 				hasYamlReaderLoad = false;
 			}
 
 			try {
 				org.bukkit.inventory.ItemStack.class.getMethod("getItemMeta");
-
-			} catch (final Exception ex) {
+			} catch (final Throwable ex) {
 				hasItemMeta = false;
 			}
 
 			try {
 				Entity.class.getMethod("addPassenger", Entity.class);
-
-			} catch (final Exception ex) {
+			} catch (final Throwable ex) {
 				hasAddPassenger = false;
 			}
 
 			try {
 				sectionPathDataClass = ReflectionUtil.lookupClass("org.bukkit.configuration.SectionPathData");
-
-			} catch (final ReflectionException ex) {
+			} catch (final Throwable ex) {
 				// unsupported
 			}
 
@@ -700,10 +694,9 @@ public final class Remain {
 	 * @param material
 	 */
 	public static void setTypeAndData(final Block block, final CompMaterial material) {
-		if (MinecraftVersion.atLeast(V.v1_13)) {
+		if (MinecraftVersion.atLeast(V.v1_13))
 			block.setType(material.getMaterial());
-
-		} else
+		else
 			try {
 				block.getClass().getMethod("setTypeIdAndData", int.class, byte.class, boolean.class).invoke(block, material.getId(), material.getData(), true);
 			} catch (final ReflectiveOperationException ex) {
@@ -1244,11 +1237,19 @@ public final class Remain {
 	 * @return
 	 */
 	public static SimpleCommandMap getCommandMap() {
+		final Class<?> craftServer = getOBCClass("CraftServer");
+
 		try {
-			return (SimpleCommandMap) getOBCClass("CraftServer").getDeclaredMethod("getCommandMap").invoke(Bukkit.getServer());
+			return (SimpleCommandMap) craftServer.getDeclaredMethod("getCommandMap").invoke(Bukkit.getServer());
 
 		} catch (final ReflectiveOperationException ex) {
-			throw new FoException(ex, "Unable to get the command map");
+
+			try {
+				return ReflectionUtil.getFieldContent(Bukkit.getServer(), "commandMap");
+
+			} catch (final Throwable ex2) {
+				throw new FoException(ex2, "Unable to get the command map");
+			}
 		}
 	}
 
@@ -1430,10 +1431,10 @@ public final class Remain {
 	 */
 	public static void openBook(Player player, ItemStack book) {
 		Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_8), "Opening books is only supported on MC 1.8 and greater");
-		Valid.checkBoolean(book.getItemMeta() instanceof BookMeta, "openBook method called for not a book item: " + book);
+		Valid.checkBoolean(book.getItemMeta() instanceof org.bukkit.inventory.meta.BookMeta, "openBook method called for not a book item: " + book);
 
 		// Fix "Invalid book tag" error when author/title is empty
-		final BookMeta meta = (BookMeta) book.getItemMeta();
+		final org.bukkit.inventory.meta.BookMeta meta = (org.bukkit.inventory.meta.BookMeta) book.getItemMeta();
 
 		if (meta.getAuthor() == null)
 			meta.setAuthor("");
@@ -1634,10 +1635,21 @@ public final class Remain {
 	 * @param player
 	 * @return
 	 */
-	public static int getPlaytimeMinutes(final Player player) {
-		final Statistic stat = getPlayTimeStatisticName();
+	public static long getPlaytimeMinutes(final OfflinePlayer player) {
+		return getPlaytimeSeconds(player) / 60;
+	}
 
-		return player.getStatistic(stat) / (stat.name().contains("TICK") ? 20 * 60 : 60 * 60);
+	/**
+	 * Return how long the player has played on this server (pulled from your world statistics file)
+	 * in seconds.
+	 *
+	 * @param player
+	 * @return
+	 */
+	public static long getPlaytimeSeconds(final OfflinePlayer player) {
+		final long value = PlayerUtil.getStatistic(player, getPlayTimeStatisticName());
+
+		return value / 20;
 	}
 
 	/**
@@ -1801,10 +1813,13 @@ public final class Remain {
 	 * Return a list of pages (new MC also will expose interactive elements)
 	 * in a book
 	 *
-	 * @param meta
+	 * @param metaObject
 	 * @return
 	 */
-	public static List<BaseComponent[]> getPages(BookMeta meta) {
+	public static List<BaseComponent[]> getPages(Object metaObject) {
+		Valid.checkBoolean(metaObject instanceof org.bukkit.inventory.meta.BookMeta);
+		final org.bukkit.inventory.meta.BookMeta meta = (org.bukkit.inventory.meta.BookMeta) metaObject;
+
 		try {
 			return meta.spigot().getPages();
 
@@ -1821,10 +1836,13 @@ public final class Remain {
 	/**
 	 * Attempts to set the book pages from the given list
 	 *
-	 * @param meta
+	 * @param metaObject
 	 * @param pages
 	 */
-	public static void setPages(BookMeta meta, List<BaseComponent[]> pages) {
+	public static void setPages(Object metaObject, List<BaseComponent[]> pages) {
+		Valid.checkBoolean(metaObject instanceof org.bukkit.inventory.meta.BookMeta);
+		final org.bukkit.inventory.meta.BookMeta meta = (org.bukkit.inventory.meta.BookMeta) metaObject;
+
 		try {
 			meta.spigot().setPages(pages);
 
@@ -2148,7 +2166,7 @@ public final class Remain {
 	 */
 	public static void sendToast(final List<Player> receivers, final Function<Player, String> message, final CompMaterial icon) {
 
-		if (hasAdvancements) {
+		if (hasAdvancements)
 			Common.runLaterAsync(() -> {
 				for (final Player receiver : receivers) {
 
@@ -2167,8 +2185,7 @@ public final class Remain {
 					});
 				}
 			});
-
-		} else
+		else
 			for (final Player receiver : receivers) {
 				final String colorized = Common.colorize(message.apply(receiver));
 
@@ -2582,22 +2599,7 @@ public final class Remain {
 	 * @return
 	 */
 	public static int getJavaVersion() {
-		String version = System.getProperty("java.version");
-
-		if (version.startsWith("1."))
-			version = version.substring(2, 3);
-
-		else {
-			final int dot = version.indexOf(".");
-
-			if (dot != -1)
-				version = version.substring(0, dot);
-		}
-
-		if (version.contains("-"))
-			version = version.split("\\-")[0];
-
-		return Integer.parseInt(version);
+		return SimplePlugin.getJavaVersion(); // The reason we have one in SimplePlugin is to NOT invoke the Remain class when calling
 	}
 
 	/**
@@ -2615,6 +2617,28 @@ public final class Remain {
 
 			// Unsupported
 			return 20;
+		}
+	}
+
+	/**
+	 * Attempts to set render distance of the player to the given value
+	 * returning false if we got a reflective exception (such as when not using PaperSpigot
+	 * or on an outdated MC version).
+	 *
+	 * @return
+	 */
+	public static boolean setViewDistance(Player player, int viewDistanceChunks) {
+
+		try {
+			final Method setViewDistance = Player.class.getDeclaredMethod("setViewDistance", int.class);
+
+			ReflectionUtil.invoke(setViewDistance, player, viewDistanceChunks);
+			return true;
+
+		} catch (final ReflectiveOperationException ex) {
+
+			// Not using Paper or old MC version
+			return false;
 		}
 	}
 
@@ -2715,7 +2739,7 @@ public final class Remain {
 	}
 
 	/**
-	 * Return if the server version supports {@link SpawnEggMeta}
+	 * Return if the server version supports SpawnEggMeta
 	 *
 	 * @return true if egg meta are supported
 	 */
@@ -2907,17 +2931,17 @@ class AdvancementAccessor {
 	}
 
 	public void show(final Player player) {
-		loadAdvancement();
-		grantAdvancement(player);
+		this.loadAdvancement();
+		this.grantAdvancement(player);
 
 		Common.runLater(10, () -> {
-			revokeAdvancement(player);
-			removeAdvancement();
+			this.revokeAdvancement(player);
+			this.removeAdvancement();
 		});
 	}
 
 	private void loadAdvancement() {
-		Bukkit.getUnsafe().loadAdvancement(key, compileJson0());
+		Bukkit.getUnsafe().loadAdvancement(this.key, this.compileJson0());
 	}
 
 	private String compileJson0() {
@@ -2928,7 +2952,7 @@ class AdvancementAccessor {
 
 		final JsonObject display = new JsonObject();
 		display.add("icon", icon);
-		display.addProperty("title", message);
+		display.addProperty("title", this.message);
 		display.addProperty("description", "");
 		display.addProperty("background", "minecraft:textures/gui/advancements/backgrounds/adventure.png");
 		display.addProperty("frame", this.toastStyle.getKey());
@@ -2950,7 +2974,7 @@ class AdvancementAccessor {
 	}
 
 	private void grantAdvancement(final Player plazer) {
-		final Advancement adv = getAdvancement();
+		final Advancement adv = this.getAdvancement();
 		final AdvancementProgress progress = plazer.getAdvancementProgress(adv);
 
 		if (!progress.isDone())
@@ -2958,7 +2982,7 @@ class AdvancementAccessor {
 	}
 
 	private void revokeAdvancement(final Player plazer) {
-		final Advancement adv = getAdvancement();
+		final Advancement adv = this.getAdvancement();
 		final AdvancementProgress prog = plazer.getAdvancementProgress(adv);
 
 		if (prog.isDone())
@@ -2966,11 +2990,11 @@ class AdvancementAccessor {
 	}
 
 	private void removeAdvancement() {
-		Bukkit.getUnsafe().removeAdvancement(key);
+		Bukkit.getUnsafe().removeAdvancement(this.key);
 	}
 
 	private Advancement getAdvancement() {
-		return Bukkit.getAdvancement(key);
+		return Bukkit.getAdvancement(this.key);
 	}
 }
 

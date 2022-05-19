@@ -23,7 +23,7 @@ import lombok.NonNull;
 
 /**
  * A special class that can store loaded {@link YamlConfig} files
- *
+ * <p>
  * DOES NOT INVOKE {@link YamlConfig#loadConfiguration(String, String)}
  * for you, you must invoke it by yourself as you otherwise normally would!
  *
@@ -53,26 +53,25 @@ public final class ConfigItems<T extends YamlConfig> {
 	 * <p>
 	 * *MUST* have a private constructor without any arguments
 	 */
-	private final Class<T> prototypeClass;
+	private final Function<String, Class<T>> prototypeCreator;
 
 	/**
 	 * Are all items stored in a single file?
 	 */
-	private boolean singleFile = false;
+	private final boolean singleFile;
 
 	/**
 	 * Create a new config items instance
 	 *
 	 * @param type
 	 * @param folder
-	 * @param prototypeClass
-	 * @param hasDefaultPrototype
+	 * @param prototypeCreator
 	 * @param singleFile
 	 */
-	private ConfigItems(String type, String folder, Class<T> prototypeClass, boolean singleFile) {
+	private ConfigItems(String type, String folder, Function<String, Class<T>> prototypeCreator, boolean singleFile) {
 		this.type = type;
 		this.folder = folder;
-		this.prototypeClass = prototypeClass;
+		this.prototypeCreator = prototypeCreator;
 		this.singleFile = singleFile;
 	}
 
@@ -85,7 +84,19 @@ public final class ConfigItems<T extends YamlConfig> {
 	 * @return
 	 */
 	public static <P extends YamlConfig> ConfigItems<P> fromFolder(String folder, Class<P> prototypeClass) {
-		return new ConfigItems<>(folder.substring(0, folder.length() - (folder.endsWith("es") && !folder.contains("variable") ? 2 : folder.endsWith("s") ? 1 : 0)), folder, prototypeClass, false);
+		return fromFolder(folder, s -> prototypeClass);
+	}
+
+	/**
+	 * Load items from the given folder
+	 *
+	 * @param <P>
+	 * @param folder
+	 * @param prototypeCreator
+	 * @return
+	 */
+	public static <P extends YamlConfig> ConfigItems<P> fromFolder(String folder, Function<String, Class<P>> prototypeCreator) {
+		return new ConfigItems<>(folder.substring(0, folder.length() - (folder.endsWith("es") && !folder.contains("variable") ? 2 : folder.endsWith("s") ? 1 : 0)), folder, prototypeCreator, false);
 	}
 
 	/**
@@ -98,7 +109,20 @@ public final class ConfigItems<T extends YamlConfig> {
 	 * @return
 	 */
 	public static <P extends YamlConfig> ConfigItems<P> fromFile(String path, String file, Class<P> prototypeClass) {
-		return new ConfigItems<>(path, file, prototypeClass, true);
+		return fromFile(path, file, s -> prototypeClass);
+	}
+
+	/**
+	 * Load items from the given YAML file path
+	 *
+	 * @param <P>
+	 * @param path
+	 * @param file
+	 * @param prototypeCreator
+	 * @return
+	 */
+	public static <P extends YamlConfig> ConfigItems<P> fromFile(String path, String file, Function<String, Class<P>> prototypeCreator) {
+		return new ConfigItems<>(path, file, prototypeCreator, true);
 	}
 
 	/**
@@ -116,36 +140,33 @@ public final class ConfigItems<T extends YamlConfig> {
 	public void loadItems(@Nullable Function<File, T> loader) {
 
 		// Clear old items
-		loadedItemsMap.clear();
+		this.loadedItemsMap.clear();
 
-		if (singleFile) {
+		if (this.singleFile) {
 			final File file = FileUtil.extract(this.folder);
 			final YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
 			//Valid.checkBoolean(config.isSet(this.type), "Unable to locate configuration section " + this.type + " in " + file);
 
 			if (config.isSet(this.type))
 				for (final String name : config.getConfigurationSection(this.type).getKeys(false))
-					loadOrCreateItem(name);
-		}
-
-		else {
+					this.loadOrCreateItem(name);
+		} else {
 			// Try copy items from our JAR
-			if (!FileUtil.getFile(folder).exists())
-				FileUtil.extractFolderFromJar(folder + "/", folder);
+			if (!FileUtil.getFile(this.folder).exists())
+				FileUtil.extractFolderFromJar(this.folder + "/", this.folder);
 
 			// Load items on our disk
-			final File[] files = FileUtil.getFiles(folder, "yml");
+			final File[] files = FileUtil.getFiles(this.folder, "yml");
 
-			for (final File file : files) {
+			for (final File file : files)
 				if (loader != null)
 					loader.apply(file);
 
 				else {
 					final String name = FileUtil.getFileName(file);
 
-					loadOrCreateItem(name);
+					this.loadOrCreateItem(name);
 				}
-			}
 		}
 	}
 
@@ -166,13 +187,12 @@ public final class ConfigItems<T extends YamlConfig> {
 	 *
 	 * @param name
 	 * @param instantiator by default we create new instances of your item by calling its constructor,
-	 * 		  which either can be a no args one or one taking a single argument, the name. If that is not
-	 * 		  sufficient, you can supply your custom instantiator here.
-	 *
+	 *                     which either can be a no args one or one taking a single argument, the name. If that is not
+	 *                     sufficient, you can supply your custom instantiator here.
 	 * @return
 	 */
 	public T loadOrCreateItem(@NonNull final String name, @Nullable Supplier<T> instantiator) {
-		Valid.checkBoolean(!isItemLoaded(name), "Item " + (this.type == null ? "" : this.type + " ") + "named " + name + " already exists! Available: " + getItemNames());
+		Valid.checkBoolean(!this.isItemLoaded(name), "Item " + (this.type == null ? "" : this.type + " ") + "named " + name + " already exists! Available: " + this.getItemNames());
 
 		// Create a new instance of our item
 		T item = null;
@@ -185,6 +205,9 @@ public final class ConfigItems<T extends YamlConfig> {
 			else {
 				Constructor<T> constructor;
 				boolean nameConstructor = true;
+
+				final Class<T> prototypeClass = this.prototypeCreator.apply(name);
+				Valid.checkNotNull(prototypeClass);
 
 				try {
 					constructor = prototypeClass.getDeclaredConstructor(String.class);
@@ -204,18 +227,18 @@ public final class ConfigItems<T extends YamlConfig> {
 						item = constructor.newInstance();
 
 				} catch (final InstantiationException ex) {
-					Common.throwError(ex, "Failed to create new" + (type == null ? prototypeClass.getSimpleName() : " " + type) + " " + name + " from " + constructor);
+					Common.throwError(ex, "Failed to create new" + (this.type == null ? prototypeClass.getSimpleName() : " " + this.type) + " " + name + " from " + constructor);
 				}
 			}
 
 			// Register
-			loadedItemsMap.put(name, item);
+			this.loadedItemsMap.put(name, item);
 
 		} catch (final Throwable t) {
-			Common.throwError(t, "Failed to load" + (type == null ? prototypeClass.getSimpleName() : " " + type) + " " + name + (this.singleFile ? "" : " from " + folder));
+			Common.throwError(t, "Failed to load" + name + (this.singleFile ? "" : " from " + this.folder));
 		}
 
-		Valid.checkNotNull(item, "Failed to initiliaze" + (type == null ? prototypeClass.getSimpleName() : " " + type) + " " + name + " from " + folder);
+		Valid.checkNotNull(item, "Failed to initiliaze " + name + " from " + this.folder);
 		return item;
 	}
 
@@ -225,16 +248,24 @@ public final class ConfigItems<T extends YamlConfig> {
 	 * @param item
 	 */
 	public void removeItem(@NonNull final T item) {
-		final String name = item.getName();
-		Valid.checkBoolean(isItemLoaded(name), ChatUtil.capitalize(type) + " " + name + " not loaded. Available: " + getItemNames());
+		this.removeItemByName(item.getName());
+	}
 
-		if (this.singleFile) {
+	/**
+	 * Remove the given item by instance
+	 *
+	 * @param name
+	 */
+	public void removeItemByName(@NonNull final String name) {
+		final T item = this.findItem(name);
+		Valid.checkNotNull(item, ChatUtil.capitalize(this.type) + " " + name + " not loaded. Available: " + this.getItemNames());
+
+		if (this.singleFile)
 			item.save("", null);
-
-		} else
+		else
 			item.deleteFile();
 
-		loadedItemsMap.remove(name);
+		this.loadedItemsMap.remove(name);
 	}
 
 	/**
@@ -244,7 +275,7 @@ public final class ConfigItems<T extends YamlConfig> {
 	 * @return
 	 */
 	public boolean isItemLoaded(final String name) {
-		return findItem(name) != null;
+		return this.findItem(name) != null;
 	}
 
 	/**
@@ -254,11 +285,11 @@ public final class ConfigItems<T extends YamlConfig> {
 	 * @return
 	 */
 	public T findItem(@NonNull final String name) {
-		final T item = loadedItemsMap.get(name);
+		final T item = this.loadedItemsMap.get(name);
 
 		// Fallback to case insensitive
 		if (item == null)
-			for (final Map.Entry<String, T> entry : loadedItemsMap.entrySet())
+			for (final Map.Entry<String, T> entry : this.loadedItemsMap.entrySet())
 				if (entry.getKey().equalsIgnoreCase(name))
 					return entry.getValue();
 
@@ -271,7 +302,7 @@ public final class ConfigItems<T extends YamlConfig> {
 	 * @return
 	 */
 	public Collection<T> getItems() {
-		return Collections.unmodifiableCollection(loadedItemsMap.values());
+		return Collections.unmodifiableCollection(this.loadedItemsMap.values());
 	}
 
 	/**
@@ -280,6 +311,6 @@ public final class ConfigItems<T extends YamlConfig> {
 	 * @return
 	 */
 	public Set<String> getItemNames() {
-		return loadedItemsMap.keySet();
+		return this.loadedItemsMap.keySet();
 	}
 }

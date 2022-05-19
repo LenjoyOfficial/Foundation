@@ -91,11 +91,6 @@ public final class Common {
 	private static final Pattern RGB_X_COLOR_REGEX = Pattern.compile("(" + ChatColor.COLOR_CHAR + "x)(" + ChatColor.COLOR_CHAR + "[0-9a-fA-F]){6}");
 
 	/**
-	 * We use this to send messages with colors to your console
-	 */
-	private static final CommandSender CONSOLE_SENDER = Bukkit.getServer().getConsoleSender();
-
-	/**
 	 * Used to send messages to player without repetition, e.g. if they attempt to break a block
 	 * in a restricted region, we will not spam their chat with "You cannot break this block here" 120x times,
 	 * instead, we only send this message once per X seconds. This cache holds the last times when we
@@ -464,13 +459,12 @@ public final class Common {
 		} else if (colorlessMessage.startsWith("<bossbar>")) {
 			final String stripped = message.replace("<bossbar>", "");
 
-			if (!stripped.isEmpty()) {
+			if (!stripped.isEmpty())
 				if (sender instanceof Player)
 					// cannot provide time here so we show it for 10 seconds
 					Remain.sendBossbarTimed((Player) sender, stripped, 10);
 				else
 					tellJson(sender, stripped);
-			}
 
 		} else
 			for (final String part : message.split("\n")) {
@@ -596,11 +590,20 @@ public final class Common {
 		if (message == null || message.isEmpty())
 			return "";
 
-		String result = ChatColor.translateAlternateColorCodes('&', message
+		final char[] letters = message.toCharArray();
+
+		for (int index = 0; index < letters.length - 1; index++)
+			if (letters[index] == '&' && "0123456789AaBbCcDdEeFfKkLlMmNnOoRrXx".indexOf(letters[index + 1]) > -1) {
+				letters[index] = ChatColor.COLOR_CHAR;
+
+				letters[index + 1] = Character.toLowerCase(letters[index + 1]);
+			}
+
+		String result = new String(letters)
 				.replace("{prefix}", message.startsWith(tellPrefix) ? "" : removeSurroundingSpaces(tellPrefix.trim()))
 				.replace("{server}", SimpleLocalization.SERVER_PREFIX)
 				.replace("{plugin_name}", SimplePlugin.getNamed())
-				.replace("{plugin_version}", SimplePlugin.getVersion()));
+				.replace("{plugin_version}", SimplePlugin.getVersion());
 
 		// RGB colors - return the closest color for legacy MC versions
 		final Matcher match = HEX_COLOR_REGEX.matcher(result);
@@ -664,7 +667,6 @@ public final class Common {
 	 * @return
 	 */
 	public static String stripColors(String message) {
-
 		if (message == null || message.isEmpty())
 			return message;
 
@@ -1078,7 +1080,7 @@ public final class Common {
 		Plugin lookup = null;
 
 		for (final Plugin otherPlugin : Bukkit.getPluginManager().getPlugins())
-			if (otherPlugin.getName().equals(pluginName)) {
+			if (otherPlugin.getDescription().getName().equals(pluginName)) {
 				lookup = otherPlugin;
 
 				break;
@@ -1269,7 +1271,9 @@ public final class Common {
 		if (messages == null)
 			return;
 
-		if (CONSOLE_SENDER == null)
+		final CommandSender console = Bukkit.getConsoleSender();
+
+		if (console == null)
 			throw new FoException("Failed to initialize Console Sender, are you running Foundation under a Bukkit/Spigot server?");
 
 		for (String message : messages) {
@@ -1277,7 +1281,7 @@ public final class Common {
 				continue;
 
 			if (stripColors(message).replace(" ", "").isEmpty()) {
-				CONSOLE_SENDER.sendMessage("  ");
+				console.sendMessage("  ");
 
 				continue;
 			}
@@ -1294,7 +1298,7 @@ public final class Common {
 				for (final String part : message.split("\n")) {
 					final String log = ((addLogPrefix && !logPrefix.isEmpty() ? removeSurroundingSpaces(logPrefix) + " " : "") + getOrEmpty(part).replace("\n", colorize("\n&r"))).trim();
 
-					CONSOLE_SENDER.sendMessage(log);
+					console.sendMessage(log);
 				}
 		}
 	}
@@ -1726,6 +1730,19 @@ public final class Common {
 		Valid.checkNotNull(array, "Cannot join null array!");
 
 		return join(Arrays.asList(array), delimiter, stringer);
+	}
+
+	/**
+	 * Joins a list of a given type using the comma delimiter and a helper interface
+	 * to convert each element in the array into string
+	 *
+	 * @param <T>
+	 * @param array
+	 * @param stringer
+	 * @return
+	 */
+	public static <T> String join(final Iterable<T> array, final Stringer<T> stringer) {
+		return join(array, ", ", stringer);
 	}
 
 	/**
@@ -2762,7 +2779,7 @@ final class TimedCharSequence implements CharSequence {
 		//	throw new RegexTimeoutException(message, futureTimestampLimit);
 
 		try {
-			return message.charAt(index);
+			return this.message.charAt(index);
 		} catch (final StringIndexOutOfBoundsException ex) {
 
 			// Odd case: Java 8 seems to overflow for too-long unicode characters, security feature
@@ -2772,17 +2789,17 @@ final class TimedCharSequence implements CharSequence {
 
 	@Override
 	public int length() {
-		return message.length();
+		return this.message.length();
 	}
 
 	@Override
 	public CharSequence subSequence(final int start, final int end) {
-		return new TimedCharSequence(message.subSequence(start, end), futureTimestampLimit);
+		return new TimedCharSequence(this.message.subSequence(start, end), this.futureTimestampLimit);
 	}
 
 	@Override
 	public String toString() {
-		return message.toString();
+		return this.message.toString();
 	}
 
 	/**

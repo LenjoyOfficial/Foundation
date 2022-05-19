@@ -9,7 +9,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.Valid;
-import org.mineacademy.fo.menu.model.ItemCreator;
 
 /**
  * Represents a tool. A tool is a simple ItemStack that is registered within the
@@ -100,7 +99,7 @@ public abstract class Tool {
 	 * @return true if this tool is the given itemstack
 	 */
 	public final boolean isTool(final ItemStack item) {
-		return ItemUtil.isSimilar(getItem(), item);
+		return ItemUtil.isSimilar(this.getItem(), item);
 	}
 
 	/**
@@ -110,7 +109,7 @@ public abstract class Tool {
 	 * @return
 	 */
 	public final boolean hasToolInHand(final Player player) {
-		return isTool(player.getItemInHand());
+		return this.isTool(player.getItemInHand());
 	}
 
 	/**
@@ -121,7 +120,7 @@ public abstract class Tool {
 	 */
 	public final boolean hasTool(Player player) {
 		for (final ItemStack item : player.getInventory().getContents())
-			if (isTool(item))
+			if (this.isTool(item))
 				return true;
 
 		return false;
@@ -199,10 +198,10 @@ public abstract class Tool {
 	 * @return true if tool was given, false if player already has it
 	 */
 	public final boolean giveIfHasnt(Player player) {
-		if (hasTool(player))
+		if (this.hasTool(player))
 			return false;
 
-		give(player);
+		this.give(player);
 		return true;
 	}
 
@@ -213,7 +212,7 @@ public abstract class Tool {
 	 * @param slot
 	 */
 	public final void give(final Player player, final int slot) {
-		player.getInventory().setItem(slot, getItem());
+		player.getInventory().setItem(slot, this.getItem());
 	}
 
 	/**
@@ -222,7 +221,7 @@ public abstract class Tool {
 	 * @param player
 	 */
 	public final void give(final Player player) {
-		player.getInventory().addItem(getItem());
+		player.getInventory().addItem(this.getItem());
 	}
 
 	/**
@@ -233,6 +232,6 @@ public abstract class Tool {
 	 */
 	@Override
 	public final boolean equals(final Object obj) {
-		return obj instanceof Tool && ((Tool) obj).getItem().equals(getItem());
+		return obj instanceof Tool && ((Tool) obj).getItem().equals(this.getItem());
 	}
 }

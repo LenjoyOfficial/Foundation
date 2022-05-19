@@ -2,6 +2,7 @@ package org.mineacademy.fo.region;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import org.bukkit.Bukkit;
@@ -343,18 +344,39 @@ public class Region implements ConfigSerializable {
 				return true;
 			}
 
-		} else {
-			if (location == null || (this.hasSecondary() && this.isSecondary(location) && toggle)) {
-				this.setSecondary(null);
+		} else if (location == null || (this.hasSecondary() && this.isSecondary(location) && toggle)) {
+			this.setSecondary(null);
 
+			return false;
+
+		} else {
+			this.setSecondary(location);
+
+			return true;
+		}
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+
+		if (obj instanceof Region) {
+			final Region otherRegion = (Region) obj;
+
+			if ((otherRegion.name != null && this.name == null) || (otherRegion.name == null && this.name != null))
 				return false;
 
-			} else {
-				this.setSecondary(location);
+			if ((otherRegion.name != null && !otherRegion.name.equals(this.name)) || (otherRegion.name != null && !this.name.equals(otherRegion.name)))
+				return false;
 
-				return true;
-			}
+			return Valid.locationEquals(otherRegion.getPrimary(), this.primary) && Valid.locationEquals(otherRegion.getSecondary(), this.secondary);
 		}
+
+		return false;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(this.name, this.primary, this.secondary);
 	}
 
 	@Override

@@ -26,13 +26,14 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.Messenger;
-import org.mineacademy.fo.BungeeUtil;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.ReflectionUtil;
@@ -47,7 +48,6 @@ import org.mineacademy.fo.event.SimpleListener;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.menu.Menu;
 import org.mineacademy.fo.menu.MenuListener;
-import org.mineacademy.fo.menu.tool.Tool;
 import org.mineacademy.fo.menu.tool.ToolsListener;
 import org.mineacademy.fo.metrics.Metrics;
 import org.mineacademy.fo.model.DiscordListener;
@@ -220,10 +220,16 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		source = instance.getFile();
 		data = instance.getDataFolder();
 
-		if (!Bukkit.getVersion().contains("Paper") && !Bukkit.getVersion().contains("NachoSpigot") && !Bukkit.getVersion().contains("-Spigot") && MinecraftVersion.atLeast(V.v1_8)) {
+		final String version = Bukkit.getVersion();
+
+		if (!version.contains("Paper")
+				&& !version.contains("Purpur")
+				&& !version.contains("NachoSpigot")
+				&& !version.contains("-Spigot")
+				&& MinecraftVersion.atLeast(V.v1_8)) {
 			Bukkit.getLogger().severe(Common.consoleLine());
 			Bukkit.getLogger().warning("Warning about " + named + ": You're not using Paper!");
-			Bukkit.getLogger().warning("Detected: " + Bukkit.getVersion());
+			Bukkit.getLogger().warning("Detected: " + version);
 			Bukkit.getLogger().warning("");
 			Bukkit.getLogger().warning("Third party forks are known to alter server in unwanted");
 			Bukkit.getLogger().warning("ways. If you have issues with " + named + " use Paper");
@@ -232,10 +238,10 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		}
 
 		// Load libraries where Spigot does not do this automatically
-		loadLibraries();
+		this.loadLibraries();
 
 		// Call parent
-		onPluginLoad();
+		this.onPluginLoad();
 	}
 
 	@Override
@@ -249,7 +255,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		}
 
 		// Solve reloading issues with PlugMan
-		for (final StackTraceElement element : new Throwable().getStackTrace()) {
+		for (final StackTraceElement element : new Throwable().getStackTrace())
 			if (element.toString().contains("com.rylinaux.plugman.util.PluginUtil.load")) {
 				Common.warning("Detected PlugMan reload, which is poorly designed. "
 						+ "It causes Bukkit not able to get our plugin from a static initializer."
@@ -257,17 +263,16 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 				break;
 			}
-		}
 
 		// Check if Foundation is correctly moved
-		checkShading();
+		this.checkShading();
 
-		if (!isEnabled())
+		if (!this.isEnabled())
 			return;
 
 		// Before all, check if necessary libraries and the minimum required MC version
-		if (!checkLibraries0() || !checkServerVersions0()) {
-			setEnabled(false);
+		if (!this.checkLibraries0() || !this.checkServerVersions0()) {
+			this.setEnabled(false);
 
 			return;
 		}
@@ -277,11 +282,11 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 		// Print startup logo early before onPluginPreStart
 		// Disable logging prefix if logo is set
-		if (getStartupLogo() != null) {
+		if (this.getStartupLogo() != null) {
 			final String oldLogPrefix = Common.getLogPrefix();
 
 			Common.setLogPrefix("");
-			Common.log(getStartupLogo());
+			Common.log(this.getStartupLogo());
 			Common.setLogPrefix(oldLogPrefix);
 		}
 
@@ -293,11 +298,11 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			HookManager.loadDependencies();
 
 		} catch (final Throwable throwable) {
-			Common.throwError(throwable, "Error while loading " + getDataFolder().getName() + " dependencies!");
+			Common.throwError(throwable, "Error while loading " + this.getDataFolder().getName() + " dependencies!");
 		}
 
 		// Return if plugin pre start indicated a fatal problem
-		if (!isEnabled())
+		if (!this.isEnabled())
 			return;
 
 		try {
@@ -306,7 +311,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			// Call the main start method
 			// --------------------------------------------
 
-			final Messenger messenger = getServer().getMessenger();
+			final Messenger messenger = this.getServer().getMessenger();
 			if (!messenger.isOutgoingChannelRegistered(this, "BungeeCord"))
 				messenger.registerOutgoingPluginChannel(this, "BungeeCord");
 
@@ -314,7 +319,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			final String oldLogPrefix = Common.getLogPrefix();
 			Common.setLogPrefix("");
 
-			startingReloadables = true;
+			this.startingReloadables = true;
 
 			try {
 				AutoRegisterScanner.scanAndRegister();
@@ -325,28 +330,28 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 				return;
 			}
 
-			onReloadablesStart();
+			this.onReloadablesStart();
 
-			startingReloadables = false;
+			this.startingReloadables = false;
 
-			onPluginStart();
+			this.onPluginStart();
 			// --------------------------------------------
 
 			// Return if plugin start indicated a fatal problem
-			if (!isEnabled())
+			if (!this.isEnabled())
 				return;
 
 			// Start update check
-			if (getUpdateCheck() != null)
-				getUpdateCheck().run();
+			if (this.getUpdateCheck() != null)
+				this.getUpdateCheck().run();
 
 			// Register our listeners
-			registerEvents(this);
-			registerEvents(new MenuListener());
-			registerEvents(new FoundationListener());
+			this.registerEvents(this);
+			this.registerEvents(new MenuListener());
+			this.registerEvents(new FoundationListener());
 
-			if (areToolsEnabled())
-				registerEvents(new ToolsListener());
+			if (this.areToolsEnabled())
+				this.registerEvents(new ToolsListener());
 
 			// Register DiscordSRV listener
 			if (HookManager.isDiscordSRVLoaded()) {
@@ -355,15 +360,15 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 				discord.resubscribe();
 				discord.registerHook();
 
-				reloadables.registerEvents(DiscordListener.DiscordListenerImpl.getInstance());
+				this.reloadables.registerEvents(DiscordListener.DiscordListenerImpl.getInstance());
 			}
 
 			// Prepare Nashorn engine
 			JavaScriptExecutor.run("");
 
 			// Finish off by starting metrics (currently bStats)
-			if (getMetricsPluginId() != -1)
-				new Metrics(this, getMetricsPluginId());
+			if (this.getMetricsPluginId() != -1)
+				new Metrics(this, this.getMetricsPluginId());
 
 			// Set the logging and tell prefix
 			Common.setTellPrefix(SimpleSettings.PLUGIN_PREFIX);
@@ -372,7 +377,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			Common.runLater(() -> Common.setLogPrefix(oldLogPrefix));
 
 		} catch (final Throwable t) {
-			displayError0(t);
+			this.displayError0(t);
 		}
 	}
 
@@ -380,13 +385,26 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 * Loads libraries from plugin.yml or from getLibraries()
 	 */
 	private void loadLibraries() {
+		final int javaVersion = getJavaVersion();
 		final List<Library> libraries = new ArrayList<>();
 
+		// Force add md_5 bungee chat since it's needed
+		if (!ReflectionUtil.isClassAvailable("net.md_5.bungee.api.ChatColor"))
+			libraries.add(Library.fromMavenRepo("net.md-5", "bungeecord-chat", "1.16-R0.4"));
+
 		if (MinecraftVersion.olderThan(V.v1_16)) {
-			final YamlConfig pluginFile = YamlConfig.fromInternalPathFast("plugin.yml");
+			final YamlConfiguration pluginFile = new YamlConfiguration();
+
+			// We have to load it using the legacy way for ancient MC versions
+			try {
+				pluginFile.loadFromString(String.join("\n", FileUtil.getInternalFileContent("plugin.yml")));
+
+			} catch (final Throwable t) {
+				throw new RuntimeException(t);
+			}
 
 			for (final String libraryPath : pluginFile.getStringList("legacy-libraries")) {
-				if (Remain.getJavaVersion() < 15 && libraryPath.contains("org.openjdk.nashorn:nashorn-core"))
+				if (javaVersion < 15 && libraryPath.contains("org.openjdk.nashorn:nashorn-core"))
 					continue;
 
 				final Library library = Library.fromMavenRepo(libraryPath);
@@ -395,9 +413,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			}
 
 			// Load normally
-			if (!libraries.isEmpty() && Remain.getJavaVersion() >= 9)
+			if (!libraries.isEmpty() && javaVersion >= 9)
 				Common.logFramed(
-						"Warning: Unsupported Java version: " + Remain.getJavaVersion() + " for your server",
+						"Warning: Unsupported Java version: " + javaVersion + " for your server",
 						"version! Minecraft " + MinecraftVersion.getServerVersion() + " was designed for Java 8",
 						"and we're unable unable to load 'legacy-libraries'",
 						"that this plugin uses:",
@@ -412,11 +430,11 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		}
 
 		// Always load user-defined libraries
-		final List<Library> manualLibraries = getLibraries();
+		final List<Library> manualLibraries = this.getLibraries();
 
 		// But only on Java 8 (for now)
-		if (!manualLibraries.isEmpty() && Remain.getJavaVersion() > 8)
-			Common.warning("The getLibraries() feature only supports Java 8 for now and does not work on Java " + Remain.getJavaVersion() + ". To load the following libraries, "
+		if (!manualLibraries.isEmpty() && javaVersion > 8)
+			Common.warning("The getLibraries() feature only supports Java 8 for now and does not work on Java " + javaVersion + ". To load the following libraries, "
 					+ "install Java 8 or upgrade to Minecraft 16 where you use the 'libraries' feature of plugin.yml to load. Skipping loading: " + manualLibraries);
 
 		else
@@ -434,6 +452,30 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 				library.load();
 			}
+	}
+
+	/**
+	 * Return the corresponding major Java version such as 8 for Java 1.8, or 11 for Java 11.
+	 *
+	 * @return
+	 */
+	public static int getJavaVersion() {
+		String version = System.getProperty("java.version");
+
+		if (version.startsWith("1."))
+			version = version.substring(2, 3);
+
+		else {
+			final int dot = version.indexOf(".");
+
+			if (dot != -1)
+				version = version.substring(0, dot);
+		}
+
+		if (version.contains("-"))
+			version = version.split("\\-")[0];
+
+		return Integer.parseInt(version);
 	}
 
 	/**
@@ -457,12 +499,12 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 * Then you just call this method and parse the field into it from your onReloadablesStart method.
 	 */
 	protected final void registerBungeeCord(@NonNull BungeeListener bungee) {
-		final Messenger messenger = getServer().getMessenger();
+		final Messenger messenger = this.getServer().getMessenger();
 
 		messenger.registerIncomingPluginChannel(this, bungee.getChannel(), bungee);
 		messenger.registerOutgoingPluginChannel(this, bungee.getChannel());
 
-		reloadables.registerEvents(bungee);
+		this.reloadables.registerEvents(bungee);
 		Debugger.debug("bungee", "Registered BungeeCord listener on channel " + bungee.getChannel());
 	}
 
@@ -488,10 +530,10 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		private static final long serialVersionUID = 1L;
 
 		public ShadingException() {
-			if (!SimplePlugin.getNamed().equals(getDescription().getName())) {
+			if (!SimplePlugin.getNamed().equals(SimplePlugin.this.getDescription().getName())) {
 				Bukkit.getLogger().severe(Common.consoleLine());
 				Bukkit.getLogger().severe("We have a class path problem in the Foundation library");
-				Bukkit.getLogger().severe("preventing " + getDescription().getName() + " from loading correctly!");
+				Bukkit.getLogger().severe("preventing " + SimplePlugin.this.getDescription().getName() + " from loading correctly!");
 				Bukkit.getLogger().severe("");
 				Bukkit.getLogger().severe("This is likely caused by two plugins having the");
 				Bukkit.getLogger().severe("same Foundation library paths - make sure you");
@@ -534,7 +576,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		if (!md_5 || !gson) {
 			Bukkit.getLogger().severe(Common.consoleLine());
 			Bukkit.getLogger().severe("Your Minecraft version (" + MinecraftVersion.getCurrent() + ")");
-			Bukkit.getLogger().severe("lacks libraries " + getDataFolder().getName() + " needs:");
+			Bukkit.getLogger().severe("lacks libraries " + this.getDataFolder().getName() + " needs:");
 			Bukkit.getLogger().severe("JSON Chat (by md_5) found: " + md_5);
 			Bukkit.getLogger().severe("Gson (by Google) found: " + gson);
 			Bukkit.getLogger().severe(" ");
@@ -565,22 +607,22 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 					Common.consoleLine());
 
 		// Check min version
-		final V minimumVersion = getMinimumVersion();
+		final V minimumVersion = this.getMinimumVersion();
 
 		if (minimumVersion != null && MinecraftVersion.olderThan(minimumVersion)) {
 			Common.logFramed(false,
-					getDataFolder().getName() + " requires Minecraft " + minimumVersion + " or newer to run.",
+					this.getDataFolder().getName() + " requires Minecraft " + minimumVersion + " or newer to run.",
 					"Please upgrade your server.");
 
 			return false;
 		}
 
 		// Check max version
-		final V maximumVersion = getMaximumVersion();
+		final V maximumVersion = this.getMaximumVersion();
 
 		if (maximumVersion != null && MinecraftVersion.newerThan(maximumVersion)) {
 			Common.logFramed(false,
-					getDataFolder().getName() + " requires Minecraft " + maximumVersion + " or older to run.",
+					this.getDataFolder().getName() + " requires Minecraft " + maximumVersion + " or older to run.",
 					"Please downgrade your server or",
 					"wait for the new version.");
 
@@ -598,7 +640,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	protected final void displayError0(Throwable throwable) {
 		Debugger.printStackTrace(throwable);
 
-		final boolean privateDistro = getServer().getBukkitVersion().contains("1.8.8-R0.2");
+		final boolean privateDistro = this.getServer().getBukkitVersion().contains("1.8.8-R0.2");
 
 		Common.log(
 				"&4    ___                  _ ",
@@ -608,8 +650,8 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 				"&4   \\___/ \\___/| .__/|___(_)",
 				"&4             |_|          ",
 				"&4!-----------------------------------------------------!",
-				" &cError loading " + getDescription().getName() + " v" + getDescription().getVersion() + ", plugin is disabled!",
-				privateDistro ? null : " &cRunning on " + getServer().getBukkitVersion() + " (" + MinecraftVersion.getServerVersion() + ") & Java " + System.getProperty("java.version"),
+				" &cError loading " + this.getDescription().getName() + " v" + this.getDescription().getVersion() + ", plugin is disabled!",
+				privateDistro ? null : " &cRunning on " + this.getServer().getBukkitVersion() + " (" + MinecraftVersion.getServerVersion() + ") & Java " + System.getProperty("java.version"),
 				"&4!-----------------------------------------------------!");
 
 		if (throwable instanceof InvalidConfigurationException) {
@@ -619,7 +661,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			Common.log(" &cto check for syntax errors!");
 
 		} else if (throwable instanceof UnsupportedOperationException || throwable.getCause() != null && throwable.getCause() instanceof UnsupportedOperationException)
-			if (getServer().getBukkitVersion().startsWith("1.2.5"))
+			if (this.getServer().getBukkitVersion().startsWith("1.2.5"))
 				Common.log(" &cSorry but Minecraft 1.2.5 is no longer supported!");
 			else {
 				Common.log(" &cUnable to setup reflection!");
@@ -639,7 +681,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		}
 		Common.log("&4!-----------------------------------------------------!");
 
-		getPluginLoader().disablePlugin(this);
+		this.getPluginLoader().disablePlugin(this);
 	}
 
 	// ----------------------------------------------------------------------------------------
@@ -650,12 +692,12 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	public final void onDisable() {
 
 		try {
-			onPluginStop();
+			this.onPluginStop();
 		} catch (final Throwable t) {
 			Common.log("&cPlugin might not shut down property. Got " + t.getClass().getSimpleName() + ": " + t.getMessage());
 		}
 
-		unregisterReloadables();
+		this.unregisterReloadables();
 
 		try {
 			for (final Player online : Remain.getOnlinePlayers())
@@ -680,7 +722,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			t.printStackTrace();
 		}
 
-		Objects.requireNonNull(instance, "Instance of " + getDataFolder().getName() + " already nulled!");
+		Objects.requireNonNull(instance, "Instance of " + this.getDataFolder().getName() + " already nulled!");
 		instance = null;
 	}
 
@@ -739,7 +781,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 		Common.log(Common.consoleLineSmooth());
 		Common.log(" ");
-		Common.log("Reloading plugin " + getDataFolder().getName() + " v" + getVersion());
+		Common.log("Reloading plugin " + this.getDataFolder().getName() + " v" + getVersion());
 		Common.log(" ");
 
 		reloading = true;
@@ -747,7 +789,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		try {
 			Debugger.detectDebugMode();
 
-			unregisterReloadables();
+			this.unregisterReloadables();
 
 			FileConfig.clearLoadedSections();
 
@@ -756,11 +798,11 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 				HookManager.loadDependencies();
 
 			} catch (final Throwable throwable) {
-				Common.throwError(throwable, "Error while loading " + getDataFolder().getName() + " dependencies!");
+				Common.throwError(throwable, "Error while loading " + this.getDataFolder().getName() + " dependencies!");
 			}
 
-			onPluginPreReload();
-			reloadables.reload();
+			this.onPluginPreReload();
+			this.reloadables.reload();
 
 			final YamlConfig metadata = CompMetadata.MetadataFile.getInstance();
 			metadata.save();
@@ -769,13 +811,13 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			SimpleHologram.onReload();
 
 			Common.setTellPrefix(SimpleSettings.PLUGIN_PREFIX);
-			onPluginReload();
+			this.onPluginReload();
 
 			// Something went wrong in the reload pipeline
-			if (!isEnabled())
+			if (!this.isEnabled())
 				return;
 
-			startingReloadables = true;
+			this.startingReloadables = true;
 
 			// Register classes
 			AutoRegisterScanner.scanAndRegister();
@@ -783,20 +825,20 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			Lang.reloadLang();
 			Lang.loadPrefixes();
 
-			onReloadablesStart();
+			this.onReloadablesStart();
 
-			startingReloadables = false;
+			this.startingReloadables = false;
 
 			if (HookManager.isDiscordSRVLoaded()) {
 				DiscordListener.DiscordListenerImpl.getInstance().resubscribe();
 
-				reloadables.registerEvents(DiscordListener.DiscordListenerImpl.getInstance());
+				this.reloadables.registerEvents(DiscordListener.DiscordListenerImpl.getInstance());
 			}
 
 			Common.log(Common.consoleLineSmooth());
 
 		} catch (final Throwable t) {
-			Common.throwError(t, "Error reloading " + getDataFolder().getName() + " " + getVersion());
+			Common.throwError(t, "Error reloading " + this.getDataFolder().getName() + " " + getVersion());
 
 		} finally {
 			Common.setLogPrefix(oldLogPrefix);
@@ -820,12 +862,12 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		} catch (final NoClassDefFoundError ex) {
 		}
 
-		getServer().getMessenger().unregisterIncomingPluginChannel(this);
-		getServer().getMessenger().unregisterOutgoingPluginChannel(this);
+		this.getServer().getMessenger().unregisterIncomingPluginChannel(this);
+		this.getServer().getMessenger().unregisterOutgoingPluginChannel(this);
 
-		getServer().getScheduler().cancelTasks(this);
+		this.getServer().getScheduler().cancelTasks(this);
 
-		mainCommand = null;
+		this.mainCommand = null;
 	}
 
 	// ----------------------------------------------------------------------------------------
@@ -854,16 +896,15 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			if (pluginClass.isAnnotationPresent(AutoRegister.class))
 				continue;
 
-			for (final Constructor<?> con : pluginClass.getConstructors()) {
+			for (final Constructor<?> con : pluginClass.getConstructors())
 				if (con.getParameterCount() == 0) {
 					final T instance = (T) ReflectionUtil.instantiate(con);
 
 					Debugger.debug("auto-register", "Auto-registering events in " + pluginClass);
-					registerEvents(instance);
+					this.registerEvents(instance);
 
 					continue classLookup;
 				}
-			}
 
 			Debugger.debug("auto-register", "Skipping auto-registering events in " + pluginClass + " because it lacks at least one no arguments constructor");
 		}
@@ -875,10 +916,10 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 * @param listener
 	 */
 	protected final void registerEvents(final Listener listener) {
-		if (startingReloadables)
-			reloadables.registerEvents(listener);
+		if (this.startingReloadables)
+			this.reloadables.registerEvents(listener);
 		else
-			getServer().getPluginManager().registerEvents(listener, this);
+			this.getServer().getPluginManager().registerEvents(listener, this);
 
 		if (listener instanceof DiscordListener)
 			((DiscordListener) listener).register();
@@ -890,8 +931,8 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 * @param listener
 	 */
 	protected final void registerEvents(final SimpleListener<? extends Event> listener) {
-		if (startingReloadables)
-			reloadables.registerEvents(listener);
+		if (this.startingReloadables)
+			this.reloadables.registerEvents(listener);
 
 		else
 			listener.register();
@@ -926,21 +967,20 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			}
 
 			try {
-				for (final Constructor<?> con : pluginClass.getConstructors()) {
+				for (final Constructor<?> con : pluginClass.getConstructors())
 					if (con.getParameterCount() == 0) {
 						final T instance = (T) ReflectionUtil.instantiate(con);
 
 						Debugger.debug("auto-register", "Auto-registering command " + pluginClass);
 
 						if (instance instanceof SimpleCommand)
-							registerCommand(instance);
+							this.registerCommand(instance);
 
 						else
-							registerCommand(instance);
+							this.registerCommand(instance);
 
 						continue classLookup;
 					}
-				}
 
 			} catch (final LinkageError ex) {
 				Common.log("Unable to register commands in '" + pluginClass.getSimpleName() + "' due to error: " + ex);
@@ -970,8 +1010,8 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 * @param group
 	 */
 	protected final void registerCommands(final SimpleCommandGroup group) {
-		if (startingReloadables)
-			reloadables.registerCommands(group);
+		if (this.startingReloadables)
+			this.reloadables.registerCommands(group);
 
 		else
 			group.register();
@@ -1023,7 +1063,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 */
 	@Nullable
 	public final SimpleCommandGroup getMainCommand() {
-		return mainCommand;
+		return this.mainCommand;
 	}
 
 	/**
@@ -1208,7 +1248,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	@Deprecated
 	@Override
 	public final boolean onCommand(final CommandSender sender, final Command command, final String label, final String[] args) {
-		throw unsupported("onCommand");
+		throw this.unsupported("onCommand");
 	}
 
 	/**
@@ -1217,7 +1257,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	@Deprecated
 	@Override
 	public final List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
-		throw unsupported("onTabComplete");
+		throw this.unsupported("onTabComplete");
 	}
 
 	/**
@@ -1226,7 +1266,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	@Deprecated
 	@Override
 	public final FileConfiguration getConfig() {
-		throw unsupported("getConfig");
+		throw this.unsupported("getConfig");
 	}
 
 	/**
@@ -1235,7 +1275,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	@Deprecated
 	@Override
 	public final void saveConfig() {
-		throw unsupported("saveConfig");
+		throw this.unsupported("saveConfig");
 	}
 
 	/**
@@ -1244,7 +1284,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	@Deprecated
 	@Override
 	public final void saveDefaultConfig() {
-		throw unsupported("saveDefaultConfig");
+		throw this.unsupported("saveDefaultConfig");
 	}
 
 	/**
@@ -1253,10 +1293,10 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	@Deprecated
 	@Override
 	public final void reloadConfig() {
-		throw new FoException("Cannot call reloadConfig in " + getDataFolder().getName() + ", use reload()!");
+		throw new FoException("Cannot call reloadConfig in " + this.getDataFolder().getName() + ", use reload()!");
 	}
 
 	private FoException unsupported(final String method) {
-		return new FoException("Cannot call " + method + " in " + getDataFolder().getName() + ", use YamlConfig or SimpleCommand classes in Foundation for that!");
+		return new FoException("Cannot call " + method + " in " + this.getDataFolder().getName() + ", use YamlConfig or SimpleCommand classes in Foundation for that!");
 	}
 }

@@ -197,8 +197,14 @@ public class SimpleDatabase {
 				final Object hikariConfig = ReflectionUtil.instantiate("com.zaxxer.hikari.HikariConfig");
 
 				if (url.startsWith("jdbc:mysql://"))
-					ReflectionUtil.invoke("setDriverClassName", hikariConfig, "com.mysql.cj.jdbc.Driver");
+					try {
+						ReflectionUtil.invoke("setDriverClassName", hikariConfig, "com.mysql.cj.jdbc.Driver");
 
+					} catch (final Throwable t) {
+
+						// Fall back to legacy driver
+						ReflectionUtil.invoke("setDriverClassName", hikariConfig, "com.mysql.jdbc.Driver");
+					}
 				else if (url.startsWith("jdbc:mariadb://"))
 					ReflectionUtil.invoke("setDriverClassName", hikariConfig, "org.mariadb.jdbc.Driver");
 
@@ -636,7 +642,7 @@ public class SimpleDatabase {
 				@Override
 				public void run() {
 					if (SimpleDatabase.this.batchUpdateGoingOn)
-						Common.log("Still executing, " + RandomUtil.nextItem("keep calm", "stand by", "watch the show", "check your db", "drink water", "call your friend") + " and DO NOT SHUTDOWN YOUR SERVER.");
+						Common.log("Database batch update is still processing, " + RandomUtil.nextItem("keep calm", "stand by", "watch the show", "check your db", "drink water", "call your friend") + " and DO NOT SHUTDOWN YOUR SERVER.");
 					else
 						this.cancel();
 				}

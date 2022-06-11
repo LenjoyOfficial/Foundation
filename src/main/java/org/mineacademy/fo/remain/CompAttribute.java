@@ -103,9 +103,9 @@ public enum CompAttribute {
 	 * Construct a new Attribute.
 	 *
 	 * @param name              the generic name
-	 * @param genericFieldName, see {@link #genericFieldName}
+	 * @param genericFieldName see {@link #genericFieldName}
 	 */
-	private CompAttribute(final String name, final String genericFieldName) {
+	CompAttribute(final String name, final String genericFieldName) {
 		this.minecraftName = name;
 		this.genericFieldName = genericFieldName;
 	}
@@ -116,7 +116,7 @@ public enum CompAttribute {
 	 * @return true if this attribute existed in MC 1.8.9
 	 */
 	public final boolean hasLegacy() {
-		return genericFieldName != null;
+		return this.genericFieldName != null;
 	}
 
 	/**
@@ -127,13 +127,13 @@ public enum CompAttribute {
 	 */
 	public final Double get(final LivingEntity entity) {
 		try {
-			final AttributeInstance instance = entity.getAttribute(Attribute.valueOf(toString()));
+			final AttributeInstance instance = entity.getAttribute(Attribute.valueOf(this.toString()));
 
 			return instance != null ? instance.getBaseValue() : null;
 
 		} catch (IllegalArgumentException | NoSuchMethodError | NoClassDefFoundError ex) {
 			try {
-				return hasLegacy() ? getLegacy(entity) : null;
+				return this.hasLegacy() ? this.getLegacy(entity) : null;
 
 			} catch (final NullPointerException exx) {
 				return null;
@@ -158,21 +158,27 @@ public enum CompAttribute {
 		Valid.checkNotNull(entity, "Attribute cannot be null");
 
 		try {
-			final AttributeInstance instance = entity.getAttribute(Attribute.valueOf(toString()));
+			final AttributeInstance instance = entity.getAttribute(Attribute.valueOf(this.toString()));
 
 			instance.setBaseValue(value);
+
 		} catch (NullPointerException | NoSuchMethodError | NoClassDefFoundError ex) {
-			try {
-				if (hasLegacy())
-					setLegacy(entity, value);
 
-			} catch (final Throwable t) {
-				if (MinecraftVersion.equals(V.v1_8))
-					t.printStackTrace();
+			if (this == GENERIC_MAX_HEALTH)
+				entity.setMaxHealth(value);
 
-				if (t instanceof NullPointerException)
-					throw new FoException("Attribute " + this + " cannot be set for " + entity);
-			}
+			else
+				try {
+					if (this.hasLegacy())
+						this.setLegacy(entity, value);
+
+				} catch (final Throwable t) {
+					if (MinecraftVersion.equals(V.v1_8))
+						t.printStackTrace();
+
+					if (t instanceof NullPointerException)
+						throw new FoException("Attribute " + this + " cannot be set for " + entity);
+				}
 		}
 	}
 
@@ -186,7 +192,7 @@ public enum CompAttribute {
 
 	// MC 1.8.9
 	private void setLegacy(final Entity entity, final double value) {
-		final Object instance = getLegacyAttributeInstance(entity);
+		final Object instance = this.getLegacyAttributeInstance(entity);
 
 		ReflectionUtil.invoke(ReflectionUtil.getMethod(instance.getClass(), "setValue", double.class), instance, value);
 	}

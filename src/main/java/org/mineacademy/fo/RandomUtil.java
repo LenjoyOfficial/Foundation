@@ -10,6 +10,7 @@ import java.util.function.Predicate;
 import lombok.experimental.UtilityClass;
 import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
+import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
 
@@ -30,7 +31,7 @@ public final class RandomUtil {
 	/**
 	 * Symbols for chat colors using the & character including decorations like bold italics etc
 	 */
-	private final char[] COLORS_AND_DECORATION = new char[] {
+	private static final char[] COLORS_AND_DECORATION = {
 			'0', '1', '2', '3', '4',
 			'5', '6', '7', '8', '9',
 			'a', 'b', 'c', 'd', 'e',
@@ -40,7 +41,7 @@ public final class RandomUtil {
 	/**
 	 * Only valid chat colors without decorations
 	 */
-	private final char[] CHAT_COLORS = new char[] {
+	private static final char[] CHAT_COLORS = {
 			'0', '1', '2', '3', '4',
 			'5', '6', '7', '8', '9',
 			'a', 'b', 'c', 'd', 'e',
@@ -50,7 +51,7 @@ public final class RandomUtil {
 	/**
 	 * English alphabet letters
 	 */
-	private final char[] LETTERS = new char[] {
+	private static final char[] LETTERS = {
 			'a', 'b', 'c', 'd', 'e',
 			'f', 'g', 'h', 'i', 'j',
 			'k', 'l', 'm', 'n', 'o',
@@ -147,6 +148,15 @@ public final class RandomUtil {
 	}
 
 	/**
+	 * Return a random bright bukkit color, 7 colors are selected
+	 *
+	 * @return
+	 */
+	public static Color nextColor() {
+		return nextItem(Color.AQUA, Color.ORANGE, Color.WHITE, Color.YELLOW, Color.RED, Color.GREEN, Color.BLUE);
+	}
+
+	/**
 	 * Returns a random integer in bounds
 	 *
 	 * @param min
@@ -238,7 +248,7 @@ public final class RandomUtil {
 	 *
 	 * @param origin
 	 * @param radius
-	 * @param is3D,  true for sphere, false for cylinder search
+	 * @param is3D true for sphere, false for cylinder search
 	 * @return
 	 */
 	public Location nextLocation(final Location origin, final double radius, final boolean is3D) {

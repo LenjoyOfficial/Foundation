@@ -14,7 +14,9 @@ import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.settings.SimpleSettings;
 
 import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * A simple yet effective way to calculate duration
@@ -32,6 +34,15 @@ public final class LagCatcher {
 	 * Stores sections with a list of lag durations for each section
 	 */
 	private static final Map<String, List<Long>> durationsMap = new HashMap<>();
+
+	/**
+	 * Used to completely disable "X took Y ms" messages from being printed in to your console.
+	 *
+	 * Defaults to true.
+	 */
+	@Setter
+	@Getter
+	private static boolean printingMessages = true;
 
 	/**
 	 * Used to completely disable "X took Y ms" messages from being printed in to your console.
@@ -185,12 +196,11 @@ public final class LagCatcher {
 		final Long nanoTime = startTimesMap.get(section);
 		final String message = section + " took " + MathUtil.formatTwoDigits(nanoTime == null ? 0D : (System.nanoTime() - nanoTime) / 1_000_000D) + " ms";
 
-		if (printingMessages) {
+		if (printingMessages)
 			if (SimplePlugin.hasInstance())
 				Common.logNoPrefix("[{plugin_name} {plugin_version}] " + message);
 			else
 				System.out.println("[LagCatcher] " + message);
-		}
 	}
 
 	/**

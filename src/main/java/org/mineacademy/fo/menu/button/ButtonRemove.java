@@ -1,6 +1,7 @@
 package org.mineacademy.fo.menu.button;
 
 import java.util.Arrays;
+import java.util.List;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -8,13 +9,16 @@ import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.menu.Menu;
 import org.mineacademy.fo.menu.model.ItemCreator;
+import org.mineacademy.fo.model.Replacer;
 import org.mineacademy.fo.remain.CompColor;
 import org.mineacademy.fo.remain.CompItemFlag;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.settings.SimpleLocalization;
 
 import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 
 /**
  * Represents a standardized remove button that opens the remove confirmation dialog.
@@ -23,6 +27,23 @@ import lombok.RequiredArgsConstructor;
  */
 @RequiredArgsConstructor
 public class ButtonRemove extends Button {
+
+	/**
+	 * The remove button item name
+	 */
+	@Getter
+	@Setter
+	private static String title = "&4&lRemove {name}";
+
+	/**
+	 * The remove button item lore
+	 */
+	@Getter
+	@Setter
+	private static List<String> lore = Arrays.asList(
+			"&r",
+			"&7The selected {type} will",
+			"&7be removed permanently.");
 
 	/**
 	 * The parent menu
@@ -42,7 +63,7 @@ public class ButtonRemove extends Button {
 	/**
 	 * The action that triggers when the object is removed
 	 */
-	private final ButtonRemoveAction removeAction;
+	private final Runnable removeAction;
 
 	/**
 	 * The icon for this button
@@ -52,30 +73,34 @@ public class ButtonRemove extends Button {
 		return ItemCreator
 
 				.of(CompMaterial.LAVA_BUCKET)
-				.name("&4&lRemove " + toRemoveName)
+				.name(title.replace("{name}", this.toRemoveName))
 
-				.lore(Arrays.asList(
-						"&r",
-						"&7The selected " + toRemoveType + " will",
-						"&7be removed permanently."))
+				.lore(Replacer.replaceArray(lore,
+						"name", this.toRemoveName,
+						"type", this.toRemoveType))
 
-				.flag(CompItemFlag.HIDE_ATTRIBUTES)
+				.flags(CompItemFlag.HIDE_ATTRIBUTES)
 				.make();
 	}
 
+	/**
+	 * The icon to confirm removal
+	 *
+	 * @return
+	 */
 	public ItemStack getRemoveConfirmItem() {
 		return ItemCreator
 
 				.ofWool(CompColor.RED)
-				.name("&6&lRemove " + toRemoveName)
+				.name("&6&lRemove " + this.toRemoveName)
 
 				.lore(Arrays.asList(
 						"&r",
-						"&7Confirm that this " + toRemoveType + " will",
+						"&7Confirm that this " + this.toRemoveType + " will",
 						"&7be removed permanently.",
 						"&cCannot be undone."))
 
-				.flag(CompItemFlag.HIDE_ATTRIBUTES)
+				.flags(CompItemFlag.HIDE_ATTRIBUTES)
 				.make();
 	}
 
@@ -99,7 +124,7 @@ public class ButtonRemove extends Button {
 
 		@Override
 		public ItemStack getItem() {
-			return getRemoveConfirmItem();
+			return ButtonRemove.this.getRemoveConfirmItem();
 		}
 
 		/**
@@ -108,25 +133,10 @@ public class ButtonRemove extends Button {
 		@Override
 		public void onClickedInMenu(final Player player, final Menu menu, final ClickType click) {
 			player.closeInventory();
-			removeAction.remove(toRemoveName);
+			ButtonRemove.this.removeAction.run();
 
-			Common.tell(player, SimpleLocalization.Menu.ITEM_DELETED.replace("{item}", (!toRemoveType.isEmpty() ? toRemoveType + " " : "") + toRemoveName));
+			Common.tell(player, SimpleLocalization.Menu.ITEM_DELETED.replace("{item}", (!ButtonRemove.this.toRemoveType.isEmpty() ? ButtonRemove.this.toRemoveType + " " : "") + ButtonRemove.this.toRemoveName));
 		}
-	}
-
-	/**
-	 * Fires the action to remove the object
-	 */
-
-	@FunctionalInterface
-	public interface ButtonRemoveAction {
-
-		/**
-		 * Remove the object
-		 *
-		 * @param object the object's name, for example "Warrior" for class
-		 */
-		void remove(String object);
 	}
 
 	/**
@@ -154,10 +164,10 @@ public class ButtonRemove extends Button {
 			super(parentMenu);
 
 			this.confirmButton = confirmButton;
-			returnButton = new ButtonReturnBack(parentMenu);
+			this.returnButton = new ButtonReturnBack(parentMenu);
 
-			setSize(9 * 3);
-			setTitle(getMenuTitle());
+			this.setSize(9 * 3);
+			this.setTitle(ButtonRemove.this.getMenuTitle());
 		}
 
 		/**
@@ -169,10 +179,10 @@ public class ButtonRemove extends Button {
 		@Override
 		public ItemStack getItemAt(final int slot) {
 			if (slot == 9 + 3)
-				return confirmButton.getItem();
+				return this.confirmButton.getItem();
 
 			if (slot == 9 + 5)
-				return returnButton.getItem();
+				return this.returnButton.getItem();
 
 			return null;
 		}

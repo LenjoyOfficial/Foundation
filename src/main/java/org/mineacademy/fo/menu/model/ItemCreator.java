@@ -151,6 +151,11 @@ public final class ItemCreator implements ConfigSerializable {
 	private boolean hideTags = false;
 
 	/**
+	 * The custom model data of the item
+	 */
+	private Integer modelData;
+
+	/**
 	 * Should we add glow to the item? (adds a fake enchant and uses {@link ItemFlag}
 	 * to hide it). The enchant is visible on older MC versions.
 	 */
@@ -705,26 +710,16 @@ public final class ItemCreator implements ConfigSerializable {
 	/**
 	 * Make an unbreakable item with all attributes hidden, suitable for menu use.
 	 *
-	 * @return the new menu tool, unbreakable with all attributes hidden
+	 * @return the new menu tool with all attributes hidden
 	 */
 	public ItemStack makeMenuTool() {
-		unbreakable = true;
-		hideTags = true;
+		this.hideTags = true;
 
-		return make();
+		return this.make();
 	}
 
 	/**
-	 * @return
-	 * @deprecated pending removal, this simply calls {@link #make()}
-	 */
-	@Deprecated
-	public ItemStack makeSurvival() {
-		return make();
-	}
-
-	/**
-	 * Construct a valid {@link ItemStack} from all parameters above.
+	 * Construct a valid {@link ItemStack} from all parameters of this class.
 	 *
 	 * @return the finished item
 	 */
@@ -751,13 +746,13 @@ public final class ItemCreator implements ConfigSerializable {
 
 		// Apply specific material color if possible
 		color:
-		if (color != null) {
+		if (this.color != null) {
 
 			if (compiledItem.getType().toString().contains("LEATHER")) {
 				if (MinecraftVersion.atLeast(V.v1_4)) {
 					Valid.checkBoolean(compiledMeta instanceof LeatherArmorMeta, "Expected a leather item, cannot apply color to " + compiledItem);
 
-					((LeatherArmorMeta) compiledMeta).setColor(color.getColor());
+					((LeatherArmorMeta) compiledMeta).setColor(this.color.getColor());
 				}
 			} else {
 
@@ -811,8 +806,8 @@ public final class ItemCreator implements ConfigSerializable {
 
 				String entityRaw = itemName.replace("_SPAWN_EGG", "");
 
-				if (entityRaw.equals("MONSTER_EGG") && material != null && material.toString().endsWith("SPAWN_EGG"))
-					entityRaw = material.toString().replace("_SPAWN_EGG", "");
+				if (entityRaw.equals("MONSTER_EGG") && this.material != null && this.material.toString().endsWith("SPAWN_EGG"))
+					entityRaw = this.material.toString().replace("_SPAWN_EGG", "");
 
 				if ("MOOSHROOM".equals(entityRaw))
 					entityRaw = "MUSHROOM_COW";
@@ -837,13 +832,13 @@ public final class ItemCreator implements ConfigSerializable {
 		if (damage != -1) {
 
 			try {
-				ReflectionUtil.invoke("setDurability", compiledItem, (short) damage);
+				ReflectionUtil.invoke("setDurability", compiledItem, (short) this.damage);
 			} catch (final Throwable t) {
 			}
 
 			try {
 				if (compiledMeta instanceof org.bukkit.inventory.meta.Damageable)
-					((org.bukkit.inventory.meta.Damageable) compiledMeta).setDamage(damage);
+					((org.bukkit.inventory.meta.Damageable) compiledMeta).setDamage(this.damage);
 			} catch (final Throwable t) {
 			}
 		}
@@ -892,7 +887,7 @@ public final class ItemCreator implements ConfigSerializable {
 			if (glow) {
 				((ItemMeta) compiledMeta).addEnchant(Enchantment.DURABILITY, 1, true);
 
-				flags.add(CompItemFlag.HIDE_ENCHANTS);
+				this.flags.add(CompItemFlag.HIDE_ENCHANTS);
 			}
 
 			if (!enchants.isEmpty())
@@ -937,6 +932,13 @@ public final class ItemCreator implements ConfigSerializable {
 		for (final CompItemFlag flag : this.flags)
 			try {
 				((ItemMeta) compiledMeta).addItemFlags(ItemFlag.valueOf(flag.toString()));
+			} catch (final Throwable t) {
+			}
+
+		// Set custom model data
+		if (this.modelData != null && MinecraftVersion.atLeast(V.v1_14))
+			try {
+				((ItemMeta) compiledMeta).setCustomModelData(this.modelData);
 			} catch (final Throwable t) {
 			}
 

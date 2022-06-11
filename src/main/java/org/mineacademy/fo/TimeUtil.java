@@ -150,7 +150,9 @@ public final class TimeUtil {
 		long seconds = 0L;
 
 		final String[] split = humanReadableTime.split(" ");
-		Valid.checkBoolean(split.length > 1, "Expected human readable time like '1 second', got '" + humanReadableTime + "' instead");
+
+		if (split.length < 2)
+			throw new IllegalArgumentException("Expected human readable time like '1 second', got '" + humanReadableTime + "' instead");
 
 		for (int i = 1; i < split.length; i++) {
 			final String sub = split[i].toLowerCase();
@@ -370,6 +372,15 @@ public final class TimeUtil {
 	private static void checkLimit(String type, long value, int maxLimit) {
 		if (value > maxLimit)
 			throw new IllegalArgumentException("Value type " + type + " is out of bounds! Max limit: " + maxLimit + ", given: " + value);
+	}
+
+	/**
+	 * Convert the current time into one that is recognized by MySQL
+	 *
+	 * @return
+	 */
+	public static String toSQLTimestamp() {
+		return toSQLTimestamp(System.currentTimeMillis());
 	}
 
 	/**

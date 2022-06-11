@@ -56,13 +56,13 @@ public final class ToolsListener implements Listener {
 	 *
 	 * @param event
 	 */
-	@EventHandler(priority = EventPriority.HIGH)
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
 	public void onToolClick(final PlayerInteractEvent event) {
 		if (!Remain.isInteractEventPrimaryHand(event))
 			return;
 
 		final Player player = event.getPlayer();
-		final Tool tool = ToolRegistry.getTool(player.getItemInHand());
+		final Tool tool = Tool.getTool(player.getItemInHand());
 
 		if (tool != null)
 			try {
@@ -101,7 +101,7 @@ public final class ToolsListener implements Listener {
 	public void onToolPlaceBlock(final BlockPlaceEvent event) {
 
 		final Player player = event.getPlayer();
-		final Tool tool = ToolRegistry.getTool(player.getItemInHand());
+		final Tool tool = Tool.getTool(player.getItemInHand());
 
 		if (tool != null)
 			try {
@@ -124,13 +124,14 @@ public final class ToolsListener implements Listener {
 
 	/**
 	 * Handles hotbar focus/defocus for tools
+	 * @param event
 	 */
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onHeltItem(final PlayerItemHeldEvent event) {
 		final Player player = event.getPlayer();
 
-		final Tool current = ToolRegistry.getTool(player.getInventory().getItem(event.getNewSlot()));
-		final Tool previous = ToolRegistry.getTool(player.getInventory().getItem(event.getPreviousSlot()));
+		final Tool current = Tool.getTool(player.getInventory().getItem(event.getNewSlot()));
+		final Tool previous = Tool.getTool(player.getInventory().getItem(event.getPreviousSlot()));
 
 		// Player has attained focus
 		if (current != null) {
@@ -177,11 +178,11 @@ public final class ToolsListener implements Listener {
 		if (!(shooter instanceof Player))
 			return;
 
-		if (shotRockets.containsKey(shot.getUniqueId()))
+		if (this.shotRockets.containsKey(shot.getUniqueId()))
 			return;
 
 		final Player player = (Player) shooter;
-		final Tool tool = ToolRegistry.getTool(player.getItemInHand());
+		final Tool tool = Tool.getTool(player.getItemInHand());
 
 		if (tool instanceof Rocket)
 			try {
@@ -212,7 +213,7 @@ public final class ToolsListener implements Listener {
 						final Projectile copy = world.spawn(directedLoc, shot.getClass());
 						copy.setVelocity(shot.getVelocity());
 
-						shotRockets.put(copy.getUniqueId(), new ShotRocket(player, rocket));
+						this.shotRockets.put(copy.getUniqueId(), new ShotRocket(player, rocket));
 						rocket.onLaunch(copy, player);
 
 						Common.runTimer(1, new BukkitRunnable() {
@@ -221,8 +222,8 @@ public final class ToolsListener implements Listener {
 
 							@Override
 							public void run() {
-								if (!copy.isValid() || copy.isOnGround() || elapsedTicks++ > 20 * 30 /*Remove after 30 seconds to reduce server strain*/)
-									cancel();
+								if (!copy.isValid() || copy.isOnGround() || this.elapsedTicks++ > 20 * 30 /*Remove after 30 seconds to reduce server strain*/)
+									this.cancel();
 
 								else
 									rocket.onFlyTick(copy, player);
@@ -231,7 +232,7 @@ public final class ToolsListener implements Listener {
 					});
 
 				} else {
-					shotRockets.put(shot.getUniqueId(), new ShotRocket(player, rocket));
+					this.shotRockets.put(shot.getUniqueId(), new ShotRocket(player, rocket));
 					rocket.onLaunch(shot, player);
 				}
 
@@ -252,7 +253,7 @@ public final class ToolsListener implements Listener {
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onRocketHit(final ProjectileHitEvent event) {
 		final Projectile projectile = event.getEntity();
-		final ShotRocket shot = shotRockets.remove(projectile.getUniqueId());
+		final ShotRocket shot = this.shotRockets.remove(projectile.getUniqueId());
 
 		if (shot != null) {
 			final Rocket rocket = shot.getRocket();

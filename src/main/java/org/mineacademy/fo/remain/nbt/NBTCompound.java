@@ -1,7 +1,6 @@
 package org.mineacademy.fo.remain.nbt;
 
 import java.io.OutputStream;
-import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
@@ -623,19 +622,34 @@ public class NBTCompound {
 	}
 
 	/**
-     * @param name
-     * @return The retrieved Integer List
-     */
-    public NBTList<int[]> getIntArrayList(String name) {
-        try {
-            this.writeLock.lock();
-            final NBTList<int[]> list = NBTReflectionUtil.getList(this, name, NBTType.NBTTagIntArray, int[].class);
-            this.saveCompound();
-            return list;
-        } finally {
-            this.writeLock.unlock();
-        }
-    }
+	 * @param name
+	 * @return The retrieved Integer List
+	 */
+	public NBTList<int[]> getIntArrayList(String name) {
+		try {
+			this.writeLock.lock();
+			final NBTList<int[]> list = NBTReflectionUtil.getList(this, name, NBTType.NBTTagIntArray, int[].class);
+			this.saveCompound();
+			return list;
+		} finally {
+			this.writeLock.unlock();
+		}
+	}
+
+	/**
+	* @param name
+	* @return The retrieved Integer List
+	*/
+	public NBTList<UUID> getUUIDList(String name) {
+		try {
+			this.writeLock.lock();
+			final NBTList<UUID> list = NBTReflectionUtil.getList(this, name, NBTType.NBTTagIntArray, UUID.class);
+			this.saveCompound();
+			return list;
+		} finally {
+			this.writeLock.unlock();
+		}
+	}
 
    /**
     * @param name
@@ -820,9 +834,9 @@ public class NBTCompound {
 			return false;
 		if(obj instanceof NBTCompound) {
 			final NBTCompound other = (NBTCompound) obj;
-			if(this.getKeys().equals(other.getKeys())) {
-				for(final String key : this.getKeys())
-					if(!isEqual(this, other, key))
+			if (this.getKeys().equals(other.getKeys())) {
+				for (final String key : this.getKeys())
+					if (!isEqual(this, other, key))
 						return false;
 				return true;
 			}

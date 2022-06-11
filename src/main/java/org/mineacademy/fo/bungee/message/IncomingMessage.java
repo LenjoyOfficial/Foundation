@@ -5,9 +5,8 @@ import java.io.IOException;
 import java.util.UUID;
 
 import org.bukkit.entity.Player;
-import org.mineacademy.fo.CompressUtil;
 import org.mineacademy.fo.ReflectionUtil;
-import org.mineacademy.fo.bungee.BungeeAction;
+import org.mineacademy.fo.bungee.BungeeListener;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.plugin.SimplePlugin;
@@ -22,7 +21,7 @@ import lombok.Getter;
  * <p>
  * NB: This uses the standardized Foundation model where the first
  * string is the server name and the second string is the
- * {@link BungeeAction} by its name *read automatically*.
+ * {@link BungeeMessageType} by its name *read automatically*.
  */
 public final class IncomingMessage extends Message {
 
@@ -47,14 +46,30 @@ public final class IncomingMessage extends Message {
 	 * <p>
 	 * NB: This uses the standardized Foundation model where the first
 	 * string is the server name and the second string is the
-	 * {@link BungeeAction} by its name *read automatically*.
+	 * {@link BungeeMessageType} by its name *read automatically*.
 	 *
 	 * @param data
 	 */
 	public IncomingMessage(byte[] data) {
+		this(SimplePlugin.getInstance().getBungeeCord(), data);
+	}
+
+	/**
+	 * Create a new incoming message from the given array
+	 * <p>
+	 * NB: This uses the standardized Foundation model where the first
+	 * string is the server name and the second string is the
+	 * {@link BungeeMessageType} by its name *read automatically*.
+	 *
+	 * @param listener
+	 * @param data
+	 */
+	public IncomingMessage(BungeeListener listener, byte[] data) {
+		super(listener);
+
 		this.data = data;
 		this.stream = new ByteArrayInputStream(data);
-		this.input = ByteStreams.newDataInput(stream);
+		this.input = ByteStreams.newDataInput(this.stream);
 
 		// -----------------------------------------------------------------
 		// We are automatically reading the first two strings assuming the
@@ -62,13 +77,13 @@ public final class IncomingMessage extends Message {
 		// -----------------------------------------------------------------
 
 		// Read senders UUID
-		setSenderUid(input.readUTF());
+		this.setSenderUid(this.input.readUTF());
 
 		// Read server name
-		setServerName(input.readUTF());
+		this.setServerName(this.input.readUTF());
 
 		// Read action
-		setAction(input.readUTF());
+		this.setAction(this.input.readUTF());
 	}
 
 	/**
@@ -77,9 +92,9 @@ public final class IncomingMessage extends Message {
 	 * @return
 	 */
 	public String readString() {
-		moveHead(String.class);
+		this.moveHead(String.class);
 
-		return CompressUtil.decompressB64(input.readUTF());
+		return this.input.readUTF();
 	}
 
 	/**
@@ -88,9 +103,9 @@ public final class IncomingMessage extends Message {
 	 * @return
 	 */
 	public UUID readUUID() {
-		moveHead(UUID.class);
+		this.moveHead(UUID.class);
 
-		return UUID.fromString(input.readUTF());
+		return UUID.fromString(this.input.readUTF());
 	}
 
 	/**
@@ -99,9 +114,9 @@ public final class IncomingMessage extends Message {
 	 * @return
 	 */
 	public SerializedMap readMap() {
-		moveHead(String.class);
+		this.moveHead(String.class);
 
-		return SerializedMap.fromJson(CompressUtil.decompressB64(input.readUTF()));
+		return SerializedMap.fromJson(this.input.readUTF());
 	}
 
 	/**
@@ -112,9 +127,9 @@ public final class IncomingMessage extends Message {
 	 * @return
 	 */
 	public <T extends Enum<T>> T readEnum(Class<T> typeOf) {
-		moveHead(typeOf);
+		this.moveHead(typeOf);
 
-		return ReflectionUtil.lookupEnum(typeOf, input.readUTF());
+		return ReflectionUtil.lookupEnum(typeOf, this.input.readUTF());
 	}
 
 	/**
@@ -123,9 +138,9 @@ public final class IncomingMessage extends Message {
 	 * @return
 	 */
 	public boolean readBoolean() {
-		moveHead(Boolean.class);
+		this.moveHead(Boolean.class);
 
-		return input.readBoolean();
+		return this.input.readBoolean();
 	}
 
 	/**
@@ -134,9 +149,9 @@ public final class IncomingMessage extends Message {
 	 * @return
 	 */
 	public byte readByte() {
-		moveHead(Byte.class);
+		this.moveHead(Byte.class);
 
-		return input.readByte();
+		return this.input.readByte();
 	}
 
 	/**
@@ -145,12 +160,12 @@ public final class IncomingMessage extends Message {
 	 * @return
 	 */
 	public byte[] readBytes() {
-		moveHead(byte[].class);
+		this.moveHead(byte[].class);
 
-		final byte[] array = new byte[stream.available()];
+		final byte[] array = new byte[this.stream.available()];
 
 		try {
-			stream.read(array);
+			this.stream.read(array);
 
 		} catch (final IOException e) {
 			e.printStackTrace();
@@ -165,9 +180,9 @@ public final class IncomingMessage extends Message {
 	 * @return
 	 */
 	public double readDouble() {
-		moveHead(Double.class);
+		this.moveHead(Double.class);
 
-		return input.readDouble();
+		return this.input.readDouble();
 	}
 
 	/**
@@ -176,9 +191,9 @@ public final class IncomingMessage extends Message {
 	 * @return
 	 */
 	public float readFloat() {
-		moveHead(Float.class);
+		this.moveHead(Float.class);
 
-		return input.readFloat();
+		return this.input.readFloat();
 	}
 
 	/**
@@ -187,9 +202,9 @@ public final class IncomingMessage extends Message {
 	 * @return
 	 */
 	public int writeInt() {
-		moveHead(Integer.class);
+		this.moveHead(Integer.class);
 
-		return input.readInt();
+		return this.input.readInt();
 	}
 
 	/**
@@ -198,9 +213,9 @@ public final class IncomingMessage extends Message {
 	 * @return
 	 */
 	public long readLong() {
-		moveHead(Long.class);
+		this.moveHead(Long.class);
 
-		return input.readLong();
+		return this.input.readLong();
 	}
 
 	/**
@@ -209,19 +224,19 @@ public final class IncomingMessage extends Message {
 	 * @return
 	 */
 	public short readShort() {
-		moveHead(Short.class);
+		this.moveHead(Short.class);
 
-		return input.readShort();
+		return this.input.readShort();
 	}
 
 	/**
 	 * Forwards this message to a player
 	 *
-	 * @param connection
+	 * @param player
 	 */
 	public void forward(Player player) {
-		player.sendPluginMessage(SimplePlugin.getInstance(), getChannel(), data);
+		player.sendPluginMessage(SimplePlugin.getInstance(), this.getChannel(), this.data);
 
-		Debugger.debug("bungee", "Forwarding data on " + getChannel() + " channel from " + getAction() + " as " + player.getName() + " player to BungeeCord.");
+		Debugger.debug("bungee", "Forwarding data on " + this.getChannel() + " channel from " + this.getAction() + " as " + player.getName() + " player to BungeeCord.");
 	}
 }

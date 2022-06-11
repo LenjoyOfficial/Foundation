@@ -34,7 +34,7 @@ final class FoundationFilter {
 	/**
 	 * Start filtering the console
 	 */
-	public static void inject() {
+	static void inject() {
 
 		// Set filter for System out
 		System.setOut(new FilterSystem());
@@ -84,10 +84,10 @@ final class FoundationFilter {
 		message = message.toLowerCase();
 
 		// Only filter this after plugin has been fully enabled
-		if (!SimpleSettings.MAIN_COMMAND_ALIASES.isEmpty()) {
+		if (SimplePlugin.hasInstance() && SimplePlugin.getInstance().getMainCommand() != null) {
 
 			// Filter inbuilt Foundation or ChatControl commands
-			if (message.contains("issued server command: /" + SimpleSettings.MAIN_COMMAND_ALIASES.get(0) + " internal") || message.contains("issued server command: /#flp"))
+			if (message.contains("issued server command: /" + SimplePlugin.getInstance().getMainCommand().getLabel() + " internal") || message.contains("issued server command: /#flp"))
 				return true;
 
 			// Filter user-defined commands
@@ -159,22 +159,22 @@ class FilterLog4j implements org.apache.logging.log4j.core.Filter {
 
 	@Override
 	public Result filter(LogEvent record) {
-		return checkMessage(record.getMessage().getFormattedMessage());
+		return this.checkMessage(record.getMessage().getFormattedMessage());
 	}
 
 	@Override
 	public Result filter(Logger arg0, Level arg1, Marker arg2, String message, Object... arg4) {
-		return checkMessage(message);
+		return this.checkMessage(message);
 	}
 
 	@Override
 	public Result filter(Logger arg0, Level arg1, Marker arg2, Object message, Throwable arg4) {
-		return checkMessage(message.toString());
+		return this.checkMessage(message.toString());
 	}
 
 	@Override
 	public Result filter(Logger arg0, Level arg1, Marker arg2, Message message, Throwable arg4) {
-		return checkMessage(message.getFormattedMessage());
+		return this.checkMessage(message.getFormattedMessage());
 	}
 
 	/*

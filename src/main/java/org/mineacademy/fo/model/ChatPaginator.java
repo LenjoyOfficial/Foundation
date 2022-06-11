@@ -3,10 +3,12 @@ package org.mineacademy.fo.model;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -14,7 +16,6 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.Plugin;
 import org.mineacademy.fo.ChatUtil;
 import org.mineacademy.fo.Common;
-import org.mineacademy.fo.command.PermsCommand;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.settings.SimpleLocalization;
 
@@ -67,7 +68,7 @@ public final class ChatPaginator {
 	 * Construct chat pages taking the entire visible
 	 * chat portion when chat is maximize given {@link #setFoundationHeader(String)}
 	 * is used and there is no footer. We use {@link #FOUNDATION_HEIGHT} for height
-	 * and {@link SimpleLocalization.Commands#HEADER_COLOR} for color.
+	 * and {@link org.mineacademy.fo.settings.SimpleLocalization.Commands#HEADER_COLOR} for color.
 	 */
 	public ChatPaginator() {
 		this(FOUNDATION_HEIGHT, SimpleLocalization.Commands.HEADER_COLOR);
@@ -78,7 +79,7 @@ public final class ChatPaginator {
 	 * chat portion when chat is maximize given {@link #setFoundationHeader(String)}
 	 * is used and there is no footer. We use {@link #FOUNDATION_HEIGHT} for height.
 	 *
-	 * @param color to use
+	 * @param themeColor
 	 */
 	public ChatPaginator(ChatColor themeColor) {
 		this(FOUNDATION_HEIGHT, themeColor);
@@ -86,7 +87,7 @@ public final class ChatPaginator {
 
 	/**
 	 * Creates a paginator with the given lines per page. Maximum on screen is 20 minus header and footer.
-	 * The {@link SimpleLocalization.Commands#HEADER_COLOR} color is used.
+	 * The {@link org.mineacademy.fo.settings.SimpleLocalization.Commands#HEADER_COLOR} color is used.
 	 *
 	 * @param linesPerPage
 	 */
@@ -99,9 +100,6 @@ public final class ChatPaginator {
 	 * ----------------
 	 * \<center\>title
 	 * ---------------
-	 *
-	 * IMPORTANT: Use {@link #setThemeColor(ChatColor)} first if you want to use
-	 * a custom theme color
 	 *
 	 * @param title
 	 * @return
@@ -117,8 +115,7 @@ public final class ChatPaginator {
 	 * @return
 	 */
 	public ChatPaginator setHeader(SimpleComponent... components) {
-		for (final SimpleComponent component : components)
-			this.header.add(component);
+		Collections.addAll(this.header, components);
 
 		return this;
 	}
@@ -184,8 +181,7 @@ public final class ChatPaginator {
 	 * @return
 	 */
 	public ChatPaginator setFooter(SimpleComponent... components) {
-		for (final SimpleComponent component : components)
-			this.footer.add(component);
+		Collections.addAll(this.footer, components);
 
 		return this;
 	}
@@ -204,11 +200,28 @@ public final class ChatPaginator {
 	}
 
 	/**
-	 * Show this page to the sender, either paginated or a full dumb when this is a console
+	 * Start showing the first page to the sender
 	 *
 	 * @param sender
 	 */
 	public void send(CommandSender sender) {
+		this.send(sender, 1);
+	}
+
+	/**
+	 * Show the given page to the sender, either paginated or a full dumb when this is a console
+	 *
+	 * @param sender
+	 * @param page
+	 */
+	public void send(CommandSender sender, int page) {
+		if (Bukkit.isPrimaryThread())
+			this.send0(sender, page);
+		else
+			Common.runLater(() -> this.send0(sender, page));
+	}
+
+	private void send0(CommandSender sender, int page) {
 		if (sender instanceof Player) {
 			final Player player = (Player) sender;
 
@@ -222,7 +235,7 @@ public final class ChatPaginator {
 			player.setMetadata("FoPages", new FixedMetadataValue(SimplePlugin.getInstance(), SimplePlugin.getNamed()));
 			player.setMetadata(getPageNbtTag(), new FixedMetadataValue(SimplePlugin.getInstance(), this));
 
-			player.chat("/#flp 1");
+			player.chat("/#flp " + page);
 		}
 
 		else {

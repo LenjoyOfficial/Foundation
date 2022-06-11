@@ -1,6 +1,8 @@
 package org.mineacademy.fo.model;
 
-import lombok.RequiredArgsConstructor;
+import java.util.Arrays;
+import java.util.Objects;
+
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -9,9 +11,7 @@ import org.mineacademy.fo.ChatUtil;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.remain.Remain;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Objects;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Represents a chat message surrounded by chat-wide line on the top and bottom:
@@ -84,19 +84,19 @@ public final class BoxedMessage {
 
 	private void launch() {
 		Common.runLater(2, () -> {
-			final boolean tellPrefixState = Common.ADD_TELL_PREFIX;
-			Common.ADD_TELL_PREFIX = false;
+			final String oldTellPrefix = Common.getTellPrefix();
+			Common.setTellPrefix("");
 
-			sendFrame();
+			this.sendFrame();
 
-			Common.ADD_TELL_PREFIX = tellPrefixState;
+			Common.setTellPrefix(oldTellPrefix);
 		});
 	}
 
 	private void sendFrame() {
-		sendLine();
-		sendFrameInternals0();
-		sendLine();
+		this.sendLine();
+		this.sendFrameInternals0();
+		this.sendLine();
 	}
 
 	private void sendFrameInternals0() {
@@ -110,13 +110,13 @@ public final class BoxedMessage {
 	}
 
 	private void send(String message) {
-		message = centerMessage0(message);
+		message = this.centerMessage0(message);
 
-		if (recipients == null)
-			broadcast0(message);
+		if (this.recipients == null)
+			this.broadcast0(message);
 
 		else
-			tell0(message);
+			this.tell0(message);
 	}
 
 	private String centerMessage0(String message) {
@@ -127,17 +127,17 @@ public final class BoxedMessage {
 	}
 
 	private void broadcast0(String message) {
-		if (sender != null)
-			Common.broadcast(message, sender);
+		if (this.sender != null)
+			Common.broadcast(message, this.sender);
 		else
 			Common.broadcastTo(Remain.getOnlinePlayers(), message);
 	}
 
 	private void tell0(String message) {
-		if (sender != null)
-			message = message.replace("{player}", Common.resolveSenderName(sender));
+		if (this.sender != null)
+			message = message.replace("{player}", Common.resolveSenderName(this.sender));
 
-		Common.broadcastTo(recipients, message);
+		Common.broadcastTo(this.recipients, message);
 	}
 
 	/**
@@ -152,12 +152,12 @@ public final class BoxedMessage {
 	}
 
 	public String getMessage() {
-		return StringUtils.join(messages, "\n");
+		return this.messages.length == 0 ? "" : String.join("\n", this.messages);
 	}
 
 	@Override
 	public String toString() {
-		return "Boxed{" + StringUtils.join(messages, ", ") + "}";
+		return "Boxed{" + String.join(", ", this.messages) + "}";
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
@@ -363,16 +363,16 @@ public final class BoxedMessage {
 		private final String[] variables;
 
 		/**
-		 * Replace {@link #variables} with the given object replacements
+		 * Replace the variables we store with the given object replacements
 		 *
 		 * @param replacements
 		 * @return
 		 */
 		public final BoxedMessage replace(Object... replacements) {
-			String message = StringUtils.join(messages, "%delimiter%");
+			String message = String.join("%delimiter%", BoxedMessage.this.messages);
 
-			for (int i = 0; i < variables.length; i++) {
-				String find = variables[i];
+			for (int i = 0; i < this.variables.length; i++) {
+				String find = this.variables[i];
 
 				{ // Auto insert brackets
 					if (!find.startsWith("{"))

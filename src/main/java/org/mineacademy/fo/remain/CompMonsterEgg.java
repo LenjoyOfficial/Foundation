@@ -94,7 +94,7 @@ public final class CompMonsterEgg {
 		if (type == null && acceptUnsafeEggs)
 			type = EntityType.UNKNOWN;
 
-		Valid.checkNotNull(type, "Could not detect monster type from " + item + " (data = " + item.getData() + ", dura = " + item.getDurability() + ")");
+		Valid.checkNotNull(type, "Could not detect monster type from " + item + ")");
 		return type;
 	}
 
@@ -190,7 +190,7 @@ public final class CompMonsterEgg {
 	 */
 	public static ItemStack setEntity(ItemStack item, final EntityType type) {
 		Valid.checkNotNull(item, "Item == null");
-		Valid.checkBoolean(type.isSpawnable(), type + " cannot be spawned and thus set into a monster egg!");
+		Valid.checkBoolean(type.isSpawnable(), "EntityType." + type + " cannot be spawned and set into a monster egg!");
 
 		if (MinecraftVersion.atLeast(V.v1_13)) {
 			item.setType(CompMaterial.makeMonsterEgg(type).getMaterial());

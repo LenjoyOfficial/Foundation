@@ -60,16 +60,6 @@ public class FoException extends RuntimeException {
 	 * @param message
 	 * @param t
 	 */
-	public FoException(String message, Throwable t) {
-		this(t, message);
-	}
-
-	/**
-	 * Create a new exception and logs it
-	 *
-	 * @param message
-	 * @param t
-	 */
 	public FoException(Throwable t, String message) {
 		super(message, t);
 

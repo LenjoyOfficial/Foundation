@@ -5,8 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.MathUtil;
 import org.mineacademy.fo.Valid;
@@ -34,15 +32,6 @@ public final class LagCatcher {
 	 * Stores sections with a list of lag durations for each section
 	 */
 	private static final Map<String, List<Long>> durationsMap = new HashMap<>();
-
-	/**
-	 * Used to completely disable "X took Y ms" messages from being printed in to your console.
-	 *
-	 * Defaults to true.
-	 */
-	@Setter
-	@Getter
-	private static boolean printingMessages = true;
 
 	/**
 	 * Used to completely disable "X took Y ms" messages from being printed in to your console.

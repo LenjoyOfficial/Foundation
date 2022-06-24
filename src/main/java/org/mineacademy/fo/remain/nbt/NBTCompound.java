@@ -1,6 +1,7 @@
 package org.mineacademy.fo.remain.nbt;
 
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
@@ -650,21 +651,6 @@ public class NBTCompound {
 			this.writeLock.unlock();
 		}
 	}
-
-   /**
-    * @param name
-    * @return The retrieved Integer List
-    */
-   public NBTList<UUID> getUUIDList(String name) {
-       try {
-           this.writeLock.lock();
-           final NBTList<UUID> list = NBTReflectionUtil.getList(this, name, NBTType.NBTTagIntArray, UUID.class);
-           this.saveCompound();
-           return list;
-       } finally {
-           this.writeLock.unlock();
-       }
-   }
 
 	/**
 	 * @param name

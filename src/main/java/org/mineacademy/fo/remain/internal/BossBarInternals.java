@@ -349,9 +349,9 @@ public final class BossBarInternals implements Listener {
 		final float pitch = loc.getPitch();
 
 		if (pitch >= 55)
-			loc.add(0, -3, 0);
+			loc.add(0, -150, 0);
 		else if (pitch <= -55)
-			loc.add(0, 3, 0);
+			loc.add(0, 150, 0);
 		else
 			loc = loc.getBlock().getRelative(getDirection(loc), Bukkit.getViewDistance() * 16).getLocation();
 

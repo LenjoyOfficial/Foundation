@@ -211,8 +211,12 @@ public abstract class SimpleHologram {
 		if (this.pendingTeleport != null) {
 			this.entity.teleport(this.pendingTeleport);
 
+			// Lower the hologram a little bit if the entity is a small armor stand
+			if (this.entity instanceof ArmorStand && ((ArmorStand) this.entity).isSmall())
+				pendingTeleport.subtract(0, 0.5, 0);
+
 			// The first line is on the top
-			pendingTeleport.add(0, loreLineHeight * (loreLines.size() - 1), 0);
+			pendingTeleport.add(0, 2 + loreLineHeight * (loreLines.size() - 1), 0);
 
 			for (final ArmorStand loreEntity : this.loreEntities) {
 				loreEntity.teleport(this.pendingTeleport);
@@ -402,7 +406,7 @@ public abstract class SimpleHologram {
 		this.lastTeleportLocation.setY(location.getY());
 		this.lastTeleportLocation.setZ(location.getZ());
 
-		this.pendingTeleport = location;
+		this.pendingTeleport = location.clone();
 	}
 
 	/**

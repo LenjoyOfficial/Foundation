@@ -1517,11 +1517,13 @@ public final class Remain {
 						CHAT_COMPONENT_CLASS); //msg
 
 				final Class<?> containerClass = lookupClass("net.minecraft.world.inventory.Container");
-				final Object activeContainer = getFieldContent(getDeclaredField(getNMSClass("EntityHuman", "net.minecraft.world.entity.player.EntityHuman"), containerClass, 1), (Object) null);
+				final Object activeContainer = getFieldContent(getDeclaredField(getNMSClass("EntityHuman", "net.minecraft.world.entity.player.EntityHuman"), containerClass, 1), nmsPlayer);
 				final int windowId = getFieldContent(activeContainer, "j");
 
+				final Method initMenu = getMethod(nmsPlayer.getClass(), MinecraftVersion.atLeast(V.v1_18) ? "a" : "initMenu", containerClass);
+
 				Remain.sendPacket(player, instantiate(packetConstructor, windowId, container, chatComponent));
-				invoke(MinecraftVersion.atLeast(V.v1_18) ? "a" : "initMenu", nmsPlayer, activeContainer);
+				invoke(initMenu, nmsPlayer, activeContainer);
 
 				return;
 			}

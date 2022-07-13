@@ -66,7 +66,7 @@ public interface MenuQuantitable {
 	 * @return the next quantity (higher or lower depending on the click)
 	 */
 	default double getNextQuantityDouble(ClickType clickType) {
-		return clickType == ClickType.LEFT ? -this.getQuantity().getAmountDouble() : this.getQuantity().getAmountDouble();
+		return clickType == ClickType.LEFT ? this.getQuantity().getAmountDouble() : -this.getQuantity().getAmountDouble();
 	}
 
 	/**
@@ -76,7 +76,7 @@ public interface MenuQuantitable {
 	 * @return the next quantity (higher or lower depending on the click)
 	 */
 	default double getNextQuantityPercent(ClickType clickType) {
-		return clickType == ClickType.LEFT ? -this.getQuantity().getAmountPercent() : this.getQuantity().getAmountPercent();
+		return clickType == ClickType.LEFT ? this.getQuantity().getAmountPercent() : -this.getQuantity().getAmountPercent();
 	}
 
 	/**
@@ -89,12 +89,11 @@ public interface MenuQuantitable {
 	default Button getQuantityButton(Menu menu) {
 		return new Button() {
 
-
 			@Override
 			public final void onClickedInMenu(Player player, Menu clickedMenu, ClickType clickType) {
 				final boolean allowDecimals = MenuQuantitable.this.allowDecimalQuantities();
 
-				final MenuQuantity nextQuantity = clickType == ClickType.LEFT ? MenuQuantitable.this.getQuantity().previous(allowDecimals) : MenuQuantitable.this.getQuantity().next(allowDecimals);
+				final MenuQuantity nextQuantity = clickType == ClickType.LEFT ? MenuQuantitable.this.getQuantity().next(allowDecimals) : MenuQuantitable.this.getQuantity().previous(allowDecimals);
 				Valid.checkNotNull(nextQuantity, "Next quantity cannot be null. Current: " + MenuQuantitable.this.getQuantity() + " Click: " + clickType);
 
 				MenuQuantitable.this.setQuantity(nextQuantity);
@@ -105,13 +104,14 @@ public interface MenuQuantitable {
 			@Override
 			public ItemStack getItem() {
 				final boolean allowDecimals = MenuQuantitable.this.allowDecimalQuantities();
+				final MenuQuantity q = getQuantity();
 
 				return ItemCreator.of(
 								CompMaterial.STRING,
-								"Edit Quantity: &7" + (int) getQuantity().getAmountDouble(),
+								"&fEdit Quantity: &a" + (allowDecimals ? q.getAmountDouble() : (int) q.getAmountPercent()),
 								"",
-								"&7Left click to increase to &b" + getQuantity().next(allowDecimals).getAmountDouble() + "&7!",
-								"&7Right click to decrease to &b" + getQuantity().previous(allowDecimals).getAmountDouble() + "&7!")
+								"&eLeft click to increase to &b" + (allowDecimals ? q.next(true).getAmountDouble() : (int) q.next(false).getAmountPercent()) + "&e!",
+								"&eRight click to decrease to &b" + (allowDecimals ? q.previous(true).getAmountDouble() : (int) q.previous(false).getAmountPercent()) + "&e!")
 						.make();
 			}
 		};

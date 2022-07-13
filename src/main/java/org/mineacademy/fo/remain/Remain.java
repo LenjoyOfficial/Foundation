@@ -47,6 +47,7 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.SimpleCommandMap;
+import org.bukkit.configuration.MemorySection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
@@ -71,6 +72,7 @@ import org.bukkit.potion.PotionType;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.EntityUtil;
 import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.MathUtil;
@@ -1219,8 +1221,10 @@ public final class Remain {
 	 */
 	public static void unregisterCommand(final String label, final boolean removeAliases) {
 		try {
+			final SimpleCommandMap commandMap = getCommandMap();
+
 			// Unregister the commandMap from the command itself.
-			final PluginCommand command = Bukkit.getPluginCommand(label);
+			final Command command = commandMap.getCommand(label);
 
 			if (command != null) {
 				final Field commandField = Command.class.getDeclaredField("commandMap");
@@ -1234,7 +1238,7 @@ public final class Remain {
 			final Field f = SimpleCommandMap.class.getDeclaredField("knownCommands");
 			f.setAccessible(true);
 
-			final Map<String, Command> cmdMap = (Map<String, Command>) f.get(getCommandMap());
+			final Map<String, Command> cmdMap = (Map<String, Command>) f.get(commandMap);
 
 			cmdMap.remove(label);
 

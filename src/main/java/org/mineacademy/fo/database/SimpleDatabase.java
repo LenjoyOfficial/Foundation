@@ -60,6 +60,11 @@ public class SimpleDatabase {
 	private final StrictMap<String, String> sqlVariables = new StrictMap<>();
 
 	/**
+	 * The raw URL from which the connection was created
+	 */
+	private String url;
+
+	/**
 	 * The last credentials from the connect function, or null if never called
 	 */
 	private LastCredentials lastCredentials;
@@ -160,12 +165,10 @@ public class SimpleDatabase {
 	 */
 	public final void connect(final String url, final String user, final String password, final String table) {
 
+		this.url = url;
 		this.connecting = true;
 
 		try {
-
-			// Close any open connection
-			this.close();
 
 			// Support local storage of databases on your disk, typically in your plugin's folder
 			// Make sure to load the library using "libraries" and "legacy-libraries" feature in plugin.yml:
@@ -364,7 +367,9 @@ public class SimpleDatabase {
 			columns += ", PRIMARY KEY (`" + creator.getPrimaryColumn() + "`)";
 
 		try {
-			this.update("CREATE TABLE IF NOT EXISTS `" + creator.getName() + "` (" + columns + ") DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;");
+			final boolean isSQLite = this.url != null && this.url.startsWith("jdbc:sqlite");
+
+			this.update("CREATE TABLE IF NOT EXISTS `" + creator.getName() + "` (" + columns + ")" + (isSQLite ? "" : " DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci") + ";");
 
 		} catch (final Throwable t) {
 			if (t.toString().contains("Unknown collation")) {
@@ -469,11 +474,8 @@ public class SimpleDatabase {
 
 		Debugger.debug("mysql", "Updating database with: " + sql);
 
-		try {
-			final Statement statement = this.connection.createStatement();
-
+		try (Statement statement = this.connection.createStatement()) {
 			statement.executeUpdate(sql);
-			statement.close();
 
 		} catch (final SQLException e) {
 			this.handleError(e, "Error on updating database with: " + sql);
@@ -491,7 +493,8 @@ public class SimpleDatabase {
 	}
 
 	/**
-	 * Lists all rows in the given table with the given parameter
+	 * Lists all rows in the given table with the given parameter.
+	 * Do not forget to close the connection when done in your consumer.
 	 *
 	 * @param table
 	 * @param param
@@ -515,9 +518,6 @@ public class SimpleDatabase {
 
 			} catch (final Throwable t) {
 				Common.error(t, "Error selecting rows from table " + table + " with param '" + param + "'");
-
-			} finally {
-				this.close(resultSet);
 			}
 		}
 	}
@@ -624,8 +624,7 @@ public class SimpleDatabase {
 		if (!this.isConnected())
 			this.connectUsingLastCredentials();
 
-		try {
-			final Statement batchStatement = this.getConnection().createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+		try (Statement batchStatement = this.getConnection().createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
 			final int processedCount = sqls.size();
 
 			// Prevent automatically sending db instructions
@@ -658,11 +657,6 @@ public class SimpleDatabase {
 
 			// This will block the thread
 			this.getConnection().commit();
-
-			if (!batchStatement.isClosed())
-				batchStatement.close();
-
-			//Common.log("Updated " + processedCount + " database entries.");
 
 		} catch (final Throwable t) {
 			final List<String> errorLog = new ArrayList<>();

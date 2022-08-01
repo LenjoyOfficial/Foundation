@@ -407,11 +407,13 @@ public class NBTCompound {
 	}
 
 	/**
-	 * Uses Gson to store an {@link Serializable} Object
+	 * Uses Gson to store an {@link Serializable} Object.
+	 * Deprecated to clarify that it's probably missused. Preferably do the serializing yourself.
 	 *
 	 * @param key
 	 * @param value
 	 */
+	@Deprecated
 	public void setObject(String key, Object value) {
 		try {
 			this.writeLock.lock();
@@ -424,11 +426,13 @@ public class NBTCompound {
 
 	/**
 	 * Uses Gson to retrieve a stored Object
+	 * Deprecated to clarify that it's probably missused. Preferably do the serializing yourself.
 	 *
 	 * @param key
 	 * @param type Class of the Object
 	 * @return The created Object or null if empty
 	 */
+	@Deprecated
 	public <T> T getObject(String key, Class<T> type) {
 		try {
 			this.readLock.lock();
@@ -479,7 +483,10 @@ public class NBTCompound {
 	public void setUUID(String key, UUID value) {
 		try {
 			this.writeLock.lock();
-			NBTReflectionUtil.setData(this, ReflectionMethod.COMPOUND_SET_UUID, key, value);
+			if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_16_R1))
+				NBTReflectionUtil.setData(this, ReflectionMethod.COMPOUND_SET_UUID, key, value);
+			else
+				this.setString(key, value.toString());
 			this.saveCompound();
 		} finally {
 			this.writeLock.unlock();
@@ -495,17 +502,30 @@ public class NBTCompound {
 	public UUID getUUID(String key) {
 		try {
 			this.readLock.lock();
-			return (UUID) NBTReflectionUtil.getData(this, ReflectionMethod.COMPOUND_GET_UUID, key);
+			if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_16_R1))
+				return (UUID) NBTReflectionUtil.getData(this, ReflectionMethod.COMPOUND_GET_UUID, key);
+			else
+				return UUID.fromString(this.getString(key));
 		} finally {
 			this.readLock.unlock();
 		}
 	}
 
 	/**
-	 * @param key
+	 * @param key String key
 	 * @return True if the key is set
+	 * @deprecated Use {@link #hasTag(String)} instead
 	 */
+	@Deprecated
 	public Boolean hasKey(String key) {
+		return this.hasTag(key);
+	}
+
+	/**
+	 * @param key String key
+	 * @return true, if the key is set
+	 */
+	public boolean hasTag(String key) {
 		try {
 			this.readLock.lock();
 			final Boolean b = (Boolean) NBTReflectionUtil.getData(this, ReflectionMethod.COMPOUND_HAS_KEY, key);
@@ -638,9 +658,9 @@ public class NBTCompound {
 	}
 
 	/**
-	* @param name
-	* @return The retrieved Integer List
-	*/
+	 * @param name
+	 * @return The retrieved Integer List
+	 */
 	public NBTList<UUID> getUUIDList(String name) {
 		try {
 			this.writeLock.lock();
@@ -728,6 +748,46 @@ public class NBTCompound {
 		} finally {
 			this.writeLock.unlock();
 		}
+	}
+
+	/**
+	 * Returns the stored value if exists, or provided value otherwise.
+	 * <p>Supported types: {@code byte/Byte, short/Short, int/Integer, long/Long, float/Float, double/Double, byte[], int[]}, {@link String}, {@link UUID}
+	 *
+	 * @param key key
+	 * @param defaultValue default non-null value
+	 * @param <T> value type
+	 * @return Stored or provided value
+	 */
+	public <T> T getOrDefault(String key, T defaultValue) {
+		if (defaultValue == null)
+			throw new NullPointerException("Default type in getOrDefault can't be null!");
+		if (!this.hasTag(key))
+			return defaultValue;
+
+		final Class<?> clazz = defaultValue.getClass();
+		if (clazz == Byte.class)
+			return (T) this.getByte(key);
+		if (clazz == Short.class)
+			return (T) this.getShort(key);
+		if (clazz == Integer.class)
+			return (T) this.getInteger(key);
+		if (clazz == Long.class)
+			return (T) this.getLong(key);
+		if (clazz == Float.class)
+			return (T) this.getFloat(key);
+		if (clazz == Double.class)
+			return (T) this.getDouble(key);
+		if (clazz == byte[].class)
+			return (T) this.getByteArray(key);
+		if (clazz == int[].class)
+			return (T) this.getIntArray(key);
+		if (clazz == String.class)
+			return (T) this.getString(key);
+		if (clazz == UUID.class)
+			return (T) this.getUUID(key);
+
+		throw new FoException("Unsupported type for getOrDefault: " + clazz.getName());
 	}
 
 	/**

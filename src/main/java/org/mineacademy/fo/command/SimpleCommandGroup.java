@@ -13,6 +13,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.MathUtil;
+import org.mineacademy.fo.Messenger;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.RandomUtil;
@@ -466,7 +467,10 @@ public abstract class SimpleCommandGroup {
 			// Building help can be heavy so do it off of the main thread
 			Common.runAsync(() -> {
 				if (subcommands.isEmpty()) {
-					tellError(SimpleLocalization.Commands.HEADER_NO_SUBCOMMANDS);
+					if (Messenger.ENABLED)
+						tellError(SimpleLocalization.Commands.HEADER_NO_SUBCOMMANDS);
+					else
+						Common.tell(this.sender, SimpleLocalization.Commands.HEADER_NO_SUBCOMMANDS);
 
 					return;
 				}
@@ -542,8 +546,12 @@ public abstract class SimpleCommandGroup {
 					// Send the component on the main thread
 					Common.runLater(() -> pages.send(sender, page));
 
-				} else
-					tellError(SimpleLocalization.Commands.HEADER_NO_SUBCOMMANDS_PERMISSION);
+				} else {
+					if (Messenger.ENABLED)
+						tellError(SimpleLocalization.Commands.HEADER_NO_SUBCOMMANDS_PERMISSION);
+					else
+						Common.tell(this.sender, SimpleLocalization.Commands.HEADER_NO_SUBCOMMANDS_PERMISSION);
+				}
 			});
 		}
 

@@ -19,7 +19,7 @@ import com.google.gson.Gson;
 
 /**
  * Utility class for translating NBTApi calls to reflections into NMS code All
- * methods are allowed to throw {@link NbtApiException}
+ * methods are allowed to throw {@link FoException}
  *
  * @author tr7zw
  *
@@ -326,7 +326,7 @@ public class NBTReflectionUtil {
 		Object root = comp.getCompound();
 		if (root == null)
 			root = ObjectCreator.NMS_NBTTAGCOMPOUND.getInstance();
-		return (gettoCompount(root, comp)) != null;
+		return gettoCompount(root, comp) != null;
 	}
 
 	protected static Object gettoCompount(Object nbttag, NBTCompound comp) {
@@ -504,7 +504,7 @@ public class NBTReflectionUtil {
 	 */
 	public static void setObject(NBTCompound comp, String key, Object value) {
 		try {
-			final String json = getString(value);
+			final String json = getJsonString(value);
 			setData(comp, ReflectionMethod.COMPOUND_SET_STRING, key, json);
 		} catch (final Exception e) {
 			throw new FoException("Exception while setting the Object '" + value + "'!", e);
@@ -607,7 +607,7 @@ public class NBTReflectionUtil {
 	 * @param obj
 	 * @return Json, representing the Object
 	 */
-	public static String getString(Object obj) {
+	public static String getJsonString(Object obj) {
 		return gson.toJson(obj);
 	}
 
@@ -626,7 +626,7 @@ public class NBTReflectionUtil {
 			final T obj = gson.fromJson(json, type);
 			return type.cast(obj);
 		} catch (final Exception ex) {
-			throw new FoException(ex, "Error while converting json to " + type.getName());
+			throw new FoException("Error while converting json to " + type.getName(), ex);
 		}
 	}
 

@@ -16,6 +16,9 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.HoverEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -41,7 +44,6 @@ import org.mineacademy.fo.jsonsimple.JSONObject;
 import org.mineacademy.fo.jsonsimple.JSONParseException;
 import org.mineacademy.fo.jsonsimple.JSONParser;
 import org.mineacademy.fo.jsonsimple.Jsonable;
-import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.model.BoxedMessage;
 import org.mineacademy.fo.model.ConfigSerializable;
 import org.mineacademy.fo.model.IsInList;
@@ -59,9 +61,6 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.HoverEvent;
 
 /**
  * Utility class for serializing objects to writeable YAML data and back.
@@ -179,12 +178,6 @@ public final class SerializeUtil {
 
 		else if (object instanceof PotionEffectType)
 			return ((PotionEffectType) object).getName();
-
-		else if (object instanceof PotionEffect)
-			return serializePotionEffect((PotionEffect) object);
-
-		else if (object instanceof ItemCreator)
-			return ((ItemCreator) object).serialize().serialize();
 
 		else if (object instanceof SimpleTime)
 			return ((SimpleTime) object).getRaw();

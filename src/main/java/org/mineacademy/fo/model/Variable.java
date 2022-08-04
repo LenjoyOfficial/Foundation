@@ -51,6 +51,12 @@ public final class Variable extends YamlConfig {
 	private String value;
 
 	/**
+	 * How long should we cache an evaluated value for?
+	 */
+	@Getter
+	private SimpleTime cacheDuration;
+
+	/**
 	 * The JavaScript condition that must return TRUE for this variable to be shown
 	 */
 	@Getter
@@ -104,6 +110,20 @@ public final class Variable extends YamlConfig {
 	@Getter
 	private String runCommand;
 
+	// -----------------------------------------------------------------------------------
+	// Cache
+	// -----------------------------------------------------------------------------------
+
+	/*
+	 * The last evaluated value
+	 */
+	private String cachedValue;
+
+	/*
+	 * The last time a value was cached
+	 */
+	private long lastCache;
+
 	/*
 	 * Create and load a new variable (automatically called)
 	 */
@@ -127,6 +147,7 @@ public final class Variable extends YamlConfig {
 		this.type = this.get("Type", Type.class);
 		this.key = this.getString("Key");
 		this.value = this.getString("Value");
+		this.cacheDuration = this.getTime("Cache_Duration");
 		this.senderCondition = this.getString("Sender_Condition");
 		this.receiverCondition = this.getString("Receiver_Condition");
 		this.senderPermission = this.getString("Sender_Permission");
@@ -176,6 +197,7 @@ public final class Variable extends YamlConfig {
 		this.set("Type", this.type);
 		this.set("Key", this.key);
 		this.set("Value", this.value);
+		this.set("Cache_Duration", this.cacheDuration);
 		this.set("Sender_Condition", this.senderCondition);
 		this.set("Receiver_Condition", this.receiverCondition);
 		this.set("Hover", this.hoverText);
@@ -202,10 +224,18 @@ public final class Variable extends YamlConfig {
 	public String getValue(CommandSender sender, Map<String, Object> replacements) {
 		Variables.REPLACE_JAVASCRIPT = false;
 
+		if (this.cacheDuration != null && System.currentTimeMillis() - this.lastCache < this.cacheDuration.getTimeMilliseconds())
+			return this.cachedValue;
+
 		try {
 			// Replace variables in script
 			final String script = Variables.replace(this.value, sender, replacements);
 			final String result = String.valueOf(JavaScriptExecutor.run(script, sender));
+
+			if (this.cacheDuration != null) {
+				this.cachedValue = result;
+				this.lastCache = System.currentTimeMillis();
+			}
 
 			return result;
 

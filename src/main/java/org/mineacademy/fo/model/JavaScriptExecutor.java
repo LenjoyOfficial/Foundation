@@ -40,11 +40,11 @@ public final class JavaScriptExecutor {
 	private static final ScriptEngine engine;
 
 	/**
-	 * Cache scripts for 1 second per player for highest performance
+	 * Cache scripts for half a second per player for highest performance
 	 * <p>
 	 * Player -> Map of scripts and their results
 	 */
-	private static final Map<UUID, Map<String, Object>> resultCache = ExpiringMap.builder().expiration(1, TimeUnit.SECONDS).build();
+	private static final Map<UUID, Map<String, Object>> resultCache = ExpiringMap.builder().expiration(500, TimeUnit.MILLISECONDS).build();
 
 	// Load the engine
 	static {

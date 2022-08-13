@@ -50,6 +50,7 @@ import com.bekvon.bukkit.residence.Residence;
 import com.bekvon.bukkit.residence.protection.ClaimedResidence;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
+import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketListener;
 import com.earth2me.essentials.CommandSource;
@@ -1230,11 +1231,6 @@ public final class HookManager {
 
 		message = isPlaceholderAPILoaded() ? placeholderAPIHook.replacePlaceholders(player, message) : message;
 		message = isMVdWPlaceholderAPILoaded() ? MVdWPlaceholderHook.replacePlaceholders(player, message) : message;
-
-		if (!isPlaceholderAPILoaded())
-			Debugger.debug("placeholder-api", "Not replacing PAPI placeholders in '" + message + "' as the plugin is not yet loaded");
-		else
-			Debugger.debug("placeholder-api", "Replacing PAPI placeholders in: " + message);
 
 		return message;
 	}

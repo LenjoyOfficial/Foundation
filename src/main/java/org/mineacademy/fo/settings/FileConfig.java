@@ -34,8 +34,6 @@ import org.mineacademy.fo.SerializeUtil.Mode;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictList;
-import org.mineacademy.fo.command.SimpleCommand;
-import org.mineacademy.fo.command.SimpleCommandGroup;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.model.BoxedMessage;
@@ -1362,16 +1360,13 @@ public abstract class FileConfig {
 
 					final String data = this.saveToString();
 
-					if (data != null) {
-						final Writer writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8);
-
-						try {
+					if (data != null)
+						try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
 							writer.write(data);
 
-						} finally {
-							writer.close();
+						} catch (final Exception ex) {
+							Remain.sneaky(ex);
 						}
-					}
 
 					// Update file
 					this.file = file;

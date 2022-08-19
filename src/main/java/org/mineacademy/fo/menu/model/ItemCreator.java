@@ -746,8 +746,7 @@ public final class ItemCreator implements ConfigSerializable {
 
 		// Apply specific material color if possible
 		color:
-		if (this.color != null) {
-
+		if (this.color != null)
 			if (compiledItem.getType().toString().contains("LEATHER")) {
 				if (MinecraftVersion.atLeast(V.v1_4)) {
 					Valid.checkBoolean(compiledMeta instanceof LeatherArmorMeta, "Expected a leather item, cannot apply color to " + compiledItem);
@@ -785,7 +784,6 @@ public final class ItemCreator implements ConfigSerializable {
 						}
 				}
 			}
-		}
 
 		// Fix monster eggs
 		if (compiledItem.getType().toString().endsWith("SPAWN_EGG") || compiledItem.getType().toString().equals("MONSTER_EGG")) {
@@ -860,7 +858,7 @@ public final class ItemCreator implements ConfigSerializable {
 
 			// Fix "Corrupted NBT tag" error when any of these fields are not set
 			if (bookMeta.getPages() == null)
-				bookMeta.setPages("");
+				bookMeta.setPages(Arrays.asList(""));
 
 			if (bookMeta.getAuthor() == null)
 				bookMeta.setAuthor("Anonymous");
@@ -903,7 +901,7 @@ public final class ItemCreator implements ConfigSerializable {
 					((PotionMeta) compiledMeta).addCustomEffect(effect, true);
 
 			if (this.name != null && !"".equals(this.name))
-				((ItemMeta) compiledMeta).setDisplayName(Common.colorize("&r&f" + name));
+				((ItemMeta) compiledMeta).setDisplayName(Common.colorize("&r&f" + this.name));
 
 			if (!this.lores.isEmpty()) {
 				final List<String> coloredLores = new ArrayList<>();
@@ -980,8 +978,8 @@ public final class ItemCreator implements ConfigSerializable {
 			for (final Entry<String, String> entry : tags.entrySet())
 				compiledItem = CompMetadata.setMetadata(compiledItem, entry.getKey(), entry.getValue());
 
-		else if (!tags.isEmpty() && item != null)
-			Common.log("Item had unsupported tags " + tags + " that are not supported on MC " + MinecraftVersion.getServerVersion() + " Item: " + compiledItem);
+		else if (!this.tags.isEmpty() && this.item != null)
+			Common.log("Item had unsupported tags " + this.tags + " that are not supported on MC " + MinecraftVersion.getServerVersion() + " Item: " + compiledItem);
 
 		return compiledItem;
 	}

@@ -1142,7 +1142,7 @@ public final class ReflectionUtil {
 		primitiveWrapperMap.put(Float.TYPE, Float.class);
 		primitiveWrapperMap.put(Void.TYPE, Void.TYPE);
 
-		for (Class<?> primitiveClass : primitiveWrapperMap.keySet()) {
+		for (final Class<?> primitiveClass : primitiveWrapperMap.keySet()) {
 			final Class<?> wrapperClass = primitiveWrapperMap.get(primitiveClass);
 
 			if (!primitiveClass.equals(wrapperClass))

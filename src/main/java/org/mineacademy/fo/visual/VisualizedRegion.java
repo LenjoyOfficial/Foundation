@@ -28,6 +28,12 @@ import lombok.Setter;
 public final class VisualizedRegion extends Region {
 
 	/**
+	 * @deprecated DOES NOT WORK, call new VisualizedRegion() instead
+	 */
+	@Deprecated
+	public final static VisualizedRegion EMPTY = null;
+
+	/**
 	 * A list of players who can see the particles, along with the particle color (requires {@link #particle} to be REDSTONE)
 	 */
 	private final StrictMap<Player, Color> viewers = new StrictMap<>();

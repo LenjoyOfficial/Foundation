@@ -1267,6 +1267,7 @@ public abstract class FileConfig {
 					this.load(new InputStreamReader(stream, StandardCharsets.UTF_8));
 
 				this.onLoad();
+				this.onLoadFinish();
 
 				if (this.shouldSave) {
 					this.loading = false;
@@ -1323,6 +1324,15 @@ public abstract class FileConfig {
 	 * fields in your class here.
 	 */
 	protected void onLoad() {
+	}
+
+	/**
+	 * @see #onLoad()
+	 *
+	 * @deprecated Renamed to {@link #onLoad()}, use that instead.
+	 */
+	@Deprecated
+	protected void onLoadFinish() {
 	}
 
 	/**
@@ -1392,6 +1402,10 @@ public abstract class FileConfig {
 	 */
 	protected void onSave() {
 		final SerializedMap map = this.saveToMap();
+		final SerializedMap legacy = this.serialize();
+
+		if (legacy != null)
+			map.put(legacy);
 
 		if (map != null)
 			for (final Map.Entry<String, Object> entry : map.entrySet())
@@ -1424,6 +1438,17 @@ public abstract class FileConfig {
 	 * @return
 	 */
 	public SerializedMap saveToMap() {
+		return null;
+	}
+
+	/**
+	 * @see #saveToMap()
+	 * @deprecated renamed, override {@link #saveToMap()} instead
+	 *
+	 * @return
+	 */
+	@Deprecated
+	protected SerializedMap serialize() {
 		return null;
 	}
 
@@ -1553,16 +1578,6 @@ public abstract class FileConfig {
 	 */
 	public final boolean isEmpty() {
 		return this.section.isEmpty();
-	}
-
-	/**
-	 * @deprecated unused, see {@link #saveToMap()}
-	 *
-	 * @return
-	 */
-	@Deprecated
-	public final SerializedMap serialize() {
-		throw new RuntimeException("serialize() is no longer used, override saveToMap() and use it manually instead. If you absolutely must use serialize, call getMap(\"\").serialize()");
 	}
 
 	// ------------------------------------------------------------------------------------

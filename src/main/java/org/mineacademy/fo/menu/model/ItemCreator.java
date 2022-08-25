@@ -348,6 +348,16 @@ public final class ItemCreator implements ConfigSerializable {
 	/**
 	 * Add the given enchant to the item.
 	 *
+	 * @param enchant
+	 * @return
+	 */
+	public ItemCreator enchant(SimpleEnchant enchant) {
+		return this.enchant(enchant.getEnchant(), enchant.getLevel());
+	}
+
+	/**
+	 * Add the given enchant to the item.
+	 *
 	 * @param enchantment
 	 * @return
 	 */
@@ -366,6 +376,17 @@ public final class ItemCreator implements ConfigSerializable {
 		this.enchants.add(new SimpleEnchant(enchantment, level));
 
 		return this;
+	}
+
+	/**
+	 * @see #flags(CompItemFlag...)
+	 * @deprecated call {@link #flags(CompItemFlag...)} instead
+	 * @param flags
+	 * @return
+	 */
+	@Deprecated
+	public ItemCreator flag(CompItemFlag... flags) {
+		return this.flags(flags);
 	}
 
 	/**
@@ -705,6 +726,25 @@ public final class ItemCreator implements ConfigSerializable {
 	 */
 	public DummyButton makeButton() {
 		return Button.makeDummy(this);
+	}
+
+	/**
+	 * @deprecated no longer needed, will simply return itself. Instead of calling "built().make()", now simple call "make()"
+	 * @return
+	 */
+	@Deprecated
+	public ItemCreator build() {
+		return this;
+	}
+
+	/**
+	 *
+	 * @deprecated simply returns {@link #make()} now, call that instead
+	 * @return
+	 */
+	@Deprecated
+	public ItemStack makeSurvival() {
+		return this.make();
 	}
 
 	/**

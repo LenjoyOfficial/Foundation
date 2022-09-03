@@ -32,11 +32,6 @@ import lombok.val;
  * @param <T> the item that each page consists of
  */
 public abstract class MenuPagged<T> extends Menu {
-	/**
-	 * The slots the current page's items will be in
-	 */
-	@Getter
-	private final List<Integer> slots;
 
 	/**
 	 * The active page button material, used in buttons to previous/next pages
@@ -57,6 +52,12 @@ public abstract class MenuPagged<T> extends Menu {
 	@Getter
 	@Setter
 	private static CompMaterial inactivePageButton = CompMaterial.GRAY_DYE;
+
+	/**
+	 * The slots the current page's items will be in
+	 */
+	@Getter
+	private final List<Integer> slots;
 
 	/**
 	 * The raw items iterated
@@ -133,6 +134,7 @@ public abstract class MenuPagged<T> extends Menu {
 	 * Create a new paged menu with automatic page size
 	 *
 	 * @param parent the parent menu
+	 * @param slots  the slots where the items should be placed on a page
 	 * @param items  the pages the pages
 	 */
 	protected MenuPagged(final Menu parent, final List<Integer> slots, final Iterable<T> items) {
@@ -154,7 +156,7 @@ public abstract class MenuPagged<T> extends Menu {
 	 * Create a new paged menu
 	 *
 	 * @param parent the parent menu
-	 * @param slots  the slots where the items will be
+	 * @param slots  the slots where the items should be placed on a page
 	 * @param items  the pages
 	 * @param returnMakesNewInstance
 	 */
@@ -170,7 +172,7 @@ public abstract class MenuPagged<T> extends Menu {
 	 * @param items    the pages
 	 */
 	protected MenuPagged(final int pageSize, @NonNull final T... items) {
-		this(pageSize, null, Arrays.asList(items));
+		this(pageSize, (Menu) null, Arrays.asList(items));
 	}
 
 	/**
@@ -181,7 +183,18 @@ public abstract class MenuPagged<T> extends Menu {
 	 * @param items    the pages
 	 */
 	protected MenuPagged(final int pageSize, final Iterable<T> items) {
-		this(pageSize, null, items);
+		this(pageSize, (Menu) null, items);
+	}
+
+	/**
+	 * Create a new paged menu
+	 *
+	 * @param pageSize size of the menu, a multiple of 9 (keep in mind we already add
+	 *                 1 row there)
+	 * @param items    the pages
+	 */
+	protected MenuPagged(final int pageSize, final List<Integer> slots, final Iterable<T> items) {
+		this(pageSize, null, slots, items, false);
 	}
 
 	/**
@@ -225,6 +238,7 @@ public abstract class MenuPagged<T> extends Menu {
 	 *
 	 * @param pageSize               size of the menu, a multiple of 9 (keep in mind we already add
 	 *                               1 row there)
+	 * @param slots                  the slots where the items should be placed on a page
 	 * @param parent                 the parent menu
 	 * @param items                  the pages the pages
 	 * @param returnMakesNewInstance should we re-instatiate the parent menu when returning to it?
@@ -237,6 +251,7 @@ public abstract class MenuPagged<T> extends Menu {
 		this.manualPageSize = pageSize;
 
 		this.calculatePages();
+		this.setButtons();
 	}
 
 	/*
@@ -244,17 +259,21 @@ public abstract class MenuPagged<T> extends Menu {
 	 */
 	private void calculatePages() {
 		final int items = this.getItemAmount(this.items);
-		final int autoPageSize = this.manualPageSize != null ? this.manualPageSize : items <= 9 ? 9 * 1 : items <= 9 * 2 ? 9 * 2 : items <= 9 * 3 ? 9 * 3 : items <= 9 * 4 ? 9 * 4 : 9 * 5;
+		final int autoPageSize;
 
-		if (this.slots.isEmpty())
+		if (this.slots.isEmpty()) {
+			autoPageSize = this.manualPageSize != null ? this.manualPageSize : items <= 9 ? 9 * 1 : items <= 9 * 2 ? 9 * 2 : items <= 9 * 3 ? 9 * 3 : items <= 9 * 4 ? 9 * 4 : 9 * 5;
+
 			for (int i = 0; i < autoPageSize; i++)
 				this.slots.add(i);
 
+			this.setSize(9 + autoPageSize);
+
+		} else
+			autoPageSize = this.slots.size();
+
 		this.pages.clear();
 		this.pages.putAll(Common.fillPages(autoPageSize, this.items));
-
-		this.setSize(9 + autoPageSize);
-		this.setButtons();
 	}
 
 	@SuppressWarnings("unused")

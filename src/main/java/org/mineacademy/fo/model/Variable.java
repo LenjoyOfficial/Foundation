@@ -1,11 +1,16 @@
 package org.mineacademy.fo.model;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 
+import com.sk89q.worldedit.bukkit.fastutil.longs.Long2ObjectMaps;
+import it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -115,14 +120,9 @@ public final class Variable extends YamlConfig {
 	// -----------------------------------------------------------------------------------
 
 	/*
-	 * The last evaluated value
+	 * The cache map (player uuid - last cache time, cached value)
 	 */
-	private String cachedValue;
-
-	/*
-	 * The last time a value was cached
-	 */
-	private long lastCache;
+	private final Map<UUID, Tuple<Long, String>> cache = new HashMap<>();
 
 	/*
 	 * Create and load a new variable (automatically called)
@@ -224,18 +224,24 @@ public final class Variable extends YamlConfig {
 	public String getValue(CommandSender sender, Map<String, Object> replacements) {
 		Variables.REPLACE_JAVASCRIPT = false;
 
-		if (this.cacheDuration != null && System.currentTimeMillis() - this.lastCache < this.cacheDuration.getTimeMilliseconds())
-			return this.cachedValue;
+		final long time = System.currentTimeMillis();
+		Tuple<Long, String> playerCache;
+
+		if (sender instanceof Player) {
+			playerCache = cache.get(((Player) sender).getUniqueId());
+
+			// Return cached value if called before expiration
+			if (playerCache != null && time - cacheDuration.getTimeMilliseconds() < playerCache.getKey())
+				return playerCache.getValue();
+		}
 
 		try {
 			// Replace variables in script
 			final String script = Variables.replace(this.value, sender, replacements);
 			final String result = String.valueOf(JavaScriptExecutor.run(script, sender));
 
-			if (this.cacheDuration != null) {
-				this.cachedValue = result;
-				this.lastCache = System.currentTimeMillis();
-			}
+			if (this.cacheDuration != null && sender instanceof Player)
+				cache.put(((Player) sender).getUniqueId(), new Tuple<>(time, result));
 
 			return result;
 

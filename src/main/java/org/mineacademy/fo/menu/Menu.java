@@ -67,10 +67,11 @@ public abstract class Menu {
 	// --------------------------------------------------------------------------------
 
 	/**
-	 * The default sound when switching between menus.
+	 * The default sound when switching between menus. Set to null to disable
 	 */
 	@Getter
 	@Setter
+	@Nullable
 	private static SimpleSound sound = new SimpleSound(CompSound.NOTE_STICKS.getSound(), .4F);
 
 	/**
@@ -452,7 +453,8 @@ public abstract class Menu {
 		}
 
 		// Play the pop sound
-		sound.play(player);
+		if (sound != null)
+			sound.play(player);
 
 		// Mark as open
 		this.closed = false;

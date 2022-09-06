@@ -169,7 +169,15 @@ public final class ReflectionUtil {
 			if (reflectionDataCache.containsKey(clazz))
 				return reflectionDataCache.get(clazz).getConstructor(params);
 
-			final Constructor<?> constructor = clazz.getConstructor(params);
+			Constructor<?> constructor;
+
+			try {
+				constructor = clazz.getConstructor(params);
+
+			} catch (final NoSuchMethodException err) {
+				constructor = clazz.getDeclaredConstructor(params);
+			}
+
 			constructor.setAccessible(true);
 
 			return constructor;
@@ -653,6 +661,8 @@ public final class ReflectionUtil {
 	 */
 	public static <T> T instantiate(final Constructor<T> constructor, final Object... params) {
 		try {
+			constructor.setAccessible(true);
+
 			return constructor.newInstance(params);
 
 		} catch (final ReflectiveOperationException ex) {

@@ -355,9 +355,11 @@ public abstract class Menu {
 			// TODO rewrite to use cache instead of for loop so that two buttons that are the same won't collide
 			for (final Button button : this.registeredButtons.keySet()) {
 				Valid.checkNotNull(button, "Menu button is null at " + this.getClass().getSimpleName());
-				Valid.checkNotNull(button.getItem(), "Menu " + this.getTitle() + " contained button " + button + " with empty item!");
 
-				if (ItemUtil.isSimilar(fromItem, button.getItem()))
+				ItemStack item = button.getItem();
+				Valid.checkNotNull(item, "Menu " + this.getTitle() + " contained button " + button.getClass().getSimpleName() + " with empty item!");
+
+				if (ItemUtil.isSimilar(fromItem, item))
 					return button;
 			}
 
@@ -545,8 +547,10 @@ public abstract class Menu {
 			this.animateTitle(animatedTitle);
 	}
 
+	/*
+	 * Internal hook before calling getItemAt
+	 */
 	void onRestart() {
-
 	}
 
 	/**

@@ -4,6 +4,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +84,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import me.clip.placeholderapi.PlaceholderAPI;
+import me.clip.placeholderapi.PlaceholderAPIPlugin;
 import me.clip.placeholderapi.PlaceholderHook;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import me.clip.placeholderapi.expansion.Relational;
@@ -1706,18 +1708,16 @@ class AdvancedVanishHook {
 		final Object instance = ReflectionUtil.getStaticFieldContent(clazz, "INSTANCE");
 
 		if (vanished) {
-			if (!isVanished(player)) {
+			if (!this.isVanished(player)) {
 				final Method vanishPlayer = ReflectionUtil.getMethod(clazz, "vanishPlayer", Player.class, boolean.class);
 
 				ReflectionUtil.invoke(vanishPlayer, instance, player, false);
 			}
 
-		} else {
-			if (isVanished(player)) {
-				final Method unVanishPlayer = ReflectionUtil.getMethod(clazz, "unVanishPlayer", Player.class, boolean.class);
+		} else if (this.isVanished(player)) {
+			final Method unVanishPlayer = ReflectionUtil.getMethod(clazz, "unVanishPlayer", Player.class, boolean.class);
 
-				ReflectionUtil.invoke(unVanishPlayer, instance, player, false);
-			}
+			ReflectionUtil.invoke(unVanishPlayer, instance, player, false);
 		}
 	}
 }
@@ -2335,7 +2335,11 @@ class PlaceholderAPIHook {
 
 	private String setPlaceholders(final OfflinePlayer player, String text) {
 		final String oldText = text;
-		final Map<String, PlaceholderHook> hooks = PlaceholderAPI.getPlaceholders();
+		final Map<String, PlaceholderExpansion> hooks = new HashMap<>();
+
+		// MineAcademy edit: Case insensitive
+		for (final PlaceholderExpansion expansion : PlaceholderAPIPlugin.getInstance().getLocalExpansionManager().getExpansions())
+			hooks.put(expansion.getIdentifier().toLowerCase(), expansion);
 
 		if (hooks.isEmpty())
 			return text;
@@ -2346,7 +2350,7 @@ class PlaceholderAPIHook {
 		return text;
 	}
 
-	private String setPlaceholders(OfflinePlayer player, String oldText, String text, Map<String, PlaceholderHook> hooks, Matcher matcher) {
+	private String setPlaceholders(OfflinePlayer player, String oldText, String text, Map<String, PlaceholderExpansion> hooks, Matcher matcher) {
 		while (matcher.find()) {
 			String format = matcher.group(1);
 			boolean frontSpace = false;
@@ -2369,7 +2373,7 @@ class PlaceholderAPIHook {
 			if (index <= 0 || index >= format.length())
 				continue;
 
-			final String identifier = format.substring(0, index);
+			final String identifier = format.substring(0, index).toLowerCase();
 			final String params = format.substring(index + 1);
 			final String finalFormat = format;
 

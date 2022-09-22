@@ -16,6 +16,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.FireworkEffect;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.banner.Pattern;
 import org.bukkit.block.banner.PatternType;
@@ -686,6 +687,15 @@ public final class ItemCreator implements ConfigSerializable {
 	 */
 	public void give(final Player player, final int slot) {
 		player.getInventory().setItem(slot, this.make());
+	}
+
+	/**
+	 * Convenience method for dropping this item at the given location
+	 *
+	 * @param location
+	 */
+	public void drop(final Location location) {
+		location.getWorld().dropItem(location, this.make());
 	}
 
 	// ----------------------------------------------------------------------------------------

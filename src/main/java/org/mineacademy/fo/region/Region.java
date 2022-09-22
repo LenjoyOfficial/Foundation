@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -297,6 +299,30 @@ public class Region implements ConfigSerializable {
 	}
 
 	/**
+	 * Returns true if X and Z coordinates irrespective of height of the given location are within
+	 * this region.
+	 *
+	 * @param location
+	 * @return
+	 */
+	public final boolean isWithinXZ(@NonNull final Location location) {
+		Valid.checkBoolean(this.isWhole(), "Cannot perform isWithinXZ on a non-complete region: " + this.toString());
+
+		if (!location.getWorld().getName().equals(this.primary.getWorld().getName()))
+			return false;
+
+		final Location[] centered = this.getCorrectedPoints();
+		final Location primary = centered[0];
+		final Location secondary = centered[1];
+
+		final int x = (int) location.getX();
+		final int z = (int) location.getZ();
+
+		return x >= primary.getX() && x <= secondary.getX()
+				&& z >= primary.getZ() && z <= secondary.getZ();
+	}
+
+	/**
 	 * Return true if both region points are set
 	 *
 	 * @return
@@ -331,6 +357,21 @@ public class Region implements ConfigSerializable {
 	 */
 	public final void setLocation(Location location, ClickType click) {
 		this.setLocation(location, click, false);
+	}
+
+	/**
+	 * Sets the primary and/or secondary locations points if they are not
+	 * null.
+	 *
+	 * @param primary
+	 * @param secondary
+	 */
+	public final void updateLocation(@Nullable Location primary, @Nullable Location secondary) {
+		if (primary != null)
+			this.setPrimary(primary);
+
+		if (secondary != null)
+			this.setSecondary(secondary);
 	}
 
 	/**

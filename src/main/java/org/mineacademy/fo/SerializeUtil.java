@@ -317,6 +317,19 @@ public final class SerializeUtil {
 			return big.toPlainString();
 		}
 
+		else if (object instanceof ConfigurationSerializable) {
+
+			if (isJson) {
+				if (object instanceof ItemStack)
+					return JsonItemStack.toJson((ItemStack) object);
+
+				throw new FoException("serializing " + object.getClass().getSimpleName() + " to JSON is not implemented! Please serialize it to string manually first!");
+			}
+
+			return object;
+
+		}
+
 		throw new SerializeFailedException("Does not know how to serialize " + object.getClass().getSimpleName() + "! Does it extends ConfigSerializable? Data: " + object);
 	}
 

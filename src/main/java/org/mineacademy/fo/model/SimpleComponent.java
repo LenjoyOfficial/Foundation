@@ -345,7 +345,7 @@ public final class SimpleComponent implements ConfigSerializable {
 				if (preparedComponent == null)
 					preparedComponent = component;
 				else
-					addExtra(preparedComponent, component);
+					this.addExtra(preparedComponent, component);
 		}
 
 		final TextComponent currentComponent = this.currentComponent == null ? null : this.currentComponent.toTextComponent(true, receiver);
@@ -354,7 +354,7 @@ public final class SimpleComponent implements ConfigSerializable {
 			if (preparedComponent == null)
 				preparedComponent = currentComponent;
 			else
-				addExtra(preparedComponent, currentComponent);
+				this.addExtra(preparedComponent, currentComponent);
 
 		return Common.getOrDefault(preparedComponent, new TextComponent(""));
 	}
@@ -862,7 +862,11 @@ public final class SimpleComponent implements ConfigSerializable {
 					part.setClickEvent(this.clickEvent);
 
 				if (this.insertion != null)
-					part.setInsertion(this.insertion);
+					try {
+						part.setInsertion(this.insertion);
+					} catch (final Throwable t) {
+						// Unsupported MC version
+					}
 			}
 
 			return new TextComponent(base.toArray(new BaseComponent[base.size()]));

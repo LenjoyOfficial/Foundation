@@ -356,8 +356,9 @@ final class AutoRegisterScanner {
 		}
 
 		else if (Tool.class.isAssignableFrom(clazz))
-			// Automatically registered in its constructor
+			// Automatically registered in its constructor that is called when we find instance
 			enforceModeFor(clazz, mode, FindInstance.SINGLETON);
+
 		else if (instance instanceof Listener) {
 			// Pass-through to register events later
 		}

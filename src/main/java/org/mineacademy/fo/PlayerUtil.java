@@ -6,8 +6,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,12 +23,14 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.Statistic;
 import org.bukkit.Statistic.Type;
 import org.bukkit.World;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.permissions.Permissible;
 import org.bukkit.plugin.Plugin;
@@ -34,6 +38,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 import org.mineacademy.fo.MinecraftVersion.V;
+import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.jsonsimple.JSONObject;
 import org.mineacademy.fo.jsonsimple.JSONParser;
@@ -61,9 +66,20 @@ public final class PlayerUtil {
 	public static final int USABLE_PLAYER_INV_SIZE = 36;
 
 	/**
+	 * Stores block faces to use for later conversion
+	 */
+	private static final BlockFace[] FACE_AXIS = { BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST };
+	private static final BlockFace[] FACE_RADIAL = { BlockFace.NORTH, BlockFace.NORTH_EAST, BlockFace.EAST, BlockFace.SOUTH_EAST, BlockFace.SOUTH, BlockFace.SOUTH_WEST, BlockFace.WEST, BlockFace.NORTH_WEST };
+
+	/**
 	 * Stores a list of currently pending title animation tasks to restore the tile to its original one
 	 */
 	private static final Map<UUID, BukkitTask> titleRestoreTasks = new ConcurrentHashMap<>();
+
+	/**
+	 * Stores temporarily saved player inventories, their health, attributes and other states
+	 */
+	private static final Map<UUID, SerializedMap> storedPlayerStates = new HashMap<>();
 
 	// ------------------------------------------------------------------------------------------------------------
 	// Misc
@@ -87,6 +103,64 @@ public final class PlayerUtil {
 	 */
 	public static int getPing(final Player player) {
 		return Remain.getPing(player);
+	}
+
+	/**
+	 * Converts where the player is looking into a block face
+	 * Source: https://bukkit.org/threads/400099/
+	 *
+	 * @param player
+	 * @return
+	 */
+	public static BlockFace getFacing(Player player) {
+		return getFacing(player.getLocation().getYaw(), false);
+	}
+
+	/**
+	 * Converts where the player is looking into a block face
+	 * Source: https://bukkit.org/threads/400099/
+	 *
+	 * @param player
+	 * @param useSubDirections
+	 * @return
+	 */
+	public static BlockFace getFacing(Player player, boolean useSubDirections) {
+		return getFacing(player.getLocation().getYaw(), useSubDirections);
+	}
+
+	/**
+	 * Converts the given yaw into a block face
+	 * Source: https://bukkit.org/threads/400099/
+	 *
+	 * @param yaw
+	 * @param useSubDirections
+	 * @return
+	 */
+	public static BlockFace getFacing(float yaw, boolean useSubDirections) {
+		if (useSubDirections)
+			return FACE_RADIAL[Math.round(yaw / 45f) & 0x7].getOppositeFace();
+
+		return FACE_AXIS[Math.round(yaw / 90f) & 0x3].getOppositeFace();
+	}
+
+	// ------------------------------------------------------------------------------------------------------------
+	// Statistics
+	// ------------------------------------------------------------------------------------------------------------
+
+	/**
+	 * Return the total amount of time the player has spent on the server.
+	 * This will get reset if you delete the playerdata folder inside your main world folder.
+	 *
+	 * **For Minecraft 1.12 and older this returns a tick value, otherwise this returns the
+	 * amount of minutes!**
+	 *
+	 * @param player
+	 * @return
+	 */
+	public static long getPlayTimeTicksOrSeconds(OfflinePlayer player) {
+		final Statistic playTime = Remain.getPlayTimeStatisticName();
+
+		return getStatistic(player, playTime);
 	}
 
 	/**
@@ -139,22 +213,6 @@ public final class PlayerUtil {
 		}
 
 		return statistics;
-	}
-
-	/**
-	 * Return the total amount of time the player has spent on the server.
-	 * This will get reset if you delete the playerdata folder inside your main world folder.
-	 *
-	 * **For Minecraft 1.12 and older this returns a tick value, otherwise this returns the
-	 * amount of minutes!**
-	 *
-	 * @param player
-	 * @return
-	 */
-	public static long getPlayTimeTicksOrSeconds(OfflinePlayer player) {
-		final Statistic playTime = Remain.getPlayTimeStatisticName();
-
-		return getStatistic(player, playTime);
 	}
 
 	/**
@@ -329,7 +387,22 @@ public final class PlayerUtil {
 			if (cleanInventory) {
 				cleanInventoryAndFood(player);
 
-				player.resetMaxHealth();
+				try {
+					CompAttribute.GENERIC_MAX_HEALTH.set(player, 20);
+
+				} catch (final Throwable t) {
+					try {
+						player.setMaxHealth(20);
+
+					} catch (final Throwable tt) {
+
+						try {
+							player.resetMaxHealth();
+						} catch (final Throwable ttt) {
+							// Minecraft 1.2.5 lol
+						}
+					}
+				}
 
 				try {
 					player.setHealth(20);
@@ -441,6 +514,152 @@ public final class PlayerUtil {
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
+	// Player states
+	// ------------------------------------------------------------------------------------------------------------
+
+	/**
+	 * Set the players snapshot to be stored locally in the cache
+	 *
+	 * @param player
+	 */
+	public static void storeState(final Player player) {
+		Valid.checkBoolean(!hasStoredState(player), "Player " + player.getName() + " already has a stored state!");
+
+		final SerializedMap data = SerializedMap.ofArray(
+				"gameMode", player.getGameMode(),
+				"content", player.getInventory().getContents(),
+				"armorContent", player.getInventory().getArmorContents(),
+				"maxHealth", Remain.getMaxHealth(player),
+				"health", Remain.getHealth(player),
+				"healthScaled", player.isHealthScaled(),
+				"remainingAir", player.getRemainingAir(),
+				"maximumAir", player.getMaximumAir(),
+				"fallDistance", player.getFallDistance(),
+				"fireTicks", player.getFireTicks(),
+				"totalExp", player.getTotalExperience(),
+				"level", player.getLevel(),
+				"exp", player.getExp(),
+				"foodLevel", player.getFoodLevel(),
+				"exhaustion", player.getExhaustion(),
+				"saturation", player.getSaturation(),
+				"flySpeed", player.getFlySpeed(),
+				"walkSpeed", player.getWalkSpeed(),
+				"potionEffects", player.getActivePotionEffects());
+
+		// Attributes
+		final Map<CompAttribute, Double> attributes = new HashMap<>();
+
+		for (final CompAttribute attribute : CompAttribute.values()) {
+			final Double value = attribute.get(player);
+
+			if (value != null)
+				attributes.put(attribute, value);
+		}
+
+		data.put("attributes", attributes);
+
+		// From now on we have to surround each method with try-catch since
+		// those are not available in older MC versions
+
+		try {
+			data.put("extraContent", player.getInventory().getExtraContents());
+		} catch (final Throwable t) {
+		}
+
+		try {
+			data.put("invulnerable", player.isInvulnerable());
+		} catch (final Throwable t) {
+		}
+
+		try {
+			data.put("silent", player.isSilent());
+		} catch (final Throwable t) {
+		}
+
+		try {
+			data.put("glowing", player.isGlowing());
+		} catch (final Throwable t) {
+		}
+
+		storedPlayerStates.put(player.getUniqueId(), data);
+	}
+
+	/**
+	 * Restores the player inventory and properties
+	 *
+	 * @param player
+	 */
+	public static void restoreState(final Player player) {
+		final SerializedMap data = storedPlayerStates.remove(player.getUniqueId());
+		Valid.checkNotNull(data, "Player " + player.getName() + " does not have a stored game state!");
+
+		player.setGameMode(data.get("gameMode", GameMode.class));
+		player.getInventory().setContents((ItemStack[]) data.getObject("content"));
+		player.getInventory().setArmorContents((ItemStack[]) data.getObject("armorContent"));
+		player.setMaxHealth(data.getInteger("maxHealth"));
+		player.setHealth(data.getInteger("health"));
+		player.setHealthScaled(data.getBoolean("healthScaled"));
+		player.setRemainingAir(data.getInteger("remainingAir"));
+		player.setMaximumAir(data.getInteger("maximumAir"));
+		player.setFallDistance(data.getFloat("fallDistance"));
+		player.setFireTicks(data.getInteger("fireTicks"));
+		player.setTotalExperience(data.getInteger("totalExp"));
+		player.setLevel(data.getInteger("level"));
+		player.setExp(data.getFloat("exp"));
+		player.setFoodLevel(data.getInteger("foodLevel"));
+		player.setExhaustion(data.getFloat("exhaustion"));
+		player.setSaturation(data.getFloat("saturation"));
+		player.setFlySpeed(data.getFloat("flySpeed"));
+		player.setWalkSpeed(data.getFloat("walkSpeed"));
+
+		// Remove old potion effects
+		for (final PotionEffect effect : player.getActivePotionEffects())
+			player.removePotionEffect(effect.getType());
+
+		// And add news
+		for (final PotionEffect effect : data.getList("potionEffects", PotionEffect.class))
+			player.addPotionEffect(effect);
+
+		// Attributes
+		final Map<CompAttribute, Double> attributes = (Map<CompAttribute, Double>) data.getObject("attributes");
+
+		for (final Entry<CompAttribute, Double> entry : attributes.entrySet())
+			entry.getKey().set(player, entry.getValue());
+
+		// From now on we have to surround each method with try-catch since
+		// those are not available in older MC versions
+
+		try {
+			player.getInventory().setExtraContents((ItemStack[]) data.getObject("extraContent"));
+		} catch (final Throwable t) {
+		}
+
+		try {
+			player.setInvulnerable(data.getBoolean("invulnerable"));
+		} catch (final Throwable t) {
+		}
+
+		try {
+			player.setSilent(data.getBoolean("silent"));
+		} catch (final Throwable t) {
+		}
+
+		try {
+			player.setGlowing(data.getBoolean("glowing"));
+		} catch (final Throwable t) {
+		}
+	}
+
+	/**
+	 * Return true if the player has a stored snapshot of inventory and properties
+	 *
+	 * @return
+	 */
+	public static boolean hasStoredState(Player player) {
+		return storedPlayerStates.containsKey(player.getUniqueId());
+	}
+
+	// ------------------------------------------------------------------------------------------------------------
 	// Vanish
 	// ------------------------------------------------------------------------------------------------------------
 
@@ -486,20 +705,22 @@ public final class PlayerUtil {
 	public static void setVanished(Player player, boolean vanished) {
 
 		// Hook into other plugins
-		HookManager.setVanished(player, false);
+		HookManager.setVanished(player, vanished);
 
-		// Remove metadata
-		final List<MetadataValue> list = player.getMetadata("vanished");
+		// Clear any previous metadata
+		for (Iterator<MetadataValue> it = player.getMetadata("vanished").iterator(); it.hasNext();) {
+			MetadataValue meta = it.next();
 
-		for (final MetadataValue meta : list)
-			if (meta.asBoolean()) {
-				player.removeMetadata("vanished", meta.getOwningPlugin());
+			if (meta.asBoolean())
+				meta.invalidate();
+		}
 
-				break;
-			}
+		// Re-add metadata if vanished
+		if (vanished)
+			player.setMetadata("vanished", new FixedMetadataValue(SimplePlugin.getInstance(), true));
 
 		// NMS
-		Remain.setInvisible(player, false);
+		Remain.setInvisible(player, vanished);
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
@@ -664,8 +885,32 @@ public final class PlayerUtil {
 		if (!containsAtLeast(player, amount, material))
 			return false;
 
-		for (int i = 0; i < amount; i++)
-			takeFirstOnePiece(player, material);
+		final Inventory inventory = player.getInventory();
+		final ItemStack[] content = inventory.getContents();
+
+		for (int slot = 0; slot < content.length; slot++) {
+			ItemStack item = content[slot];
+
+			if (item != null && material.is(item)) {
+				int itemAmount = item.getAmount();
+				int newAmount = itemAmount - amount;
+
+				if (newAmount < 0) {
+					amount = amount - itemAmount;
+
+					content[slot] = null;
+				}
+
+				else {
+					item.setAmount(newAmount);
+
+					content[slot] = item;
+					break;
+				}
+			}
+		}
+
+		inventory.setContents(content);
 
 		return true;
 	}

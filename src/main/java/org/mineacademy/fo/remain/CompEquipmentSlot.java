@@ -1,5 +1,8 @@
 package org.mineacademy.fo.remain;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import javax.annotation.Nullable;
 
 import org.bukkit.entity.HumanEntity;
@@ -10,6 +13,7 @@ import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.exception.FoException;
+import org.mineacademy.fo.menu.model.ItemCreator;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +53,7 @@ public enum CompEquipmentSlot {
 	 * @param item
 	 */
 	public void applyTo(LivingEntity entity, ItemStack item) {
-		this.applyTo(entity, null);
+		this.applyTo(entity, item, null);
 	}
 
 	/**
@@ -61,58 +65,60 @@ public enum CompEquipmentSlot {
 	 * @param dropChance
 	 */
 	public void applyTo(LivingEntity entity, ItemStack item, @Nullable Double dropChance) {
-		final EntityEquipment equip = entity.getEquipment();
+		final EntityEquipment equipment = entity instanceof LivingEntity ? entity.getEquipment() : null;
+		Valid.checkNotNull(equipment);
+
 		final boolean lacksDropChance = entity instanceof HumanEntity || entity.getType().toString().equals("ARMOR_STAND");
 
 		switch (this) {
 
 			case HAND:
-				equip.setItemInHand(item);
+				equipment.setItemInHand(item);
 
 				if (dropChance != null && !lacksDropChance)
-					equip.setItemInHandDropChance(dropChance.floatValue());
+					equipment.setItemInHandDropChance(dropChance.floatValue());
 
 				break;
 
 			case OFF_HAND:
 				Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_9), "Setting off hand item requires Minecraft 1.9+");
 
-				equip.setItemInOffHand(item);
+				equipment.setItemInOffHand(item);
 
 				if (dropChance != null && !lacksDropChance)
-					equip.setItemInOffHandDropChance(dropChance.floatValue());
+					equipment.setItemInOffHandDropChance(dropChance.floatValue());
 
 				break;
 
 			case HEAD:
-				equip.setHelmet(item);
+				equipment.setHelmet(item);
 
 				if (dropChance != null && !lacksDropChance)
-					equip.setHelmetDropChance(dropChance.floatValue());
+					equipment.setHelmetDropChance(dropChance.floatValue());
 
 				break;
 
 			case CHEST:
-				equip.setChestplate(item);
+				equipment.setChestplate(item);
 
 				if (dropChance != null && !lacksDropChance)
-					equip.setChestplateDropChance(dropChance.floatValue());
+					equipment.setChestplateDropChance(dropChance.floatValue());
 
 				break;
 
 			case LEGS:
-				equip.setLeggings(item);
+				equipment.setLeggings(item);
 
 				if (dropChance != null && !lacksDropChance)
-					equip.setLeggingsDropChance(dropChance.floatValue());
+					equipment.setLeggingsDropChance(dropChance.floatValue());
 
 				break;
 
 			case FEET:
-				equip.setBoots(item);
+				equipment.setBoots(item);
 
 				if (dropChance != null && !lacksDropChance)
-					equip.setBootsDropChance(dropChance.floatValue());
+					equipment.setBootsDropChance(dropChance.floatValue());
 
 				break;
 		}
@@ -135,8 +141,153 @@ public enum CompEquipmentSlot {
 		throw new FoException("No such equipment slot from key: " + key);
 	}
 
+	/**
+	 * A convenience shortcut to quickly give the entity a full leather armor in the given color
+	 * that does not drop.
+	 *
+	 * @param entity
+	 * @param color
+	 */
+	public static void applyArmor(LivingEntity entity, CompColor color) {
+		applyArmor(entity, color, 0D, new HashSet<>());
+	}
+
+	/**
+	 * A convenience shortcut to quickly give the entity a full leather armor in the given color
+	 * that does not drop.
+	 *
+	 * @param entity
+	 * @param color
+	 * @param ignoredSlots
+	 */
+	public static void applyArmor(LivingEntity entity, CompColor color, Set<CompEquipmentSlot> ignoredSlots) {
+		applyArmor(entity, color, 0D, ignoredSlots);
+	}
+
+	/**
+	 * A convenience shortcut to quickly give the entity a full leather armor in the given color
+	 *
+	 * @param entity
+	 * @param color
+	 * @param dropChance
+	 */
+	public static void applyArmor(LivingEntity entity, CompColor color, double dropChance) {
+		applyArmor(entity, color, dropChance, new HashSet<>());
+	}
+
+	/**
+	 * A convenience shortcut to quickly give the entity a full leather armor in the given color
+	 *
+	 * @param entity
+	 * @param color
+	 * @param dropChance
+	 */
+	public static void applyArmor(LivingEntity entity, CompColor color, Double dropChance, Set<CompEquipmentSlot> ignoredSlots) {
+		if (!ignoredSlots.contains(HEAD))
+			HEAD.applyTo(entity, ItemCreator.of(CompMaterial.LEATHER_HELMET).color(color).make(), dropChance);
+
+		if (!ignoredSlots.contains(CHEST))
+			CHEST.applyTo(entity, ItemCreator.of(CompMaterial.LEATHER_CHESTPLATE).color(color).make(), dropChance);
+
+		if (!ignoredSlots.contains(LEGS))
+			LEGS.applyTo(entity, ItemCreator.of(CompMaterial.LEATHER_LEGGINGS).color(color).make(), dropChance);
+
+		if (!ignoredSlots.contains(FEET))
+			FEET.applyTo(entity, ItemCreator.of(CompMaterial.LEATHER_BOOTS).color(color).make(), dropChance);
+	}
+
+	/**
+	 * A convenience shortcut to quickly give the entity a full armor of the given type
+	 * with 0 drop chance
+	 *
+	 * @param entity
+	 * @param type
+	 */
+	public static void applyArmor(LivingEntity entity, Type type) {
+		applyArmor(entity, type, 0d, new HashSet<>());
+	}
+
+	/**
+	 * A convenience shortcut to quickly give the entity a full armor of the given type
+	 * with 0 drop chance
+	 *
+	 * @param entity
+	 * @param ignoredSlots
+	 */
+	public static void applyArmor(LivingEntity entity, Type type, Set<CompEquipmentSlot> ignoredSlots) {
+		applyArmor(entity, type, 0d, ignoredSlots);
+	}
+
+	/**
+	 * A convenience shortcut to quickly give the entity a full armor of the given type
+	 *
+	 * @param entity
+	 * @param dropChance
+	 */
+	public static void applyArmor(LivingEntity entity, Type type, double dropChance) {
+		applyArmor(entity, type, dropChance, new HashSet<>());
+	}
+
+	/**
+	 * A convenience shortcut to quickly give the entity a full armor of the given type
+	 *
+	 * @param entity
+	 * @param type
+	 * @param dropChance
+	 * @param ignoredSlots
+	 */
+	public static void applyArmor(LivingEntity entity, Type type, Double dropChance, Set<CompEquipmentSlot> ignoredSlots) {
+
+		// Compatibility
+		if (type == Type.NETHERITE && MinecraftVersion.olderThan(V.v1_16))
+			type = Type.DIAMOND;
+
+		String name = type == Type.GOLD ? "GOLDEN" : type.toString();
+
+		if (!ignoredSlots.contains(HEAD))
+			HEAD.applyTo(entity, CompMaterial.valueOf(name + "_HELMET").toItem(), dropChance);
+
+		if (!ignoredSlots.contains(CHEST))
+			CHEST.applyTo(entity, CompMaterial.valueOf(name + "_CHESTPLATE").toItem(), dropChance);
+
+		if (!ignoredSlots.contains(LEGS))
+			LEGS.applyTo(entity, CompMaterial.valueOf(name + "_LEGGINGS").toItem(), dropChance);
+
+		if (!ignoredSlots.contains(FEET))
+			FEET.applyTo(entity, CompMaterial.valueOf(name + "_BOOTS").toItem(), dropChance);
+	}
+
 	@Override
 	public String toString() {
 		return this.key.toUpperCase();
+	}
+
+	/**
+	 * Denotes the main armor material type such as Leather or Diamond
+	 *
+	 */
+	public static enum Type {
+		LEATHER,
+		CHAINMAIL,
+		IRON,
+		GOLD,
+		DIAMOND,
+		NETHERITE;
+
+		/**
+		 * Attempts to parse armor material (any helmet, chestplate, leggings or boots)
+		 * to a type based on its type (i.e. iron_helmet -> iron)
+		 *
+		 * @param armorMaterial
+		 * @return
+		 */
+		public static Type fromArmor(CompMaterial armorMaterial) {
+			String n = armorMaterial.name();
+
+			Valid.checkBoolean(n.contains("LEATHER") || n.contains("CHAINMAIL") || n.contains("IRON") || n.contains("GOLD") || n.contains("DIAMOND") || n.contains("NETHERITE"),
+					"Only leather to netherite armors are supported, not: " + armorMaterial);
+
+			return Type.valueOf(n.split("_")[0]);
+		}
 	}
 }

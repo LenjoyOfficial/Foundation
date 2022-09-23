@@ -312,6 +312,8 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			// --------------------------------------------
 
 			final Messenger messenger = this.getServer().getMessenger();
+
+			// Always make the main channel available
 			if (!messenger.isOutgoingChannelRegistered(this, "BungeeCord"))
 				messenger.registerOutgoingPluginChannel(this, "BungeeCord");
 
@@ -789,6 +791,12 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			Debugger.detectDebugMode();
 
 			this.unregisterReloadables();
+
+			final Messenger messenger = this.getServer().getMessenger();
+
+			// Always make the main channel available
+			if (!messenger.isOutgoingChannelRegistered(this, "BungeeCord"))
+				messenger.registerOutgoingPluginChannel(this, "BungeeCord");
 
 			// Load our dependency system
 			try {

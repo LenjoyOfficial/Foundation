@@ -1131,6 +1131,9 @@ public final class SerializedMap extends StrictCollection implements Iterable<Ma
 			return (SerializedMap) object;
 		}
 
+		if (object instanceof String && object.toString().equals("{}"))
+			return new SerializedMap(mode);
+
 		if (object instanceof MemorySection)
 			return of(Common.getMapFromSection(object));
 

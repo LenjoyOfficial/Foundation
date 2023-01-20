@@ -587,9 +587,10 @@ public final class ReflectionUtil {
 
 			if (reflectionDataCache.containsKey(clazz))
 				constructor = ((ReflectionData<T>) reflectionDataCache.get(clazz)).getDeclaredConstructor();
-
 			else
 				constructor = (Constructor<T>) ReflectionUtil.getConstructor(clazz);
+
+			constructor.setAccessible(true);
 
 			return constructor.newInstance();
 

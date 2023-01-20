@@ -36,12 +36,12 @@ public abstract class SimpleHologram {
 	private static final Constructor<?> DESTROY_ENTITIES_PACKET;
 
 	static {
-		final Class<?> nmsLivingEntity = ReflectionUtil.getNMSClass("EntityLiving", "net.minecraft.world.entity.EntityLiving");
+		final Class<?> nmsEntity = ReflectionUtil.getNMSClass("EntityLiving", "net.minecraft.world.entity.Entity");
 
 		SPAWN_ENTITY_LIVING_PACKET = ReflectionUtil.getConstructor(
 				ReflectionUtil.getNMSClass("PacketPlayOutSpawnEntityLiving",
 						"net.minecraft.network.protocol.game.PacketPlayOutSpawnEntity" + (MinecraftVersion.atLeast(MinecraftVersion.V.v1_19) ? "" : "Living")),
-				nmsLivingEntity);
+				nmsEntity);
 
 		DESTROY_ENTITIES_PACKET = ReflectionUtil.getConstructor(
 				ReflectionUtil.getNMSClass("PacketPlayOutEntityDestroy", "net.minecraft.network.protocol.game.PacketPlayOutEntityDestroy"),

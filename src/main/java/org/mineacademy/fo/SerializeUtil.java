@@ -179,6 +179,9 @@ public final class SerializeUtil {
 		else if (object instanceof PotionEffectType)
 			return ((PotionEffectType) object).getName();
 
+		else if (object instanceof Enchantment)
+			return ((Enchantment) object).getName();
+
 		else if (object instanceof SimpleTime)
 			return ((SimpleTime) object).getRaw();
 

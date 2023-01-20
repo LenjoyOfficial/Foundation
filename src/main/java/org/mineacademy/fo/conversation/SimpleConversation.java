@@ -164,8 +164,8 @@ public abstract class SimpleConversation implements ConversationAbandonedListene
 	/*
 	 * Add a space to the prefix if it ends with one
 	 */
-	private String addLastSpace(final String prefix) {
-		return prefix.endsWith(" ") ? prefix : prefix + " ";
+	private final String addLastSpace(final String prefix) {
+		return Common.stripColors(prefix).endsWith(" ") ? prefix : prefix + " ";
 	}
 
 	/**

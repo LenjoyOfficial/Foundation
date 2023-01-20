@@ -312,7 +312,7 @@ public final class Common {
 	 * @param message
 	 */
 	public static void tellConversing(final Conversable conversable, final String message) {
-		conversable.sendRawMessage(colorize(addLastSpace(tellPrefix) + removeFirstSpaces(message)).trim());
+		conversable.sendRawMessage(colorize((message.contains(tellPrefix) ? "" : addLastSpace(tellPrefix)) + removeFirstSpaces(message)).trim());
 	}
 
 	/**
@@ -627,7 +627,11 @@ public final class Common {
 			result = result.replaceAll(Pattern.quote(matched), replacement);
 		}
 
-		result = result.replace("\\\\#", "#").replace("\\#", "#");
+		if (result.contains("\\\\#"))
+			result = result.replace("\\\\#", "\\#");
+
+		else if (result.contains("\\#"))
+			result = result.replace("\\#", "#");
 
 		return result;
 	}

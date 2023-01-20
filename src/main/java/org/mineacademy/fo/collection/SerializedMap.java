@@ -506,8 +506,8 @@ public final class SerializedMap extends StrictCollection implements Iterable<Ma
 	 * @param key
 	 * @return
 	 */
-	public ItemStack getItem(final String key) {
-		return this.getItem(key, null);
+	public ItemStack getItemStack(final String key) {
+		return this.getItemStack(key, null);
 	}
 
 	/**
@@ -517,7 +517,7 @@ public final class SerializedMap extends StrictCollection implements Iterable<Ma
 	 * @param def
 	 * @return
 	 */
-	public ItemStack getItem(final String key, final ItemStack def) {
+	public ItemStack getItemStack(final String key, final ItemStack def) {
 		final Object obj = getObject(key);
 
 		if (obj == null)

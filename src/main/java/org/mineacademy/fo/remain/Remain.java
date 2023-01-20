@@ -2723,7 +2723,10 @@ public final class Remain {
 	 * @return
 	 */
 	public static boolean isServerNameChanged() {
-		return !"see mineacademy.org/server-properties to configure".contains(serverName) && !"undefined".equals(serverName) && !"Unknown Server".equals(serverName);
+		if (serverName == null)
+			injectServerName();
+
+		return serverName != null && !"see mineacademy.org/server-properties to configure".contains(serverName) && !"undefined".equals(serverName) && !"Unknown Server".equals(serverName);
 	}
 
 	/**

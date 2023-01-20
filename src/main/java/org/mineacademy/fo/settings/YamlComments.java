@@ -153,11 +153,12 @@ final class YamlComments {
 				for (final String ignoredSection : ignoredSections) {
 					if (key.equals(ignoredSection)) {
 						Object oldIgnoredObject = oldConfig.get(ignoredSection);
+						Object newIgnoredObject = newConfig.get(ignoredSection);
 
 						// Special case if people put [] or {}
-						if ((oldIgnoredObject instanceof String && oldIgnoredObject.toString().equals("{}"))
-								|| (oldIgnoredObject instanceof List && ((List<?>) oldIgnoredObject).isEmpty())
-								|| (oldIgnoredObject instanceof MemorySection && ((MemorySection) oldIgnoredObject).getKeys(false).isEmpty())) {
+						if (("{}".equals(oldIgnoredObject) && "{}".equals(newIgnoredObject))
+								|| (oldIgnoredObject instanceof List && ((List<?>) oldIgnoredObject).isEmpty() && newIgnoredObject instanceof List && ((List<?>) newIgnoredObject).isEmpty())
+								|| (oldIgnoredObject instanceof MemorySection && ((MemorySection) oldIgnoredObject).getKeys(false).isEmpty()) && newIgnoredObject instanceof MemorySection && ((MemorySection) newIgnoredObject).getKeys(false).isEmpty()) {
 							copyDenied.add(ignoredSection);
 
 							write0(key, "{}", true, newConfig, oldConfig, comments, ignoredSections, writer, yaml);
@@ -307,7 +308,6 @@ final class YamlComments {
 
 			if (o instanceof Map) {
 				int entryIndex = 0;
-				final int mapSize = ((Map<?, ?>) o).size();
 
 				for (final Map.Entry<?, ?> entry : ((Map<?, ?>) o).entrySet()) {
 					builder.append(prefixSpaces);
@@ -319,9 +319,6 @@ final class YamlComments {
 
 					builder.append(entry.getKey()).append(": ").append(yaml.dump(entry.getValue()));
 					entryIndex++;
-
-					if (entryIndex != mapSize)
-						builder.append("\n");
 				}
 
 			} else if (o instanceof String || o instanceof Character)

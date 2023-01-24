@@ -87,6 +87,7 @@ public abstract class Menu {
 	 * <p>
 	 * Used in {@link #animateTitle(String)}
 	 */
+	@Getter
 	@Setter
 	private static int titleAnimationDurationTicks = 20;
 
@@ -700,7 +701,7 @@ public abstract class Menu {
 	 *
 	 * @param title the title to animate
 	 */
-	public final void animateTitle(final String title) {
+	public void animateTitle(final String title) {
 		if (titleAnimationEnabled)
 			PlayerUtil.updateInventoryTitle(this, this.getViewer(), title, this.getTitle(), titleAnimationDurationTicks);
 	}

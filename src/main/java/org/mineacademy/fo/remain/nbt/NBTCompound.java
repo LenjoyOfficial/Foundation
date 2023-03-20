@@ -833,6 +833,7 @@ public class NBTCompound implements ReadWriteNBT {
 	 * @param name
 	 * @return The retrieved Compound List
 	 */
+	@Override
 	public NBTCompoundList getCompoundList(String name) {
 		try {
 			writeLock.lock();

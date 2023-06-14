@@ -288,7 +288,7 @@ public final class Remain {
 				getHandle = getOBCClass("entity.CraftPlayer").getMethod("getHandle");
 
 				fieldPlayerConnection = getNMSClass("EntityPlayer", "net.minecraft.server.level.EntityPlayer")
-						.getField(MinecraftVersion.atLeast(V.v1_17) ? "b" : hasNMS ? "playerConnection" : "netServerHandler");
+						.getField(MinecraftVersion.atLeast(V.v1_20) ? "c" : MinecraftVersion.atLeast(V.v1_17) ? "b" : hasNMS ? "playerConnection" : "netServerHandler");
 
 				sendPacket = getNMSClass(hasNMS ? "PlayerConnection" : "NetServerHandler", "net.minecraft.server.network.PlayerConnection")
 						.getMethod(MinecraftVersion.atLeast(V.v1_18) ? "a" : "sendPacket", getNMSClass("Packet", "net.minecraft.network.protocol.Packet"));
@@ -2084,7 +2084,13 @@ public final class Remain {
 			Valid.checkNotNull(nmsEntity, "setInvisible requires either a LivingEntity or a NMS Entity, got: " + entity.getClass());
 
 			// https://www.spigotmc.org/threads/how-do-i-make-an-entity-go-invisible-without-using-potioneffects.321227/
-			Common.runLater(2, () -> invoke("setInvisible", nmsEntity, invisible));
+			Common.runLater(2, () -> {
+				try {
+					ReflectionUtil.invoke("setInvisible", nmsEntity, invisible);
+				} catch (Throwable t) {
+					// unsupported
+				}
+			});
 		}
 	}
 

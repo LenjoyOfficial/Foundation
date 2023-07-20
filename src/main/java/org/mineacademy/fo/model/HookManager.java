@@ -51,6 +51,7 @@ import com.bekvon.bukkit.residence.Residence;
 import com.bekvon.bukkit.residence.protection.ClaimedResidence;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
+import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketListener;
 import com.earth2me.essentials.CommandSource;
@@ -2450,7 +2451,7 @@ class PlaceholderAPIHook {
 		return text;
 	}
 
-	private String setPlaceholders(OfflinePlayer player, String oldText, String text, Map<String, PlaceholderExpansion> hooks, Matcher matcher) {
+	private String setPlaceholders(@Nullable OfflinePlayer player, String oldText, String text, Map<String, PlaceholderExpansion> hooks, Matcher matcher) {
 		while (matcher.find()) {
 			String format = matcher.group(1);
 			boolean frontSpace = false;
@@ -3332,16 +3333,20 @@ class CMIHook {
 	void setGodMode(final Player player, final boolean godMode) {
 		final CMIUser user = this.getUser(player);
 
-		if (user != null) {
+		if (user != null)
 			try {
-				Method setGod = ReflectionUtil.getMethod(CMIUser.class, "setGod", Boolean.class);
+				CMI.getInstance().getNMS().changeGodMode(player, godMode);
 
-				ReflectionUtil.invoke(setGod, user, godMode);
+			} catch (Throwable tt) {
+				try {
+					Method setGod = CMIUser.class.getMethod("setGod", Boolean.class);
 
-			} catch (Throwable t) {
-				// Removed in most recent CMI versions
+					setGod.invoke(user, godMode);
+
+				} catch (Throwable t) {
+					// unavailable
+				}
 			}
-		}
 	}
 
 	void setLastTeleportLocation(final Player player, final Location location) {

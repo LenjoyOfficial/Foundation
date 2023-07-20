@@ -1,6 +1,7 @@
 package org.mineacademy.fo.remain;
 
 import java.io.File;
+import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -18,6 +19,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.annotation.Nullable;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -48,6 +51,7 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.SimpleCommandMap;
+import org.bukkit.configuration.MemorySection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
@@ -72,12 +76,14 @@ import org.bukkit.potion.PotionType;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.EntityUtil;
 import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.MathUtil;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.PlayerUtil;
+import org.mineacademy.fo.RandomUtil;
 import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.TimeUtil;
 import org.mineacademy.fo.Valid;
@@ -919,21 +925,25 @@ public final class Remain {
 	 * @return the Json string representation of the item
 	 */
 	public static String toJson(ItemStack item) {
-		// ItemStack methods to get a net.minecraft.server.ItemStack object for serialization
-		final Class<?> craftItemstack = getOBCClass("inventory.CraftItemStack");
-		final Method asNMSCopyMethod = getMethod(craftItemstack, "asNMSCopy", ItemStack.class);
+		if (MinecraftVersion.atLeast(V.v1_4)) {
+			// ItemStack methods to get a net.minecraft.server.ItemStack object for serialization
+			final Class<?> craftItemstack = getOBCClass("inventory.CraftItemStack");
+			final Method asNMSCopyMethod = getMethod(craftItemstack, "asNMSCopy", ItemStack.class);
 
-		// NMS Method to serialize a net.minecraft.server.ItemStack to a valid Json string
-		final Class<?> nmsItemStack = ReflectionUtil.getNMSClass("ItemStack", "net.minecraft.world.item.ItemStack");
-		final Class<?> nbtTagCompound = ReflectionUtil.getNMSClass("NBTTagCompound", "net.minecraft.nbt.NBTTagCompound");
-		final Method saveItemstackMethod = ReflectionUtil.getMethod(nmsItemStack, MinecraftVersion.atLeast(V.v1_18) ? "b" : "save", nbtTagCompound);
+			// NMS Method to serialize a net.minecraft.server.ItemStack to a valid Json string
+			final Class<?> nmsItemStack = getNMSClass("ItemStack", "net.minecraft.world.item.ItemStack");
+			final Class<?> nbtTagCompound = getNMSClass("NBTTagCompound", "net.minecraft.nbt.NBTTagCompound");
+			final Method saveItemstackMethod = getMethod(nmsItemStack, MinecraftVersion.atLeast(V.v1_18) ? "b" : "save", nbtTagCompound);
 
-		final Object nmsNbtTagCompoundObj = instantiate(nbtTagCompound);
-		final Object nmsItemStackObj = invoke(asNMSCopyMethod, null, item);
-		final Object itemAsJsonObject = invoke(saveItemstackMethod, nmsItemStackObj, nmsNbtTagCompoundObj);
+			final Object nmsNbtTagCompoundObj = instantiate(nbtTagCompound);
+			final Object nmsItemStackObj = invoke(asNMSCopyMethod, null, item);
+			final Object itemAsJsonObject = invoke(saveItemstackMethod, nmsItemStackObj, nmsNbtTagCompoundObj);
 
-		// Return a string representation of the serialized object
-		return itemAsJsonObject.toString();
+			// Return a string representation of the serialized object
+			return itemAsJsonObject.toString();
+		}
+
+		return item.getType().toString();
 	}
 
 	/**
@@ -1261,6 +1271,28 @@ public final class Remain {
 		} catch (final ReflectiveOperationException ex) {
 			throw new FoException(ex, "Unable to create command: /" + label);
 		}
+	}
+
+	/**
+	 * A shortcut method to generate a new {@link NamespacedKey}. Requires MC 1.13+
+	 *
+	 * @param name
+	 * @return
+	 */
+	public static NamespacedKey newNamespaced(String name) {
+		return new NamespacedKey(SimplePlugin.getInstance(), name);
+	}
+
+	/**
+	 * A shortcut method to generate a new {@link NamespacedKey}. Requires MC 1.13+
+	 *
+	 * The name is randomly assigned in the format YOURPLUGIN_RANDOM where YOURPLUGIN
+	 * is your plugin's name and RANDOM are 16 random letters.
+	 *
+	 * @return
+	 */
+	public static NamespacedKey newNamespaced() {
+		return new NamespacedKey(SimplePlugin.getInstance(), SimplePlugin.getNamed() + "_" + RandomUtil.nextString(16));
 	}
 
 	/**
@@ -2007,17 +2039,32 @@ public final class Remain {
 	 * @param name
 	 */
 	public static void setCustomName(final Entity entity, final String name) {
+		setCustomName(entity, name, true);
+	}
+
+	/**
+	 * Sets a custom name to entity
+	 *
+	 * @param entity
+	 * @param name
+	 * @param visible
+	 */
+	public static void setCustomName(final Entity entity, @Nullable final String name, final boolean visible) {
 		try {
-			entity.setCustomNameVisible(true);
-			entity.setCustomName(Common.colorize(name));
+			entity.setCustomNameVisible(visible);
+
+			if (name != null)
+				entity.setCustomName(Common.colorize(name));
 
 		} catch (final NoSuchMethodError er) {
 			Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_7), "setCustomName requires Minecraft 1.7.10+");
 
 			final NBTEntity nbt = new NBTEntity(entity);
 
-			nbt.setInteger("CustomNameVisible", 1);
-			nbt.setString("CustomName", Common.colorize(name));
+			nbt.setInteger("CustomNameVisible", visible ? 1 : 0);
+
+			if (name != null)
+				nbt.setString("CustomName", Common.colorize(name));
 		}
 	}
 
@@ -2219,6 +2266,7 @@ public final class Remain {
 	 *
 	 * @param receiver
 	 * @param message
+	 * @param icon
 	 */
 	public static void sendToast(final Player receiver, final String message, final CompMaterial icon) {
 		sendToast(receiver, message, icon, CompToastStyle.TASK);
@@ -2234,6 +2282,7 @@ public final class Remain {
 	 * @param receiver
 	 * @param message
 	 * @param icon
+	 * @param toastStyle
 	 */
 	public static void sendToast(final Player receiver, final String message, final CompMaterial icon, final CompToastStyle toastStyle) {
 		if (message != null && !message.isEmpty()) {
@@ -2260,7 +2309,6 @@ public final class Remain {
 	 * @param receivers
 	 * @param message you can replace player-specific variables in the message here
 	 * @param icon
-	 * @param goal
 	 */
 	public static void sendToast(final List<Player> receivers, final Function<Player, String> message, final CompMaterial icon) {
 		sendToast(receivers, message, icon, CompToastStyle.GOAL);
@@ -2275,6 +2323,7 @@ public final class Remain {
 	 * @param receivers
 	 * @param message you can replace player-specific variables in the message here
 	 * @param icon
+	 * @param style
 	 */
 	public static void sendToast(final List<Player> receivers, final Function<Player, String> message, final CompMaterial icon, final CompToastStyle style) {
 
@@ -2774,6 +2823,8 @@ public final class Remain {
 	 * Attempts to set render distance of the player to the given value
 	 * returning false if we got a reflective exception (such as when not using PaperSpigot
 	 * or on an outdated MC version).
+	 * @param player
+	 * @param viewDistanceChunks
 	 *
 	 * @return
 	 */

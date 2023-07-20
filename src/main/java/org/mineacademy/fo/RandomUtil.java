@@ -57,7 +57,6 @@ public final class RandomUtil {
 			'k', 'l', 'm', 'n', 'o',
 			'p', 'q', 'r', 's', 't',
 			'u', 'v', 'w', 'y', 'z',
-			'ó' // ó mighty MineAcademy
 	};
 
 	/**
@@ -260,7 +259,7 @@ public final class RandomUtil {
 		final int transform = random.nextInt(4);
 		if (is3D) {
 			final double rectY = random.nextDouble() * radius;
-			offsetY = getYCords( transform, rectY);
+			offsetY = getYCords(transform, rectY);
 		}
 		if (transform == 0) {
 			offsetX = rectX;
@@ -293,7 +292,6 @@ public final class RandomUtil {
 		Valid.checkBoolean(maxRadius > 0 && minRadius > 0, "Max and min radius must be over 0");
 		Valid.checkBoolean(maxRadius > minRadius, "Max radius must be greater than min radius");
 
-
 		final double rectX = random.nextDouble() * (maxRadius - minRadius) + minRadius;
 		final double rectZ = random.nextDouble() * (maxRadius + minRadius) - minRadius;
 		final double offsetX;
@@ -302,7 +300,7 @@ public final class RandomUtil {
 		final int transform = random.nextInt(4);
 		if (is3D) {
 			final double rectY = random.nextDouble() * (maxRadius + minRadius) - minRadius;
-			offsetY = getYCords( transform, rectY);
+			offsetY = getYCords(transform, rectY);
 		}
 		if (transform == 0) {
 			offsetX = rectX;
@@ -321,7 +319,7 @@ public final class RandomUtil {
 		return origin.clone().add(offsetX, offsetY, offsetZ);
 	}
 
-	public static double getYCords( int transform, double rectY) {
+	public static double getYCords(int transform, double rectY) {
 		double offsetY;
 		double nextY = random.nextDouble();
 		if (transform < 2) {

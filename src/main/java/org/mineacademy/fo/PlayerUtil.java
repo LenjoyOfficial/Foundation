@@ -531,11 +531,12 @@ public final class PlayerUtil {
 		final ItemStack[] inv = player.getInventory().getContents();
 		final ItemStack[] armor = player.getInventory().getArmorContents();
 
-		final ItemStack[] everything = (ItemStack[]) Common.joinArrays(inv, armor);
+		final Object[] everything = Common.joinArrays(inv, armor);
 
-		for (final ItemStack i : everything)
-			if (i != null && i.getType() != Material.AIR)
-				return false;
+		for (final Object i : everything)
+			if (i instanceof ItemStack)
+				if (((ItemStack) i).getType() != Material.AIR)
+					return false;
 
 		return true;
 	}
@@ -679,6 +680,7 @@ public final class PlayerUtil {
 
 	/**
 	 * Return true if the player has a stored snapshot of inventory and properties
+	 * @param player
 	 *
 	 * @return
 	 */

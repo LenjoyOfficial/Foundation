@@ -548,9 +548,11 @@ public abstract class Menu {
 		this.onRestart();
 
 		this.compileItems().forEach((slot, item) -> drawer.setItem(slot, item));
-		this.onDisplay(drawer);
+		this.onPreDisplay(drawer);
 
 		drawer.display(this.getViewer());
+
+		this.onPostDisplay(this.getViewer());
 
 		if (animatedTitle != null)
 			this.animateTitle(animatedTitle);

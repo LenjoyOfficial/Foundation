@@ -261,6 +261,16 @@ public final class Variables {
 					return cachedVar;
 			}
 
+			// PlaceholderAPI and MVdWPlaceholderAPI
+			if (senderIsPlayer)
+				message = HookManager.replacePlaceholders((Player) sender, message);
+
+			else if (sender instanceof DiscordSender)
+				message = HookManager.replacePlaceholders(((DiscordSender) sender).getOfflinePlayer(), message);
+
+			// Default
+			message = replaceHardVariables0(sender, message);
+
 			// Custom placeholders
 			if (REPLACE_JAVASCRIPT) {
 				REPLACE_JAVASCRIPT = false;
@@ -273,19 +283,11 @@ public final class Variables {
 				}
 			}
 
-			// PlaceholderAPI and MVdWPlaceholderAPI
-			if (senderIsPlayer)
-				message = HookManager.replacePlaceholders((Player) sender, message);
-
-			else if (sender instanceof DiscordSender)
-				message = HookManager.replacePlaceholders(((DiscordSender) sender).getOfflinePlayer(), message);
-
-			// Default
-			message = replaceHardVariables0(sender, message);
-
 			// Support the & color system and replacing variables in variables
 			if (!message.startsWith("[JSON]")) {
-				message = Common.colorize(message);
+
+				if (colorize)
+					message = Common.colorize(message);
 
 				if (!original.equals(message) && ((message.contains("{") && message.contains("}")) || message.contains("%")))
 					return replace(message, sender, replacements, colorize);

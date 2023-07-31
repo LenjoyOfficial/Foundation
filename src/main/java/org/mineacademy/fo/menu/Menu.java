@@ -10,6 +10,7 @@ import java.util.Map;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryAction;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -545,6 +546,7 @@ public abstract class Menu {
 		this.registerButtons();
 
 		// Call before calling getItemAt
+		this.onRestartInternal();
 		this.onRestart();
 
 		this.compileItems().forEach((slot, item) -> drawer.setItem(slot, item));
@@ -561,7 +563,13 @@ public abstract class Menu {
 	/*
 	 * Internal hook before calling getItemAt
 	 */
-	void onRestart() {
+	void onRestartInternal() {
+	}
+
+	/**
+	 * Called automatically when a menu is restarted. Called before getItemAt() and after registerButtons()
+	 */
+	public void onRestart() {
 	}
 
 	/**

@@ -240,6 +240,11 @@ public final class Remain {
 	 */
 	private static String serverName;
 
+	/**
+	 * Return true if this is a Folia server
+	 */
+	private static boolean isFolia = false;
+
 	// Singleton
 	private Remain() {
 	}
@@ -410,6 +415,15 @@ public final class Remain {
 				sectionPathDataClass = ReflectionUtil.lookupClass("org.bukkit.configuration.SectionPathData");
 			} catch (final Throwable ex) {
 				// unsupported
+			}
+
+			try {
+				Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
+
+				isFolia = true;
+
+			} catch (Exception ex) {
+				isFolia = false;
 			}
 
 		} catch (final ReflectiveOperationException ex) {
@@ -2983,6 +2997,15 @@ public final class Remain {
 	 */
 	public static boolean hasAddPassenger() {
 		return hasAddPassenger;
+	}
+
+	/**
+	 * Return true if this is a Folia server
+	 *
+	 * @return
+	 */
+	public static boolean isFolia() {
+		return isFolia;
 	}
 
 	// ------------------------ Legacy ------------------------

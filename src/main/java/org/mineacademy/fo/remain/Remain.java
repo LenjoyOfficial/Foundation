@@ -5,8 +5,6 @@ import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -261,12 +259,6 @@ public final class Remain {
 
 			CompParticle.CRIT.getClass();
 
-			for (final Material bukkitMaterial : Material.values())
-				CompMaterial.fromString(bukkitMaterial.toString());
-
-			for (final CompMaterial compMaterial : CompMaterial.values())
-				compMaterial.getMaterial();
-
 			getNMSClass("Entity", "net.minecraft.world.entity.Entity");
 
 		} catch (final Throwable t) {
@@ -417,14 +409,7 @@ public final class Remain {
 				// unsupported
 			}
 
-			try {
-				Class.forName("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
-
-				isFolia = true;
-
-			} catch (Exception ex) {
-				isFolia = false;
-			}
+			isFolia = Bukkit.getVersion().contains("Folia");
 
 		} catch (final ReflectiveOperationException ex) {
 			throw new UnsupportedOperationException("Failed to set up reflection, " + SimplePlugin.getNamed() + " won't work properly", ex);
@@ -575,8 +560,8 @@ public final class Remain {
 		try {
 			return player.getClientViewDistance();
 
-		} catch (NoSuchMethodError err) {
-			Method getViewDistance = ReflectionUtil.getMethod(player.spigot().getClass(), "getViewDistance");
+		} catch (final NoSuchMethodError err) {
+			final Method getViewDistance = ReflectionUtil.getMethod(player.spigot().getClass(), "getViewDistance");
 
 			return ReflectionUtil.invoke(getViewDistance, player.spigot());
 		}
@@ -679,7 +664,7 @@ public final class Remain {
 			// Default delay to 750ms
 			try {
 				((Item) bukkitItem).setPickupDelay(15);
-			} catch (Throwable t) {
+			} catch (final Throwable t) {
 				// unsupported
 			}
 
@@ -2143,13 +2128,17 @@ public final class Remain {
 		else {
 			final Object nmsEntity = entity.getClass().toString().startsWith("net.minecraft") ? entity : entity instanceof LivingEntity ? getHandleEntity((LivingEntity) entity) : null;
 			Valid.checkNotNull(nmsEntity, "setInvisible requires either a LivingEntity or a NMS Entity, got: " + entity.getClass());
+			final Method setInvisible = ReflectionUtil.getMethod(nmsEntity.getClass(), "setInvisible", boolean.class);
 
 			// https://www.spigotmc.org/threads/how-do-i-make-an-entity-go-invisible-without-using-potioneffects.321227/
 			Common.runLater(2, () -> {
 				try {
-					ReflectionUtil.invoke("setInvisible", nmsEntity, invisible);
-				} catch (Throwable t) {
+					ReflectionUtil.invoke(setInvisible, nmsEntity, invisible);
+
+				} catch (final Throwable t) {
+
 					// unsupported
+					t.printStackTrace();
 				}
 			});
 		}
@@ -2342,7 +2331,7 @@ public final class Remain {
 	public static void sendToast(final List<Player> receivers, final Function<Player, String> message, final CompMaterial icon, final CompToastStyle style) {
 
 		if (hasAdvancements)
-			Common.runLaterAsync(() -> {
+			Common.runAsync(() -> {
 				for (final Player receiver : receivers) {
 
 					// Sleep to mitigate sending not working at once
@@ -2731,65 +2720,13 @@ public final class Remain {
 	}
 
 	/**
-	 * New Minecraft versions lack server-name that we rely on for BungeeCord,
-	 * restore it back
-	 */
-	public static void injectServerName() {
-		try {
-			// If user has Bungee_Server_Name in their settings, move it automatically
-			final File settingsFile = FileUtil.getFile("settings.yml");
-			String previousName = null;
-
-			if (settingsFile.exists()) {
-				final YamlConfiguration settings = YamlConfiguration.loadConfiguration(settingsFile);
-				final String previousNameRaw = settings.getString("Bungee_Server_Name");
-
-				if (previousNameRaw != null && !previousNameRaw.isEmpty() && !"none".equals(previousNameRaw) && !"undefined".equals(previousNameRaw)) {
-					Common.warning("Detected Bungee_Server_Name being used in your settings.yml that is now located in server.properties." +
-							" It has been moved there and you can now delete this key from settings.yml if it was not deleted already.");
-
-					previousName = previousNameRaw;
-				}
-			}
-
-			// Check server.properties for a valid server-name key, if it lacks, add it with instructions on configuring properly
-			final File serverProperties = new File(SimplePlugin.getData().getParentFile().getParentFile(), "server.properties");
-			final List<String> lines = FileUtil.readLines(serverProperties);
-
-			lines.removeIf(line -> line.equals("server-name=undefined") || line.equals("server-name=Unknown Server"));
-
-			boolean hasServerName = false;
-			String oldName = null;
-
-			for (final String line : lines)
-				if (line.startsWith("server-name=")) {
-					hasServerName = true;
-
-					oldName = line.replace("server-name=", "");
-					break;
-				}
-
-			if (!hasServerName) {
-				serverName = previousName == null ? "Undefined - see mineacademy.org/server-properties to configure" : previousName;
-				lines.add("server-name=" + serverName);
-
-				Files.write(serverProperties.toPath(), lines, StandardOpenOption.TRUNCATE_EXISTING);
-			}
-
-			serverName = oldName;
-
-		} catch (final Throwable t) {
-			t.printStackTrace();
-		}
-	}
-
-	/**
 	 * Return the server name identifier (used for BungeeCord)
 	 *
 	 * @return
 	 */
 	public static String getServerName() {
-		Valid.checkBoolean(isServerNameChanged(), "Detected getServerName call, please configure your 'server-name' in server.properties according to mineacademy.org/server-properties");
+		if (!hasServerName())
+			throw new IllegalArgumentException("Please write a 'server-name' key to your server.properties according to https://mineacademy.org/server-properties (do NOT report this, this is NOT a bug)");
 
 		return serverName;
 	}
@@ -2799,11 +2736,39 @@ public final class Remain {
 	 *
 	 * @return
 	 */
-	public static boolean isServerNameChanged() {
+	public static boolean hasServerName() {
 		if (serverName == null)
-			injectServerName();
+			loadServerName();
 
-		return serverName != null && !"see mineacademy.org/server-properties to configure".contains(serverName) && !"undefined".equals(serverName) && !"Unknown Server".equals(serverName);
+		return serverName != null && !serverName.isEmpty() && !"mineacademy.org/server-properties".contains(serverName) && !"undefined".equals(serverName) && !"Unknown Server".equals(serverName);
+	}
+
+	/**
+	 * New Minecraft versions lack server-name that we rely on for BungeeCord,
+	 * restore it back
+	 */
+	private static void loadServerName() {
+		try {
+			// Check server.properties for a valid server-name key, if it lacks, add it with instructions on configuring properly
+			final File serverProperties = new File(SimplePlugin.getData().getParentFile().getParentFile(), "server.properties");
+			final List<String> lines = FileUtil.readLines(serverProperties);
+
+			lines.removeIf(line -> line.equals("server-name=undefined") || line.equals("server-name=Unknown Server"));
+
+			String oldName = "";
+
+			for (final String line : lines)
+				if (line.startsWith("server-name=")) {
+					oldName = line.replace("server-name=", "");
+
+					break;
+				}
+
+			serverName = oldName;
+
+		} catch (final Throwable t) {
+			t.printStackTrace();
+		}
 	}
 
 	/**

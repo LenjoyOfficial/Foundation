@@ -15,7 +15,6 @@ import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.Messenger;
@@ -37,6 +36,7 @@ import org.mineacademy.fo.menu.button.annotation.Position;
 import org.mineacademy.fo.menu.model.InventoryDrawer;
 import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.menu.model.MenuClickLocation;
+import org.mineacademy.fo.model.SimpleRunnable;
 import org.mineacademy.fo.model.SimpleSound;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompMaterial;
@@ -357,7 +357,7 @@ public abstract class Menu {
 			for (final Button button : this.registeredButtons.keySet()) {
 				Valid.checkNotNull(button, "Menu button is null at " + this.getClass().getSimpleName());
 
-				ItemStack item = button.getItem();
+				final ItemStack item = button.getItem();
 				Valid.checkNotNull(item, "Menu " + this.getTitle() + " contained button " + button.getClass() + " named '" + button.getClass().getSimpleName() + "' with empty item!");
 
 				if (ItemUtil.isSimilar(fromItem, item))
@@ -538,10 +538,18 @@ public abstract class Menu {
 	 * @param animatedTitle the animated title
 	 */
 	public final void restartMenu(final String animatedTitle) {
+		this.restartMenu(animatedTitle, true);
+	}
+
+	final void restartMenu(final String animatedTitle, boolean callOnMenuClose) {
 
 		final Inventory inventory = this.getViewer().getOpenInventory().getTopInventory();
 		final InventoryDrawer drawer = InventoryDrawer.of(getViewer());
 		Valid.checkBoolean(inventory.getType() == InventoryType.CHEST, this.getViewer().getName() + "'s inventory closed in the meanwhile (now == " + inventory.getType() + ").");
+
+		// Most plugins save items here
+		if (callOnMenuClose)
+			this.onMenuClose(player, inventory);
 
 		this.registerButtons();
 
@@ -758,14 +766,16 @@ public abstract class Menu {
 	/*
 	 * Helper method to create a bukkit runnable
 	 */
-	private BukkitRunnable wrapAnimation(MenuRunnable task) {
-		return new BukkitRunnable() {
+	private SimpleRunnable wrapAnimation(MenuRunnable task) {
+		return new SimpleRunnable() {
+			boolean canceled = false;
 
 			@Override
 			public void run() {
 
 				if (Menu.this.closed) {
-					this.cancel();
+					if (!canceled)
+						this.cancel();
 
 					return;
 				}
@@ -774,6 +784,8 @@ public abstract class Menu {
 					task.run();
 
 				} catch (final EventHandledException ex) {
+					canceled = true;
+
 					this.cancel();
 				}
 			}

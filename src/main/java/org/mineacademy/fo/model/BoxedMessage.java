@@ -25,6 +25,16 @@ import lombok.RequiredArgsConstructor;
 public final class BoxedMessage {
 
 	/**
+	 * The top and bottom line itself
+	 */
+	public static String LINE = Common.chatLineSmooth();
+
+	/**
+	 * The color of the top and bottom line
+	 */
+	public static ChatColor LINE_COLOR = ChatColor.DARK_GRAY;
+
+	/**
 	 * All message recipients
 	 */
 	private final Iterable<? extends CommandSender> recipients;

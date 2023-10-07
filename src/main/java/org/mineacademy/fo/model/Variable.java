@@ -234,12 +234,14 @@ public final class Variable extends YamlConfig {
 		try {
 			// Replace variables in script
 			final String script = Variables.replace(this.value, sender, replacements, true, false);
-			final Object result = JavaScriptExecutor.run(script, sender);
+			final Object run = JavaScriptExecutor.run(script, sender);
+			final String result = run != null ? run.toString() : "";
 
-			if (this.cacheDuration != null && sender instanceof Player)
+			if (this.cacheDuration != null && sender instanceof Player) {
 				cache.put(((Player) sender).getUniqueId(), new Tuple<>(time, result));
+			}
 
-			return result != null ? result.toString() : "";
+			return result;
 
 		} catch (final RuntimeException ex) {
 

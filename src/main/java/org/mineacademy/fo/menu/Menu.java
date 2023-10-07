@@ -543,9 +543,12 @@ public abstract class Menu {
 
 	final void restartMenu(final String animatedTitle, boolean callOnMenuClose) {
 
-		final Inventory inventory = this.getViewer().getOpenInventory().getTopInventory();
-		final InventoryDrawer drawer = InventoryDrawer.of(getViewer());
-		Valid.checkBoolean(inventory.getType() == InventoryType.CHEST, this.getViewer().getName() + "'s inventory closed in the meanwhile (now == " + inventory.getType() + ").");
+		final Player player = this.getViewer();
+		Valid.checkNotNull(player, "Cannot restartMenu if it was not yet shown to a player! Menu: " + this);
+
+		final Inventory inventory = player.getOpenInventory().getTopInventory();
+		final InventoryDrawer drawer = InventoryDrawer.of(player);
+		Valid.checkBoolean(inventory.getType() == InventoryType.CHEST, player.getName() + "'s inventory closed in the meanwhile (now == " + inventory.getType() + ").");
 
 		// Most plugins save items here
 		if (callOnMenuClose)
@@ -560,9 +563,9 @@ public abstract class Menu {
 		this.compileItems().forEach((slot, item) -> drawer.setItem(slot, item));
 		this.onPreDisplay(drawer);
 
-		drawer.display(this.getViewer());
+		drawer.display(player);
 
-		this.onPostDisplay(this.getViewer());
+		this.onPostDisplay(player);
 
 		if (animatedTitle != null)
 			this.animateTitle(animatedTitle);

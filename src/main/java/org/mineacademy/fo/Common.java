@@ -67,6 +67,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Our main utility class hosting a large variety of different convenience functions

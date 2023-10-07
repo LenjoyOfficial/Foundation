@@ -425,8 +425,6 @@ public abstract class MenuPagged<T> extends Menu {
 	@Override
 	protected final void onPreDisplay(final InventoryDrawer drawer) {
 		drawer.setTitle(this.getTitleWithPageNumbers());
-
-		this.onPostDisplay(drawer);
 	}
 
 	/**
@@ -435,14 +433,6 @@ public abstract class MenuPagged<T> extends Menu {
 	@Override
 	final void onRestartInternal() {
 		this.calculatePages();
-	}
-
-	/**
-	 * Called before the menu is displayed
-	 *
-	 * @param drawer
-	 */
-	protected void onPostDisplay(InventoryDrawer drawer) {
 	}
 
 	/**

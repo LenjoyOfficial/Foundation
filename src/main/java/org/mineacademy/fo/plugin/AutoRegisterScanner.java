@@ -25,14 +25,13 @@ import org.mineacademy.fo.bungee.BungeeListener;
 import org.mineacademy.fo.command.SimpleCommand;
 import org.mineacademy.fo.command.SimpleCommandGroup;
 import org.mineacademy.fo.command.SimpleSubCommand;
+import org.mineacademy.fo.enchant.SimpleEnchantment;
 import org.mineacademy.fo.event.SimpleListener;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.menu.tool.Tool;
 import org.mineacademy.fo.model.DiscordListener;
-import org.mineacademy.fo.model.FoundationEnchantmentListener;
 import org.mineacademy.fo.model.HookManager;
 import org.mineacademy.fo.model.PacketListener;
-import org.mineacademy.fo.model.SimpleEnchantment;
 import org.mineacademy.fo.model.SimpleExpansion;
 import org.mineacademy.fo.model.Tuple;
 import org.mineacademy.fo.model.Variables;
@@ -60,7 +59,7 @@ final class AutoRegisterScanner {
 	/**
 	 * Automatically register the main command group if there is only one in the code
 	 */
-	private static List<SimpleCommandGroup> registeredCommandGroups = new ArrayList<>();
+	private static final List<SimpleCommandGroup> registeredCommandGroups = new ArrayList<>();
 
 	/**
 	 * Scans your plugin and if your {@link Tool} or {@link SimpleEnchantment} class implements {@link Listener}
@@ -202,9 +201,6 @@ final class AutoRegisterScanner {
 		if (staticSettingsFound.isEmpty() && staticSettingsFileExist)
 			YamlStaticConfig.load(SimpleSettings.class);
 
-		if (staticLocalizations.isEmpty() && staticLocalizationFileExist)
-			YamlStaticConfig.load(SimpleLocalization.class);
-
 		// A dirty solution to prioritize loading settings and then localization
 		final List<Class<?>> delayedLoading = new ArrayList<>();
 
@@ -216,6 +212,10 @@ final class AutoRegisterScanner {
 
 		for (final Class<?> delayedSettings : delayedLoading)
 			YamlStaticConfig.load((Class<? extends YamlStaticConfig>) delayedSettings);
+
+		if (staticLocalizations.isEmpty() && staticLocalizationFileExist)
+			YamlStaticConfig.load(SimpleLocalization.class);
+
 	}
 
 	/*
@@ -354,9 +354,12 @@ final class AutoRegisterScanner {
 			if (!enchantListenersRegistered) {
 				enchantListenersRegistered = true;
 
-				plugin.registerEvents(FoundationEnchantmentListener.getInstance());
+				plugin.registerEvents(SimpleEnchantment.Listener.getInstance());
 
-				FoundationPacketListener.getInstance().onRegister();
+				if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null)
+					FoundationPacketListener.getInstance().onRegister();
+				else
+					Common.warning("Custom enchantments require ProtocolLib for lore to be added properly.");
 			}
 		}
 

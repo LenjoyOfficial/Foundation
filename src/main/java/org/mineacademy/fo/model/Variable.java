@@ -9,12 +9,14 @@ import java.util.UUID;
 import java.util.function.Function;
 
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.PlayerUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.constants.FoConstants;
+import org.mineacademy.fo.debug.Debugger;
+import org.mineacademy.fo.exception.FoException;
+import org.mineacademy.fo.exception.FoScriptException;
 import org.mineacademy.fo.settings.ConfigItems;
 import org.mineacademy.fo.settings.YamlConfig;
 
@@ -231,26 +233,103 @@ public final class Variable extends YamlConfig {
 				return playerCache.getValue();
 		}
 
+		// Replace variables in script
+		final String script;
+
 		try {
-			// Replace variables in script
-			final String script = Variables.replace(this.value, sender, replacements, true, false);
-			final Object run = JavaScriptExecutor.run(script, sender);
-			final String result = run != null ? run.toString() : "";
+			script = Variables.replace(this.value, sender, replacements, true, false);
 
-			if (this.cacheDuration != null && sender instanceof Player) {
-				cache.put(((Player) sender).getUniqueId(), new Tuple<>(time, result));
-			}
+		} catch (final Throwable t) {
+			final String errorHeadline = "Error replacing placeholders in variable!";
 
-			return result;
+			Common.logFramed(
+					errorHeadline,
+					"",
+					"Variable: " + this.value,
+					"Sender: " + sender,
+					"Replacements: " + replacements,
+					"Error: " + t.getMessage(),
+					"",
+					"Please report this issue!");
 
-		} catch (final RuntimeException ex) {
-
-			// Assume console or Discord lack proper methods to call
-			if (sender instanceof Player)
-				throw ex;
+			if (FoException.isErrorSavedAutomatically())
+				Debugger.saveError(t, errorHeadline);
 
 			return "";
 		}
+
+		Object result = null;
+
+		try {
+			result = JavaScriptExecutor.run(script, sender);
+
+		} catch (final FoScriptException ex) {
+			Common.logFramed(
+					"Error executing JavaScript in a variable!",
+					"Variable: " + this.getFileName(),
+					"Line: " + ex.getErrorLine(),
+					"Sender: " + sender,
+					"Replacements: " + replacements,
+					"Error: " + ex.getMessage(),
+					"",
+					"This is likely NOT our plugin bug, check Value key in " + this.getFileName(),
+					"that it returns a valid JavaScript code before reporting!");
+
+			throw ex;
+		}
+
+		if (this.cacheDuration != null && sender instanceof Player) {
+			cache.put(((Player) sender).getUniqueId(), new Tuple<>(time, result));
+		}
+
+		return result != null ? result.toString() : "";
+	}
+
+	/**
+	 * Builds this variable without additional components
+	 *
+	 * @param sender
+	 * @param replacements
+	 * @return
+	 */
+	public String buildPlain(CommandSender sender, Map<String, Object> replacements) {
+
+		if (this.senderPermission != null && !this.senderPermission.isEmpty() && !PlayerUtil.hasPerm(sender, this.senderPermission))
+			return "";
+
+		if (this.senderCondition != null && !this.senderCondition.isEmpty()) {
+
+			try {
+				final Object result = JavaScriptExecutor.run(Variables.replace(this.senderCondition, sender, replacements, true, false), sender);
+
+				if (result != null) {
+					Valid.checkBoolean(result instanceof Boolean, "Variable '" + this.getFileName() + "' option Condition must return boolean not " + (result == null ? "null" : result.getClass()));
+
+					if (!((boolean) result))
+						return "";
+				}
+
+			} catch (final FoScriptException ex) {
+				Common.logFramed(
+						"Error executing Sender_Condition in a variable!",
+						"Variable: " + this.getFileName(),
+						"Sender condition: " + this.senderCondition,
+						"Sender: " + sender,
+						"Replacements: " + replacements,
+						"Error: " + ex.getMessage(),
+						"",
+						"This is likely NOT a plugin bug,",
+						"check your JavaScript code in",
+						this.getFileName() + " in the 'Sender_Condition' key",
+						"before reporting it to us.");
+
+				throw ex;
+			}
+		}
+
+		final String value = this.getValue(sender, replacements);
+
+		return value == null || value.isEmpty() || "null".equals(value) ? "" : value;
 	}
 
 	/**
@@ -267,13 +346,32 @@ public final class Variable extends YamlConfig {
 			return SimpleComponent.of("");
 
 		if (this.senderCondition != null && !this.senderCondition.isEmpty()) {
-			final Object result = JavaScriptExecutor.run(Variables.replace(this.senderCondition, sender, replacements, true, false), sender);
 
-			if (result != null) {
-				Valid.checkBoolean(result instanceof Boolean, "Variable '" + this.getFileName() + "' option Condition must return boolean not " + (result == null ? "null" : result.getClass()));
+			try {
+				final Object result = JavaScriptExecutor.run(Variables.replace(this.senderCondition, sender, replacements, true, false), sender);
 
-				if (!((boolean) result))
-					return SimpleComponent.of("");
+				if (result != null) {
+					Valid.checkBoolean(result instanceof Boolean, "Variable '" + this.getFileName() + "' option Condition must return boolean not " + (result == null ? "null" : result.getClass()));
+
+					if (!((boolean) result))
+						return SimpleComponent.of("");
+				}
+
+			} catch (final FoScriptException ex) {
+				Common.logFramed(
+						"Error executing Sender_Condition in a variable!",
+						"Variable: " + this.getFileName(),
+						"Sender condition: " + this.senderCondition,
+						"Sender: " + sender,
+						"Replacements: " + replacements,
+						"Error: " + ex.getMessage(),
+						"",
+						"This is likely NOT a plugin bug,",
+						"check your JavaScript code in",
+						this.getFileName() + " in the 'Sender_Condition' key",
+						"before reporting it to us.");
+
+				throw ex;
 			}
 		}
 
@@ -287,24 +385,47 @@ public final class Variable extends YamlConfig {
 				.viewPermission(this.receiverPermission)
 				.viewCondition(this.receiverCondition);
 
-		if (!Valid.isNullOrEmpty(this.hoverText))
-			component.onHover(Variables.replace(this.hoverText, sender, replacements));
+		if (!Valid.isNullOrEmpty(this.hoverText)) {
+			// Trick: Join the lines to only parse variables at once -- performance++ -- then split again
+			final String deliminer = "%FLVJ%";
+
+			component.onHover(Variables.replace(String.join(deliminer, this.hoverText), sender, replacements, true, false).split(deliminer));
+		}
 
 		if (this.hoverItem != null && !this.hoverItem.isEmpty()) {
-			final Object result = JavaScriptExecutor.run(Variables.replace(this.hoverItem, sender, replacements, true, false), sender);
-			Valid.checkBoolean(result instanceof ItemStack, "Variable '" + this.getFileName() + "' option Hover_Item must return ItemStack not " + result.getClass());
 
-			component.onHover((ItemStack) result);
+			try {
+				final Object result = JavaScriptExecutor.run(Variables.replace(this.hoverItem, sender, replacements, true, false), sender);
+
+				Valid.checkBoolean(result instanceof ItemStack, "Variable '" + this.getFileName() + "' option Hover_Item must return ItemStack not " + result.getClass());
+				component.onHover((ItemStack) result);
+
+			} catch (final FoScriptException ex) {
+				Common.logFramed(
+						"Error executing Hover_Item in a variable!",
+						"Variable: " + this.getFileName(),
+						"Hover Item: " + this.hoverItem,
+						"Sender: " + sender,
+						"Replacements: " + replacements,
+						"Error: " + ex.getMessage(),
+						"",
+						"This is likely NOT a plugin bug,",
+						"check your JavaScript code in",
+						this.getFileName() + " in the 'Hover_Item' key",
+						"before reporting it to us.");
+
+				throw ex;
+			}
 		}
 
 		if (this.openUrl != null && !this.openUrl.isEmpty())
-			component.onClickOpenUrl(Variables.replace(this.openUrl, sender, replacements));
+			component.onClickOpenUrl(Variables.replace(this.openUrl, sender, replacements, true, false));
 
 		if (this.suggestCommand != null && !this.suggestCommand.isEmpty())
-			component.onClickSuggestCmd(Variables.replace(this.suggestCommand, sender, replacements));
+			component.onClickSuggestCmd(Variables.replace(this.suggestCommand, sender, replacements, true, false));
 
 		if (this.runCommand != null && !this.runCommand.isEmpty())
-			component.onClickRunCmd(Variables.replace(this.runCommand, sender, replacements));
+			component.onClickRunCmd(Variables.replace(this.runCommand, sender, replacements, true, false));
 
 		return component;
 	}

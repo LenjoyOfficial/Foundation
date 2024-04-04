@@ -222,6 +222,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		// Load libraries where Spigot does not do this automatically
 		this.loadLibraries();
 
+		// Unfreeze registries
+		Remain.unfreezeEnchantRegistry();
+
 		// Call parent
 		this.onPluginLoad();
 	}
@@ -323,6 +326,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 			this.onPluginStart();
 			// --------------------------------------------
+
+			// Freeze back registries
+			Remain.freezeEnchantRegistry();
 
 			// Return if plugin start indicated a fatal problem
 			if (!this.isEnabled())
@@ -627,6 +633,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 *
 	 * @param throwable
 	 */
+	@SuppressWarnings("removal")
 	protected final void displayError0(Throwable throwable) {
 		Debugger.printStackTrace(throwable);
 
@@ -801,9 +808,12 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			this.onPluginPreReload();
 			this.reloadables.reload();
 
-			final YamlConfig metadata = CompMetadata.MetadataFile.getInstance();
-			metadata.save();
-			metadata.reload();
+			if (CompMetadata.isLegacy()) {
+				final YamlConfig metadata = CompMetadata.MetadataFile.getInstance();
+
+				metadata.save();
+				metadata.reload();
+			}
 
 			SimpleHologram.onReload();
 

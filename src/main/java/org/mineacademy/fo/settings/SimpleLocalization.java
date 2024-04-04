@@ -225,6 +225,21 @@ public class SimpleLocalization extends YamlStaticConfig {
 		public static ChatColor HEADER_SECONDARY_COLOR = ChatColor.RED;
 
 		/**
+		 * The format of the header
+		 */
+		public static String HEADER_FORMAT = "&r\n{theme_color}&m<center>&r{theme_color} {title} &m\n&r";
+
+		/**
+		 * The center character of the format in case \<center\> is used
+		 */
+		public static String HEADER_CENTER_LETTER = "-";
+
+		/**
+		 * The padding of the header in case \<center\> is used
+		 */
+		public static Integer HEADER_CENTER_PADDING = 130;
+
+		/**
 		 * Key for when plugin is reloading {@link org.mineacademy.fo.plugin.SimplePlugin}
 		 */
 		public static String RELOADING = "reloading";
@@ -369,6 +384,18 @@ public class SimpleLocalization extends YamlStaticConfig {
 
 			if (isSetDefault("Header_Secondary_Color"))
 				HEADER_SECONDARY_COLOR = get("Header_Secondary_Color", ChatColor.class);
+
+			if (isSetDefault("Header_Format"))
+				HEADER_FORMAT = getString("Header_Format");
+
+			if (isSetDefault("Header_Center_Letter")) {
+				HEADER_CENTER_LETTER = getString("Header_Center_Letter");
+
+				Valid.checkBoolean(HEADER_CENTER_LETTER.length() == 1, "Header_Center_Letter must only have 1 letter, not " + HEADER_CENTER_LETTER.length() + ":" + HEADER_CENTER_LETTER);
+			}
+
+			if (isSetDefault("Header_Center_Padding"))
+				HEADER_CENTER_PADDING = getInteger("Header_Center_Padding");
 
 			if (isSet("Reloading"))
 				RELOADING = getString("Reloading");
@@ -727,7 +754,7 @@ public class SimpleLocalization extends YamlStaticConfig {
 	public static String CONSOLE_NAME = "Console";
 
 	/**
-	 * The message when a section is missing from data.db file (typically we use
+	 * The message when a section is missing from data file (the one ending in .db) (typically we use
 	 * this file to store serialized values such as arenas from minigame plugins).
 	 */
 	public static String DATA_MISSING = "&c{name} lacks database information! Please only create {type} in-game! Skipping..";

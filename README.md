@@ -20,9 +20,10 @@ Thousands of servers are running on Foundation since 2013. It has been battle te
 # Quick Start
 
 1. Import Foundation using Maven/Gradle (see the Importing section).
-2. Change "**extends JavaPlugin**" to "**extends SimplePlugin**" (we need that to register things and listeners on our end automatically)
-3. Change **onEnable()** to **onPluginStart()** and **onDisable()** to **onPluginStop()** (we occupy these methods to perform logic)
-4. If you use a **static getInstance()** method in your main plugin's class, change it to return **(T) SimplePlugin.getInstance()** where T is your plugin instead. Delete the instance of your plugin from your class if you use it (if you have myPlugin = this anywhere, remove it).
+2. Important: Configure shading to only include Foundation and the libraries you need otherwise all of our dependencies will be shaded to your jar! [See this link]([url](https://github.com/kangarko/PluginTemplate/blob/master/pom.xml#L130)) for sample usage.
+3. Change "**extends JavaPlugin**" to "**extends SimplePlugin**" (we need that to register things and listeners on our end automatically)
+4. Change **onEnable()** to **onPluginStart()** and **onDisable()** to **onPluginStop()** (we occupy these methods to perform logic)
+5. If you use a **static getInstance()** method in your main plugin's class, change it to return **(T) SimplePlugin.getInstance()** where T is your plugin instead. Delete the instance of your plugin from your class if you use it (if you have myPlugin = this anywhere, remove it).
 
 For a sample plugin, see [PluginTemplate](https://github.com/kangarko/plugintemplate).
 
@@ -87,12 +88,13 @@ Foundation works on Bukkit, Spigot, Paper and as of recently also Folia (see the
 
 © MineAcademy.org
 
-1) **If you are a paying student of MineAcademy.org** then you are granted full
-unlimited licence to use, modify and reproduce Foundation both commercially
-and non-commercially for yourself, your team or network without stating 
-that you are using this library.
+Tl;dl: You can do whatever you want as long as you don't claim Foundation as your own or don't sell or resell parts of it. If you are not a paying student of MineAcademy however, you MUST place a link to this GitHub page in your sales pages (example Overview pages on Spigot) if your paid software is using Foundation.
 
-2) **If you are not a paying student of MineAcademy.org** then you may
+1) **If you are a paying student of MineAcademy.org** then you can use, modify and
+reproduce Foundation both commercially and non-commercially for yourself, your team
+or network without attribution.
+
+4) **If you are not a paying student of MineAcademy.org** then you may
 use this library as stated above however you must clearly attribute that you
 are using Foundation in your software by linking to this GitHub page.
 

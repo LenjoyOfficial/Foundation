@@ -43,7 +43,6 @@ import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.Valid;
-import org.mineacademy.fo.debug.Debugger;
 
 import lombok.Getter;
 import lombok.NonNull;
@@ -55,7 +54,7 @@ import lombok.NonNull;
  * This class is mainly designed to support {@link ItemStack}. If you want to use it on blocks, you'll have to use
  * <a href="https://github.com/CryptoMorin/XSeries/blob/master/src/main/java/com/cryptomorin/xseries/XBlock.java">XBlock</a>
  * <p>
- * Pre-flattening: https://minecraft.gamepedia.com/Java_Edition_data_values/Pre-flattening
+ * Pre-flattening: https://minecraft.wiki/w/Java_Edition_data_values/Pre-flattening
  * Materials: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
  * Materials (1.12): https://helpch.at/docs/1.12.2/index.html?org/bukkit/Material.html
  * Material IDs: https://minecraft-ids.grahamedgecombe.com/
@@ -64,7 +63,7 @@ import lombok.NonNull;
  * <p>
  * This class will throw a "unsupported material" error if someone tries to use an item with an invalid data value which can only happen in 1.12 servers and below or when the
  * utility is missing a new material in that specific version.
- * To get an invalid item, (aka <a href="https://minecraft.fandom.com/wiki/Missing_Texture_Block">Missing Texture Block</a>) you can use the command
+ * To get an invalid item, (aka <a href="https://minecraft.wiki/w/Missing_textures_and_models#Missing_texture">Missing Texture Block</a>) you can use the command
  * <b>/give @p minecraft:dirt 1 10</b> where 1 is the item amount, and 10 is the data value. The material {@link #DIRT} with a data value of {@code 10} doesn't exist.
  *
  * @author Crypto Morin, forked by kangarko from MineAcademy.org
@@ -91,7 +90,7 @@ public enum CompMaterial {
 	ACACIA_WOOD(0, "LOG_2"),
 	ACTIVATOR_RAIL,
 	/**
-	 * <a href="https://minecraft.gamepedia.com/Air">Air</a>
+	 * <a href="https://minecraft.wiki/w/Air">Air</a>
 	 * {@link Material#isAir()}
 	 *
 	 * @see #VOID_AIR
@@ -239,6 +238,7 @@ public enum CompMaterial {
 	BRAIN_CORAL_FAN,
 	BRAIN_CORAL_WALL_FAN,
 	BREAD,
+	BREEZE_SPAWN_EGG,
 	BREWER_POTTERY_SHERD,
 	BREWING_STAND("BREWING_STAND", "BREWING_STAND_ITEM"),
 	BRICK("CLAY_BRICK"),
@@ -329,6 +329,7 @@ public enum CompMaterial {
 	CHICKEN_SPAWN_EGG(93, "MONSTER_EGG"),
 	CHIPPED_ANVIL(1, "ANVIL"),
 	CHISELED_BOOKSHELF,
+	CHISELED_COPPER,
 	CHISELED_DEEPSLATE,
 	CHISELED_NETHER_BRICKS(1, "NETHER_BRICKS"),
 	CHISELED_POLISHED_BLACKSTONE("POLISHED_BLACKSTONE"),
@@ -336,6 +337,8 @@ public enum CompMaterial {
 	CHISELED_RED_SANDSTONE(1, "RED_SANDSTONE"),
 	CHISELED_SANDSTONE(1, "SANDSTONE"),
 	CHISELED_STONE_BRICKS(3, "SMOOTH_BRICK"),
+	CHISELED_TUFF,
+	CHISELED_TUFF_BRICKS,
 	CHORUS_FLOWER,
 	CHORUS_FRUIT,
 	CHORUS_PLANT,
@@ -383,8 +386,12 @@ public enum CompMaterial {
 	COOKED_SALMON(1, "COOKED_FISH"),
 	COOKIE,
 	COPPER_BLOCK,
+	COPPER_BULB,
+	COPPER_DOOR,
+	COPPER_GRATE,
 	COPPER_INGOT,
 	COPPER_ORE,
+	COPPER_TRAPDOOR,
 	CORNFLOWER,
 	COW_SPAWN_EGG(92, "MONSTER_EGG"),
 	CRACKED_DEEPSLATE_BRICKS,
@@ -392,6 +399,7 @@ public enum CompMaterial {
 	CRACKED_NETHER_BRICKS(2, "NETHER_BRICKS"),
 	CRACKED_POLISHED_BLACKSTONE_BRICKS("POLISHED_BLACKSTONE_BRICKS"),
 	CRACKED_STONE_BRICKS(2, "SMOOTH_BRICK"),
+	CRAFTER,
 	CRAFTING_TABLE("WORKBENCH"),
 	CREEPER_BANNER_PATTERN,
 	CREEPER_HEAD(4, "SKULL", "SKULL_ITEM"),
@@ -571,7 +579,12 @@ public enum CompMaterial {
 	EVOKER_SPAWN_EGG(34, "MONSTER_EGG"),
 	EXPERIENCE_BOTTLE("EXP_BOTTLE"),
 	EXPLORER_POTTERY_SHERD,
+	EXPOSED_CHISELED_COPPER,
 	EXPOSED_COPPER,
+	EXPOSED_COPPER_BULB,
+	EXPOSED_COPPER_DOOR,
+	EXPOSED_COPPER_GRATE,
+	EXPOSED_COPPER_TRAPDOOR,
 	EXPOSED_CUT_COPPER,
 	EXPOSED_CUT_COPPER_SLAB,
 	EXPOSED_CUT_COPPER_STAIRS,
@@ -650,7 +663,6 @@ public enum CompMaterial {
 	GRANITE_SLAB,
 	GRANITE_STAIRS,
 	GRANITE_WALL,
-	GRASS(1, "LONG_GRASS"),
 	GRASS_BLOCK("GRASS"),
 	GRAVEL,
 	GRAY_BANNER(8, "STANDING_BANNER", "BANNER"),
@@ -970,7 +982,7 @@ public enum CompMaterial {
 	NETHER_SPROUTS,
 	NETHER_STAR,
 	/**
-	 * Just like mentioned in <a href="https://minecraft.gamepedia.com/Nether_Wart">Nether Wart</a>
+	 * Just like mentioned in <a href="https://minecraft.wiki/w/Nether_Wart">Nether Wart</a>
 	 * Nether wart is also known as nether stalk in the code.
 	 * NETHER_STALK is the planted state of nether warts.
 	 */
@@ -1017,7 +1029,12 @@ public enum CompMaterial {
 	ORANGE_WALL_BANNER(14, "WALL_BANNER"),
 	ORANGE_WOOL(1, "WOOL"),
 	OXEYE_DAISY(8, "RED_ROSE"),
+	OXIDIZED_CHISELED_COPPER,
 	OXIDIZED_COPPER,
+	OXIDIZED_COPPER_BULB,
+	OXIDIZED_COPPER_DOOR,
+	OXIDIZED_COPPER_GRATE,
+	OXIDIZED_COPPER_TRAPDOOR,
 	OXIDIZED_CUT_COPPER,
 	OXIDIZED_CUT_COPPER_SLAB,
 	OXIDIZED_CUT_COPPER_STAIRS,
@@ -1092,6 +1109,10 @@ public enum CompMaterial {
 	POLISHED_GRANITE(2, "STONE"),
 	POLISHED_GRANITE_SLAB,
 	POLISHED_GRANITE_STAIRS,
+	POLISHED_TUFF,
+	POLISHED_TUFF_SLAB,
+	POLISHED_TUFF_STAIRS,
+	POLISHED_TUFF_WALL,
 	POPPED_CHORUS_FRUIT("CHORUS_FRUIT_POPPED"),
 	POPPY("RED_ROSE"),
 	PORKCHOP("PORK"),
@@ -1283,6 +1304,11 @@ public enum CompMaterial {
 	SHEEP_SPAWN_EGG(91, "MONSTER_EGG"),
 	SHELTER_POTTERY_SHERD,
 	SHIELD,
+	/**
+	 * 1.13.0: LONG_GRASS:1
+	 * 1.20.4: GRASS -> SHORT_GRASS
+	 */
+	SHORT_GRASS(1, "GRASS", "LONG_GRASS"),
 	SHROOMLIGHT,
 	SHULKER_BOX("PURPLE_SHULKER_BOX"),
 	SHULKER_SHELL,
@@ -1434,6 +1460,8 @@ public enum CompMaterial {
 	TOTEM_OF_UNDYING("TOTEM"),
 	TRADER_LLAMA_SPAWN_EGG,
 	TRAPPED_CHEST,
+	TRIAL_KEY,
+	TRIAL_SPAWNER,
 	TRIDENT,
 	TRIPWIRE,
 	TRIPWIRE_HOOK,
@@ -1445,6 +1473,13 @@ public enum CompMaterial {
 	TUBE_CORAL_FAN,
 	TUBE_CORAL_WALL_FAN,
 	TUFF,
+	TUFF_BRICKS,
+	TUFF_BRICK_SLAB,
+	TUFF_BRICK_STAIRS,
+	TUFF_BRICK_WALL,
+	TUFF_SLAB,
+	TUFF_STAIRS,
+	TUFF_WALL,
 	TURTLE_EGG,
 	TURTLE_HELMET,
 	TURTLE_SPAWN_EGG,
@@ -1495,24 +1530,49 @@ public enum CompMaterial {
 	WATER("STATIONARY_WATER"),
 	WATER_BUCKET,
 	WATER_CAULDRON,
+	WAXED_CHISELED_COPPER,
 	WAXED_COPPER_BLOCK,
+	WAXED_COPPER_BULB,
+	WAXED_COPPER_DOOR,
+	WAXED_COPPER_GRATE,
+	WAXED_COPPER_TRAPDOOR,
 	WAXED_CUT_COPPER,
 	WAXED_CUT_COPPER_SLAB,
 	WAXED_CUT_COPPER_STAIRS,
+	WAXED_EXPOSED_CHISELED_COPPER,
 	WAXED_EXPOSED_COPPER,
+	WAXED_EXPOSED_COPPER_BULB,
+	WAXED_EXPOSED_COPPER_DOOR,
+	WAXED_EXPOSED_COPPER_GRATE,
+	WAXED_EXPOSED_COPPER_TRAPDOOR,
 	WAXED_EXPOSED_CUT_COPPER,
 	WAXED_EXPOSED_CUT_COPPER_SLAB,
 	WAXED_EXPOSED_CUT_COPPER_STAIRS,
+	WAXED_OXIDIZED_CHISELED_COPPER,
 	WAXED_OXIDIZED_COPPER,
+	WAXED_OXIDIZED_COPPER_BULB,
+	WAXED_OXIDIZED_COPPER_DOOR,
+	WAXED_OXIDIZED_COPPER_GRATE,
+	WAXED_OXIDIZED_COPPER_TRAPDOOR,
 	WAXED_OXIDIZED_CUT_COPPER,
 	WAXED_OXIDIZED_CUT_COPPER_SLAB,
 	WAXED_OXIDIZED_CUT_COPPER_STAIRS,
+	WAXED_WEATHERED_CHISELED_COPPER,
 	WAXED_WEATHERED_COPPER,
+	WAXED_WEATHERED_COPPER_BULB,
+	WAXED_WEATHERED_COPPER_DOOR,
+	WAXED_WEATHERED_COPPER_GRATE,
+	WAXED_WEATHERED_COPPER_TRAPDOOR,
 	WAXED_WEATHERED_CUT_COPPER,
 	WAXED_WEATHERED_CUT_COPPER_SLAB,
 	WAXED_WEATHERED_CUT_COPPER_STAIRS,
 	WAYFINDER_ARMOR_TRIM_SMITHING_TEMPLATE,
+	WEATHERED_CHISELED_COPPER,
 	WEATHERED_COPPER,
+	WEATHERED_COPPER_BULB,
+	WEATHERED_COPPER_DOOR,
+	WEATHERED_COPPER_GRATE,
+	WEATHERED_COPPER_TRAPDOOR,
 	WEATHERED_CUT_COPPER,
 	WEATHERED_CUT_COPPER_SLAB,
 	WEATHERED_CUT_COPPER_STAIRS,
@@ -1647,7 +1707,7 @@ public enum CompMaterial {
 			// MELON_SLICE, CARROTS, POTATOES, BEETROOTS, GRASS_BLOCK, BRICKS, NETHER_BRICKS, BROWN_MUSHROOM
 			// Using the constructor to add elements will decide to allocate more size which we don't need.
 			DUPLICATED = new HashSet<>(4);
-			DUPLICATED.add(GRASS.name());
+			DUPLICATED.add("GRASS");
 			DUPLICATED.add(MELON.name());
 			DUPLICATED.add(BRICK.name());
 			DUPLICATED.add(NETHER_BRICK.name());
@@ -1655,7 +1715,7 @@ public enum CompMaterial {
 	}
 
 	/**
-	 * The data value of this material <a href="https://minecraft.gamepedia.com/Java_Edition_data_values/Pre-flattening">pre-flattening</a>.
+	 * The data value of this material <a href="https://minecraft.wiki/w/Java_Edition_data_values/Pre-flattening">pre-flattening</a>.
 	 *
 	 * Can be accessed with {@link ItemStack#getData()} then {@code MaterialData#getData()}
 	 * or {@link ItemStack#getDurability()} if not damageable.
@@ -2216,6 +2276,8 @@ public enum CompMaterial {
 	 * @return the corresponding egg, or Sheep Monster Egg if does not exist
 	 */
 	public static CompMaterial makeMonsterEgg(final EntityType type) {
+		CompMaterial created = CompMaterial.SHEEP_SPAWN_EGG;
+
 		try {
 			String name = type.toString() + "_SPAWN_EGG";
 
@@ -2232,16 +2294,18 @@ public enum CompMaterial {
 			// Parse normally, backwards compatible
 			final CompMaterial mat = fromString(name);
 
-			if (mat == CompMaterial.STONE)
-				return CompMaterial.SHEEP_SPAWN_EGG;
+			if (mat == null || mat.getMaterial().toString().equals("STONE"))
+				created = CompMaterial.SHEEP_SPAWN_EGG;
 
-			// Return the egg or sheep egg if does not exist
-			return Common.getOrDefault(mat, CompMaterial.SHEEP_SPAWN_EGG);
+			else
+				// Return the egg or sheep egg if does not exist
+				created = Common.getOrDefault(mat, CompMaterial.SHEEP_SPAWN_EGG);
 
 		} catch (final Throwable throwable) {
-			Debugger.saveError(throwable, "Something went wrong while creating spawn egg!", "Type: " + type);
+			Common.error(throwable, "Something went wrong while creating spawn egg!", "Type: " + type);
 		}
-		return CompMaterial.SHEEP_SPAWN_EGG;
+
+		return created;
 	}
 
 	/**
@@ -2414,10 +2478,17 @@ public enum CompMaterial {
 	 * @return
 	 */
 	public static CompMaterial fromMaterial(@NonNull Material material) {
-		final CompMaterial compmaterial = fromLegacy(material.name(), UNKNOWN_DATA_VALUE);
-		Valid.checkNotNull(compmaterial, "Unsupported material with no data value: " + material.name());
 
-		return compmaterial;
+		try {
+			return CompMaterial.valueOf(material.toString());
+
+		} catch (final Throwable t) {
+			final CompMaterial compmaterial = fromLegacy(material.name(), UNKNOWN_DATA_VALUE);
+			Valid.checkNotNull(compmaterial, "Unsupported material with no data value: " + material.name());
+
+			return compmaterial;
+
+		}
 	}
 
 	/**

@@ -1,4 +1,4 @@
-package org.mineacademy.fo.model;
+package org.mineacademy.fo.enchant;
 
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -15,7 +15,7 @@ public enum SimpleEnchantmentTarget {
 			return ARMOR_FEET.includes(item)
 					|| ARMOR_LEGS.includes(item)
 					|| ARMOR_HEAD.includes(item)
-					|| ARMOR_TORSO.includes(item);
+					|| ARMOR_CHEST.includes(item);
 		}
 	},
 
@@ -52,7 +52,7 @@ public enum SimpleEnchantmentTarget {
 	/**
 	 * Allows the Enchantment to be placed on torso slot armor
 	 */
-	ARMOR_TORSO {
+	ARMOR_CHEST {
 		@Override
 		public boolean includes(Material item) {
 			return item.equals(Material.LEATHER_CHESTPLATE)
@@ -98,7 +98,7 @@ public enum SimpleEnchantmentTarget {
 	/**
 	 * Allows the Enchantment to be placed on tools (spades, pickaxe, axes)
 	 */
-	TOOL {
+	DIGGER {
 		@Override
 		public boolean includes(Material item) {
 			return SHOVEL.includes(item)
@@ -254,6 +254,17 @@ public enum SimpleEnchantmentTarget {
 		@Override
 		public boolean includes(Material item) {
 			return BREAKABLE.includes(item) || (WEARABLE.includes(item) && !item.equals(CompMaterial.ELYTRA.getMaterial())) || item.equals(Material.COMPASS);
+		}
+	},
+
+	/**
+	 * @deprecated use {@link #DIGGER}
+	 */
+	@Deprecated
+	TOOL {
+		@Override
+		public boolean includes(Material item) {
+			throw new RuntimeException("Please use SimpleEnchantmentTarget.DIGGER");
 		}
 	};
 

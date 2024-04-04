@@ -463,7 +463,7 @@ public class NBTCompound implements ReadWriteNBT {
 	 */
 	@Override
 	public void setLongArray(String key, long[] value) {
-		Valid.checkBoolean(org.mineacademy.fo.MinecraftVersion.atLeast(V.v1_16), "setLongArray needs MC 1.16+");
+		Valid.checkBoolean(org.mineacademy.fo.MinecraftVersion.atLeast(V.v1_16), "getLongArray requires MC 1.16");
 
 		try {
 			writeLock.lock();
@@ -484,7 +484,7 @@ public class NBTCompound implements ReadWriteNBT {
 	 */
 	@Override
 	public long[] getLongArray(String key) {
-		Valid.checkBoolean(org.mineacademy.fo.MinecraftVersion.atLeast(V.v1_16), "getLongArray needs MC 1.16+");
+		Valid.checkBoolean(org.mineacademy.fo.MinecraftVersion.atLeast(V.v1_16), "getLongArray requires MC 1.16");
 
 		try {
 			readLock.lock();

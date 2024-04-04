@@ -2974,6 +2974,7 @@ class WorldGuardHook {
 		return list;
 	}
 
+	@SuppressWarnings("removal")
 	public Region getRegion(final String name) {
 		for (final World w : Bukkit.getWorlds()) {
 			final Object rm = this.getRegionManager(w);
@@ -3542,9 +3543,15 @@ class CMIHook {
 class CitizensHook {
 
 	boolean isNPC(final Entity entity) {
-		final NPCRegistry reg = CitizensAPI.getNPCRegistry();
+		try {
+			final NPCRegistry reg = CitizensAPI.getNPCRegistry();
 
-		return reg != null ? reg.isNPC(entity) : false;
+			return reg != null ? reg.isNPC(entity) : false;
+		} catch (final NoClassDefFoundError err) {
+			Common.logTimed(60 * 30, "Unable to check if " + entity + " is Citizens NPC, got " + err + ". This error only shows once per 30min.");
+
+			return false;
+		}
 	}
 
 	Entity getNPCTarget(Entity entity) {

@@ -25,6 +25,7 @@ import org.mineacademy.fo.SerializeUtil.Mode;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.event.SimpleComponentSendEvent;
+import org.mineacademy.fo.exception.FoScriptException;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.Remain;
 
@@ -61,6 +62,12 @@ public final class SimpleComponent implements ConfigSerializable {
 	 */
 	@Getter
 	private boolean firingEvent = false;
+
+	/**
+	 * Shall this component not send itself when its condition result in the message being empty? Defaults to false
+	 */
+	@Getter
+	private boolean ignoringEmpty = false;
 
 	/**
 	 * Create a new interactive chat component
@@ -466,10 +473,13 @@ public final class SimpleComponent implements ConfigSerializable {
 				component = event.getComponent();
 			}
 
+			final String legacy = Common.colorize(component.toLegacyText());
+
+			if (this.ignoringEmpty && Common.stripColors(legacy).trim().isEmpty())
+				continue;
+
 			// Prevent clients being kicked out, so we just send plain message instead
 			if (STRIP_OVERSIZED_COMPONENTS && Remain.toJson(component).length() + 1 >= Short.MAX_VALUE) {
-				final String legacy = Common.colorize(component.toLegacyText());
-
 				if (legacy.length() + 1 >= Short.MAX_VALUE)
 					Common.warning("JSON Message to " + receiver.getName() + " was too large and could not be sent: '" + legacy + "'");
 
@@ -531,6 +541,18 @@ public final class SimpleComponent implements ConfigSerializable {
 	 */
 	public SimpleComponent setFiringEvent(boolean firingEvent) {
 		this.firingEvent = firingEvent;
+
+		return this;
+	}
+
+	/**
+	 * Shall this component not send itself when its condition result in the message being empty? Defaults to false
+	 *
+	 * @param ignoringEmpty
+	 * @return
+	 */
+	public SimpleComponent setIgnoringEmpty(boolean ignoringEmpty) {
+		this.ignoringEmpty = ignoringEmpty;
 
 		return this;
 	}
@@ -927,14 +949,16 @@ public final class SimpleComponent implements ConfigSerializable {
 				try {
 					result = JavaScriptExecutor.run(Variables.replace(this.viewCondition, receiver), receiver);
 
-				} catch (final Throwable t) {
-					Common.error(t,
-							"Failed to parse JavaScript view condition for component!",
-							"The javascript code must return a valid true/false boolean value.",
+				} catch (final FoScriptException ex) {
+					Common.logFramed(
+							"Failed parsing View_Condition for component!",
+							"",
+							"The View_Condition must be a JavaScript code that returns a boolean!",
 							"Component: " + this,
-							"Error: %error%");
+							"Line: " + ex.getErrorLine(),
+							"Error: " + ex.getMessage());
 
-					return false;
+					throw ex;
 				}
 
 				if (result != null) {

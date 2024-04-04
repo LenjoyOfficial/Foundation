@@ -4,6 +4,7 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -15,6 +16,7 @@ import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.remain.nbt.NBTEntity;
 
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -110,7 +112,9 @@ public enum CompProperty {
 			}
 	}
 
-	private void applyLegacy(Object instance, Object key) {
+	private void applyLegacy(@NonNull Object instance, @NonNull Object key) {
+		Valid.checkBoolean(Bukkit.isPrimaryThread(), "Cannot call CompProperty." + this + ".applyLegacy(" + instance.getClass().getSimpleName() + ") async on " + instance);
+
 		if (instance instanceof Entity) {
 			final NBTEntity nbtEntity = new NBTEntity((Entity) instance);
 			final boolean has = Boolean.parseBoolean(key.toString());

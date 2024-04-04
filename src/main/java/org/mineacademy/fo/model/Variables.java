@@ -63,12 +63,6 @@ public final class Variables {
 	 */
 	private static final Map<String, Map<String, String>> cache = ExpiringMap.builder().expiration(500, TimeUnit.MILLISECONDS).build();
 
-	/**
-	 * Should we replace javascript placeholders from variables/ folder automatically?
-	 * Used internally to prevent race condition
-	 */
-	private volatile static boolean REPLACE_JAVASCRIPT = true;
-
 	// ------------------------------------------------------------------------------------------------------------
 	// Custom variables
 	// ------------------------------------------------------------------------------------------------------------
@@ -180,25 +174,6 @@ public final class Variables {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Replaces variables in the messages using the message sender as an object to replace
-	 * player-related placeholders.
-	 *
-	 * We also support PlaceholderAPI and MVdWPlaceholderAPI (only if sender is a Player).
-	 *
-	 * @param messages
-	 * @param sender
-	 * @param replacements
-	 * @return
-	 */
-	public static List<String> replace(Iterable<String> messages, CommandSender sender, Map<String, Object> replacements) {
-
-		// Trick: Join the lines to only parse variables at once -- performance++ -- then split again
-		final String deliminer = "%FLVJ%";
-
-		return Arrays.asList(replace(String.join(deliminer, messages), sender, replacements).split(deliminer));
-	}
-
-	/**
 	 * Replaces variables in the message using the message sender as an object to replace
 	 * player-related placeholders.
 	 *
@@ -253,19 +228,15 @@ public final class Variables {
 	 * @param sender
 	 * @param replacements
 	 * @param colorize
-	 * @param script
+	 * @param replaceScript
 	 * @return
 	 */
-	public static String replace(String message, CommandSender sender, Map<String, Object> replacements, boolean colorize, boolean script) {
+	public static String replace(String message, CommandSender sender, Map<String, Object> replacements, boolean colorize, boolean replaceScript) {
 		if (message == null || message.isEmpty())
 			return "";
 
 		final String original = message;
 		final boolean senderIsPlayer = sender instanceof Player;
-
-		// Replace custom variables first
-		if (replacements != null && !replacements.isEmpty())
-			message = Replacer.replaceArray(message, replacements);
 
 		if (senderIsPlayer) {
 
@@ -273,9 +244,13 @@ public final class Variables {
 			final Map<String, String> cached = cache.get(sender.getName());
 			final String cachedVar = cached != null ? cached.get(message) : null;
 
-			if (cachedVar != null)
+			if (cachedVar != null && !cachedVar.contains("flpm_") && !cachedVar.contains("flps_"))
 				return cachedVar;
 		}
+
+		// Replace custom variables first
+		if (replacements != null && !replacements.isEmpty())
+			message = Replacer.replaceArray(message, replacements);
 
 		// PlaceholderAPI and MVdWPlaceholderAPI
 		if (senderIsPlayer)
@@ -284,30 +259,17 @@ public final class Variables {
 		else if (sender instanceof DiscordSender)
 			message = HookManager.replacePlaceholders(((DiscordSender) sender).getOfflinePlayer(), message);
 
-		// Default
-		message = replaceHardVariables(sender, message);
+		// Replace hard variables
+		message = replaceHardVariables0(sender, message, Variables.VARIABLE_PATTERN.matcher(message));
+		message = replaceHardVariables0(sender, message, Variables.BRACKET_VARIABLE_PATTERN.matcher(message));
+		message = Messenger.replacePrefixes(message);
 
 		// Custom placeholders
-		if (REPLACE_JAVASCRIPT && script) {
-			REPLACE_JAVASCRIPT = false;
+		if (replaceScript)
+			message = replaceJavascriptVariables0(message, sender, replacements);
 
-			try {
-				message = replaceJavascriptVariables0(message, sender, replacements);
-
-			} finally {
-				REPLACE_JAVASCRIPT = true;
-			}
-		}
-
-		// Support the & color system and replacing variables in variables
-		if (!message.startsWith("[JSON]")) {
-
-			if (colorize)
-				message = Common.colorize(message);
-
-			if (!original.equals(message) && ((message.contains("{") && message.contains("}")) || message.contains("%")))
-				return replace(message, sender, replacements, colorize);
-		}
+		if (!message.startsWith("[JSON]") && colorize)
+			message = Common.colorize(message);
 
 		if (senderIsPlayer) {
 			final Map<String, String> map = cache.get(sender.getName());
@@ -340,11 +302,7 @@ public final class Variables {
 			final Variable variable = Variable.findVariable(variableKey.substring(1, variableKey.length() - 1));
 
 			if (variable != null && variable.getType() == Variable.Type.FORMAT) {
-				final SimpleComponent component = variable.build(sender, SimpleComponent.empty(), replacements);
-
-				// We do not support interact chat elements in format variables,
-				// so we just flatten the variable. Use formatting or chat variables instead.
-				String plain = component.getPlainMessage();
+				String plain = variable.buildPlain(sender, replacements);
 
 				// And we remove the white prefix that is by default added in every component
 				if (plain.startsWith(ChatColor.COLOR_CHAR + "f" + ChatColor.COLOR_CHAR + "f"))
@@ -353,22 +311,6 @@ public final class Variables {
 				message = message.replace(variableKey, plain);
 			}
 		}
-
-		return message;
-	}
-
-	/**
-	 * Replaces our hardcoded variables in the message, using a cache for better performance
-	 *
-	 * @param sender
-	 * @param message
-	 * @return
-	 */
-	public static String replaceHardVariables(CommandSender sender, String message) {
-
-		message = replaceHardVariables0(sender, message, Variables.VARIABLE_PATTERN.matcher(message));
-		message = replaceHardVariables0(sender, message, Variables.BRACKET_VARIABLE_PATTERN.matcher(message));
-		message = Messenger.replacePrefixes(message);
 
 		return message;
 	}

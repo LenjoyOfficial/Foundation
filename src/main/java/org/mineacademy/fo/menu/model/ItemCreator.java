@@ -45,12 +45,11 @@ import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.SerializeUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
+import org.mineacademy.fo.enchant.SimpleEnchantment;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.menu.button.Button;
 import org.mineacademy.fo.menu.button.Button.DummyButton;
 import org.mineacademy.fo.model.ConfigSerializable;
-import org.mineacademy.fo.model.SimpleEnchant;
-import org.mineacademy.fo.model.SimpleEnchantment;
 import org.mineacademy.fo.model.SimplePotionData;
 import org.mineacademy.fo.remain.CompColor;
 import org.mineacademy.fo.remain.CompItemFlag;
@@ -132,7 +131,7 @@ public final class ItemCreator implements ConfigSerializable {
 	/**
 	 * The enchants applied to the item.
 	 */
-	private final List<SimpleEnchant> enchants = new ArrayList<>();
+	private final Map<Enchantment, Integer> enchants = new HashMap<>();
 
 	/**
 	 * The {@link CompItemFlag}.
@@ -397,7 +396,7 @@ public final class ItemCreator implements ConfigSerializable {
 	 * @return
 	 */
 	public ItemCreator enchant(Enchantment enchantment, int level) {
-		this.enchants.add(new SimpleEnchant(enchantment, level));
+		this.enchants.put(enchantment, level);
 
 		return this;
 	}
@@ -961,13 +960,16 @@ public final class ItemCreator implements ConfigSerializable {
 				this.flags.add(CompItemFlag.HIDE_ENCHANTS);
 			}
 
-			if (!enchants.isEmpty())
-				for (final SimpleEnchant enchant : enchants)
-					if (compiledMeta instanceof EnchantmentStorageMeta)
-						((EnchantmentStorageMeta) compiledMeta).addStoredEnchant(enchant.getEnchant(), enchant.getLevel(), true);
+			for (final Map.Entry<Enchantment, Integer> entry : this.enchants.entrySet()) {
+				final Enchantment enchant = entry.getKey();
+				final int level = entry.getValue();
 
-					else
-						((ItemMeta) compiledMeta).addEnchant(enchant.getEnchant(), enchant.getLevel(), true);
+				if (compiledMeta instanceof EnchantmentStorageMeta)
+					((EnchantmentStorageMeta) compiledMeta).addStoredEnchant(enchant, level, true);
+
+				else
+					((ItemMeta) compiledMeta).addEnchant(enchant, level, true);
+			}
 
 			if (!potionEffects.isEmpty() && compiledMeta instanceof PotionMeta)
 				for (final PotionEffect effect : potionEffects)
@@ -1124,8 +1126,12 @@ public final class ItemCreator implements ConfigSerializable {
 		if (meta instanceof EnchantmentStorageMeta && !enchants.isEmpty()) {
 			final SerializedMap enchantsMap = new SerializedMap();
 
-			for (final SimpleEnchant enchant : enchants)
-				enchantsMap.put(enchant.getEnchant().getName(), enchant.getLevel());
+			for (final Map.Entry<Enchantment, Integer> entry : this.enchants.entrySet()) {
+				final Enchantment enchant = entry.getKey();
+				final int level = entry.getValue();
+
+				enchantsMap.put(enchant.getName(), level);
+			}
 
 			map.put("Stored_Enchants", enchantsMap);
 		}
@@ -1205,8 +1211,12 @@ public final class ItemCreator implements ConfigSerializable {
 		if (!(meta instanceof EnchantmentStorageMeta) && !enchants.isEmpty()) {
 			final SerializedMap enchantsMap = new SerializedMap();
 
-			for (final SimpleEnchant enchant : enchants)
-				enchantsMap.put(enchant.getEnchant().getName(), enchant.getLevel());
+			for (final Map.Entry<Enchantment, Integer> entry : this.enchants.entrySet()) {
+				final Enchantment enchant = entry.getKey();
+				final int level = entry.getValue();
+
+				enchantsMap.put(enchant.getName(), level);
+			}
 
 			map.put("Enchantments", enchantsMap);
 		}
@@ -1239,7 +1249,7 @@ public final class ItemCreator implements ConfigSerializable {
 		creator.name = name;
 
 		creator.lore(this.lores);
-		creator.enchants.addAll(this.enchants);
+		creator.enchants.putAll(this.enchants);
 		creator.flags.addAll(this.flags);
 		creator.patterns.addAll(this.patterns);
 
@@ -1628,7 +1638,7 @@ public final class ItemCreator implements ConfigSerializable {
 
 		for (final String enchantType : enchants.keySet())
 			try {
-				final Enchantment enchant = SerializeUtil.deserialize(Enchantment.class, enchantType);
+				final Enchantment enchant = SerializeUtil.deserialize(SerializeUtil.Mode.YAML, Enchantment.class, enchantType);
 				final int level = enchants.getInteger(enchantType);
 
 				builder.enchant(enchant, level);

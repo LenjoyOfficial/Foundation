@@ -2425,8 +2425,8 @@ public final class Common {
 	public static <T> List<T> toList(final Iterable<T> it) {
 		final List<T> list = new ArrayList<>();
 
-		if (iterable != null)
-			iterable.forEach(el -> list.add(el));
+		if (it != null)
+			it.forEach(el -> list.add(el));
 
 		return list;
 	}

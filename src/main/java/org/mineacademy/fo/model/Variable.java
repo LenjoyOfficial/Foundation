@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.function.Function;
 
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.PlayerUtil;
@@ -279,7 +280,7 @@ public final class Variable extends YamlConfig {
 		}
 
 		if (this.cacheDuration != null && sender instanceof Player) {
-			cache.put(((Player) sender).getUniqueId(), new Tuple<>(time, result));
+			cache.put(((Player) sender).getUniqueId(), new Tuple<>(time, result != null ? result.toString() : ""));
 		}
 
 		return result != null ? result.toString() : "";

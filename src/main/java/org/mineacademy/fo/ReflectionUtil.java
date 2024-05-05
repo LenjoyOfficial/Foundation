@@ -215,7 +215,6 @@ public final class ReflectionUtil {
 			for (final Field f : clazz.getDeclaredFields())
 				if (f.getName().equals(field))
 					return (T) getFieldContent(f, instance);
-
 		while (!(clazz = clazz.getSuperclass()).isAssignableFrom(Object.class));
 
 		throw new ReflectionException("No such field " + field + " in " + originalClassName + " or its superclasses");
@@ -251,7 +250,6 @@ public final class ReflectionUtil {
 		try {
 			do
 				list.addAll(Arrays.asList(clazz.getDeclaredFields()));
-
 			while (!(clazz = clazz.getSuperclass()).isAssignableFrom(Object.class));
 
 		} catch (final NullPointerException ex) {
@@ -556,7 +554,7 @@ public final class ReflectionUtil {
 	 * @return
 	 */
 	public static <T> T invoke(final Method method, final Object instance, final Object... params) {
-		Valid.checkNotNull(method, "Method cannot be null for instance " + instance + " class (" + instance.getClass() + ") with params " + Common.join(params, ", "));
+		Valid.checkNotNull(method, "Method cannot be null for instance " + instance + " class (" + (instance == null ? "no instance - static" : instance.getClass()) + ") with params " + Common.join(params, ", "));
 
 		try {
 			return (T) method.invoke(instance, params);
@@ -638,7 +636,6 @@ public final class ReflectionUtil {
 
 			if (reflectionDataCache.containsKey(clazz))
 				constructor = ((ReflectionData<T>) reflectionDataCache.get(clazz)).getDeclaredConstructor(paramArr);
-
 			else {
 				classCache.put(clazz.getCanonicalName(), clazz);
 
@@ -771,7 +768,7 @@ public final class ReflectionUtil {
 	 */
 	@Nullable
 	public static <E extends Enum<E>> E lookupEnum(final Class<E> enumType, final String name) {
-		return lookupEnum(enumType, name, "The enum '" + enumType.getSimpleName() + "' does not contain '" + name + "' on MC " + MinecraftVersion.getServerVersion() + "! Available values: {available}");
+		return lookupEnum(enumType, name, "The enum '" + enumType.getSimpleName() + "' does not contain '" + name + "' on MC " + MinecraftVersion.getFullVersion() + "! Available values: {available}");
 	}
 
 	/**
@@ -825,14 +822,12 @@ public final class ReflectionUtil {
 				if (MinecraftVersion.olderThan(V.v1_9))
 					if (rawName.equals("TRIDENT"))
 						name = "ARROW";
-
 					else if (rawName.equals("DRAGON_FIREBALL"))
 						name = "FIREBALL";
 
 				if (MinecraftVersion.olderThan(V.v1_13))
 					if (rawName.equals("DROWNED"))
 						name = "ZOMBIE";
-
 					else if (rawName.equals("ZOMBIE_VILLAGER"))
 						name = "ZOMBIE";
 			}
@@ -845,14 +840,12 @@ public final class ReflectionUtil {
 				if (MinecraftVersion.olderThan(V.v1_11))
 					if (rawName.equals("ENTITY_SWEEP_ATTACK"))
 						name = "ENTITY_ATTACK";
-
 					else if (rawName.equals("CRAMMING"))
 						name = "CUSTOM";
 
 				if (MinecraftVersion.olderThan(V.v1_9))
 					if (rawName.equals("FLY_INTO_WALL"))
 						name = "SUFFOCATION";
-
 					else if (rawName.equals("HOT_FLOOR"))
 						name = "LAVA";
 

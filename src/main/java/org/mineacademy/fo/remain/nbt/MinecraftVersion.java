@@ -13,6 +13,7 @@ import org.bukkit.Bukkit;
  * @author tr7zw
  *
  */
+
 enum MinecraftVersion {
 	UNKNOWN(Integer.MAX_VALUE), // Use the newest known mappings
 	MC1_7_R4(174),
@@ -37,7 +38,8 @@ enum MinecraftVersion {
 	MC1_19_R3(1193, true),
 	MC1_20_R1(1201, true),
 	MC1_20_R2(1202, true),
-	MC1_20_R3(1203, true);
+	MC1_20_R3(1203, true),
+	MC1_20_R4(1204, true);
 
 	private static MinecraftVersion version;
 	private static Boolean isForgePresent;
@@ -46,6 +48,7 @@ enum MinecraftVersion {
 	private final int versionId;
 	private final boolean mojangMapping;
 
+	// TODO: not nice
 	@SuppressWarnings("serial")
 	private static final Map<String, MinecraftVersion> VERSION_TO_REVISION = new HashMap<String, MinecraftVersion>() {
 		{
@@ -54,6 +57,8 @@ enum MinecraftVersion {
 			this.put("1.20.2", MC1_20_R2);
 			this.put("1.20.3", MC1_20_R3);
 			this.put("1.20.4", MC1_20_R3);
+			this.put("1.20.5", MC1_20_R4);
+			this.put("1.20.6", MC1_20_R4);
 		}
 	};
 
@@ -88,13 +93,12 @@ enum MinecraftVersion {
 	 * @return
 	 */
 	public String getPackageName() {
-		if (this == UNKNOWN) {
+		if (this == UNKNOWN)
 			try {
 				return Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
 			} catch (final Exception ex) {
 				// ignore, paper without remap, will fail
 			}
-		}
 		return this.name().replace("MC", "v");
 	}
 
@@ -125,18 +129,17 @@ enum MinecraftVersion {
 	 * @return The enum for the MinecraftVersion this server is running
 	 */
 	public static MinecraftVersion getVersion() {
-		if (version != null) {
+		if (version != null)
 			return version;
-		}
 		try {
 			final String ver = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
 
 			version = MinecraftVersion.valueOf(ver.replace("v", "MC"));
 		} catch (final Exception ex) {
-
 			version = VERSION_TO_REVISION.getOrDefault(Bukkit.getServer().getBukkitVersion().split("-")[0],
 					MinecraftVersion.UNKNOWN);
 		}
+
 		return version;
 	}
 
@@ -146,7 +149,6 @@ enum MinecraftVersion {
 	public static boolean isForgePresent() {
 		if (isForgePresent != null)
 			return isForgePresent;
-
 		try {
 			if (getVersion() == MinecraftVersion.MC1_7_R4)
 				Class.forName("cpw.mods.fml.common.Loader");
@@ -154,11 +156,9 @@ enum MinecraftVersion {
 				Class.forName("net.minecraftforge.fml.common.Loader");
 
 			isForgePresent = true;
-
 		} catch (final Exception ex) {
 			isForgePresent = false;
 		}
-
 		return isForgePresent;
 	}
 
@@ -166,12 +166,10 @@ enum MinecraftVersion {
 	 * @return True, if Folia is present
 	 */
 	public static boolean isFoliaPresent() {
-		if (isFoliaPresent != null) {
+		if (isFoliaPresent != null)
 			return isFoliaPresent;
-		}
 		try {
 			Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
-
 			isFoliaPresent = true;
 		} catch (final Exception ex) {
 			isFoliaPresent = false;

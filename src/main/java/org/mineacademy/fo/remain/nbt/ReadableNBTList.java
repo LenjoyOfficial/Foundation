@@ -107,7 +107,7 @@ public interface ReadableNBTList<T> extends Iterable<T> {
 	 * @return A list of the elements in the stream.
 	 */
 	default List<T> toListCopy() {
-		List<T> list = new ArrayList<>();
+		final List<T> list = new ArrayList<>();
 		iterator().forEachRemaining(list::add);
 		return list;
 	}

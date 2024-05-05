@@ -10,6 +10,8 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.NamespacedKey;
@@ -25,7 +27,6 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.projectiles.ProjectileSource;
@@ -39,9 +40,11 @@ import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.StrictSet;
 import org.mineacademy.fo.exception.FoException;
+import org.mineacademy.fo.remain.CompEquipmentSlot;
 import org.mineacademy.fo.remain.Remain;
 
 import lombok.AccessLevel;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -82,6 +85,7 @@ public abstract class SimpleEnchantment implements Listener {
 	/**
 	 * The class that will be instantiated to wrap custom enchants.
 	 */
+	@Getter
 	private static Class<? extends NmsEnchant> handleClass = null;
 
 	/**
@@ -103,7 +107,7 @@ public abstract class SimpleEnchantment implements Listener {
 	/**
 	 * The actual handle injecting this enchant into Minecraft
 	 */
-	private final NmsEnchant handle;
+	private NmsEnchant handle;
 
 	/**
 	 * Used internally to pair enchants for MC older than 1.13
@@ -127,22 +131,19 @@ public abstract class SimpleEnchantment implements Listener {
 		this.namespacedName = namespacedName;
 		this.namespacedNameWithPrefix = "minecraft:" + this.namespacedName;
 		this.maxLevel = maxLevel;
-		this.handle = this.assignHandle();
 
-		this.handle.register();
+		if (handleClass != null) {
+			this.handle = this.assignHandle();
+			this.handle.register();
 
-		registeredEnchantments.add(this);
+			registeredEnchantments.add(this);
+		}
 	}
 
 	/*
 	 * Private method to register this enchant
 	 */
 	private NmsEnchant assignHandle() {
-		final V currentVersion = MinecraftVersion.getCurrent();
-
-		Valid.checkNotNull(handleClass, "Custom enchantments are not implemented for " + currentVersion
-				+ ". If you are a developer, implement it and call in SimpleEnchantment#registerEnchantmentHandle in onPluginLoad().");
-
 		Constructor<?> constructor;
 
 		try {
@@ -232,15 +233,29 @@ public abstract class SimpleEnchantment implements Listener {
 	// ------------------------------------------------------------------------------------------
 
 	/**
+	 * Return if this enchant works for the current Minecraft version.
+	 *
+	 * @return
+	 */
+	public final boolean isAvailable() {
+		return this.handle != null;
+	}
+
+	/**
 	 * Converts into Bukkit's class {@link Enchantment}
 	 *
 	 * @return
 	 */
+	@Nullable
 	public final Enchantment toBukkit() {
-		final Enchantment enchantment = this.handle.toBukkit();
-		Valid.checkNotNull(enchantment, "Failed to convert " + this + " into a Bukkit class");
+		if (this.isAvailable()) {
+			final Enchantment enchantment = this.handle.toBukkit();
+			Valid.checkNotNull(enchantment, "Failed to convert " + this + " into a Bukkit class");
 
-		return enchantment;
+			return enchantment;
+		}
+
+		return null;
 	}
 
 	/**
@@ -259,10 +274,12 @@ public abstract class SimpleEnchantment implements Listener {
 	 * @return
 	 */
 	public final ItemStack applyTo(ItemStack item, int level) {
-		final ItemMeta meta = item.getItemMeta();
+		if (this.isAvailable()) {
+			final ItemMeta meta = item.getItemMeta();
 
-		meta.addEnchant(this.toBukkit(), level, true);
-		item.setItemMeta(meta);
+			meta.addEnchant(this.toBukkit(), level, true);
+			item.setItemMeta(meta);
+		}
 
 		return item;
 	}
@@ -294,8 +311,8 @@ public abstract class SimpleEnchantment implements Listener {
 	 *
 	 * @return
 	 */
-	public Set<EquipmentSlot> getActiveSlots() {
-		return Common.newSet(EquipmentSlot.values());
+	public Set<CompEquipmentSlot> getActiveSlots() {
+		return Common.newSet(CompEquipmentSlot.values());
 	}
 
 	/**
@@ -321,8 +338,10 @@ public abstract class SimpleEnchantment implements Listener {
 	/**
 	 * Get the startup level, 1 by default
 	 *
+	 * @deprecated not used
 	 * @return
 	 */
+	@Deprecated
 	public int getStartLevel() {
 		return 1;
 	}
@@ -330,21 +349,54 @@ public abstract class SimpleEnchantment implements Listener {
 	/**
 	 * Return the min cost for the given level
 	 *
+	 * @deprecated use {@link #getMinCost()}
+	 *
 	 * @param level
 	 * @return
 	 */
+	@Deprecated
 	public int getMinCost(int level) {
+		return this.getMinCost().calculate(level);
+	}
+
+	/**
+	 * Return the min cost for the given level
+	 *
+	 * @return
+	 */
+	public Cost getMinCost() {
+		return new Cost(1, 1);
+	}
+
+	/**
+	 * Return the cost on anvil
+	 *
+	 * @return
+	 */
+	public int getAnvilCost() {
 		return 1;
 	}
 
 	/**
 	 * Return the max cost for the given level
 	 *
+	 * @deprecated use {@link #getMaxCost()}
+	 *
 	 * @param level
 	 * @return
 	 */
+	@Deprecated
 	public int getMaxCost(int level) {
-		return level;
+		return this.getMaxCost().calculate(level);
+	}
+
+	/**
+	 * Return the max cost for the given level
+	 *
+	 * @return
+	 */
+	public Cost getMaxCost() {
+		return new Cost(1, 1);
 	}
 
 	/**
@@ -431,6 +483,8 @@ public abstract class SimpleEnchantment implements Listener {
 	 * @param handleClass
 	 */
 	public static void registerEnchantmentHandle(Class<? extends NmsEnchant> handleClass) {
+		Remain.unfreezeEnchantRegistry();
+
 		SimpleEnchantment.handleClass = handleClass;
 	}
 
@@ -576,7 +630,7 @@ public abstract class SimpleEnchantment implements Listener {
 
 	private static SimpleEnchantment fromBukkit(Enchantment bukkitEnchantment) {
 		if (hasNamespacedKeys) {
-			final String key = bukkitEnchantment.getKey().asString();
+			final String key = bukkitEnchantment.getKey().getNamespace() + ":" + bukkitEnchantment.getKey().getKey();
 
 			for (final SimpleEnchantment simpleEnchantment : registeredEnchantments)
 				if (simpleEnchantment.namespacedNameWithPrefix.equals(key))
@@ -605,6 +659,24 @@ public abstract class SimpleEnchantment implements Listener {
 	}
 
 	/**
+	 * A wrapper for 1.20.5+ cost handling
+	 */
+	@Data
+	public static final class Cost {
+		private final int base;
+		private final int perLevel;
+
+		public Cost(int var0, int var1) {
+			this.base = var0;
+			this.perLevel = var1;
+		}
+
+		public int calculate(int level) {
+			return this.base + this.perLevel * (level - 1);
+		}
+	}
+
+	/**
 	 * Listens and executes events for {@link SimpleEnchantment}
 	 * <p>
 	 * @deprecated Internal use only!
@@ -614,7 +686,7 @@ public abstract class SimpleEnchantment implements Listener {
 	public static final class Listener implements org.bukkit.event.Listener {
 
 		@Getter
-		private static volatile Listener instance = new Listener();
+		private static final Listener instance = new Listener();
 
 		@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 		public void onEntityDamage(EntityDamageByEntityEvent event) {

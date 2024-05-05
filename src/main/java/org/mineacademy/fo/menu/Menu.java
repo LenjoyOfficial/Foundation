@@ -473,7 +473,7 @@ public abstract class Menu {
 		// Register current menu
 		Common.runLater(1, () -> {
 			try {
-				drawer.display(player);
+				this.onDisplay(drawer, player);
 
 			} catch (final Throwable t) {
 				Common.error(t, "Error opening menu " + Menu.this);
@@ -517,6 +517,17 @@ public abstract class Menu {
 	}
 
 	/**
+	 * Called when the menu is shown to the player, by default displays the menu
+	 * from the inventory drawer
+	 *
+	 * @param drawer
+	 * @param player
+	 */
+	protected void onDisplay(final InventoryDrawer drawer, final Player player) {
+		drawer.display(player);
+	}
+
+	/**
 	 * Called automatically after the menu is displayed to the viewer
 	 *
 	 * @param viewer
@@ -541,7 +552,7 @@ public abstract class Menu {
 		this.restartMenu(animatedTitle, true);
 	}
 
-	final void restartMenu(final String animatedTitle, boolean callOnMenuClose) {
+	final void restartMenu(final String animatedTitle, final boolean callOnMenuClose) {
 
 		final Player player = this.getViewer();
 		Valid.checkNotNull(player, "Cannot restartMenu if it was not yet shown to a player! Menu: " + this);
@@ -661,7 +672,7 @@ public abstract class Menu {
 	 *
 	 * @param messages
 	 */
-	public final void tell(String... messages) {
+	public final void tell(final String... messages) {
 		Common.tell(this.viewer, messages);
 	}
 
@@ -670,7 +681,7 @@ public abstract class Menu {
 	 *
 	 * @param message
 	 */
-	public final void tellInfo(String message) {
+	public final void tellInfo(final String message) {
 		Messenger.info(this.viewer, message);
 	}
 
@@ -679,7 +690,7 @@ public abstract class Menu {
 	 *
 	 * @param message
 	 */
-	public final void tellSuccess(String message) {
+	public final void tellSuccess(final String message) {
 		Messenger.success(this.viewer, message);
 	}
 
@@ -688,7 +699,7 @@ public abstract class Menu {
 	 *
 	 * @param message
 	 */
-	public final void tellWarn(String message) {
+	public final void tellWarn(final String message) {
 		Messenger.warn(this.viewer, message);
 	}
 
@@ -697,7 +708,7 @@ public abstract class Menu {
 	 *
 	 * @param message
 	 */
-	public final void tellError(String message) {
+	public final void tellError(final String message) {
 		Messenger.error(this.viewer, message);
 	}
 
@@ -706,7 +717,7 @@ public abstract class Menu {
 	 *
 	 * @param message
 	 */
-	public final void tellQuestion(String message) {
+	public final void tellQuestion(final String message) {
 		Messenger.question(this.viewer, message);
 	}
 
@@ -715,7 +726,7 @@ public abstract class Menu {
 	 *
 	 * @param message
 	 */
-	public final void tellAnnounce(String message) {
+	public final void tellAnnounce(final String message) {
 		Messenger.announce(this.viewer, message);
 	}
 
@@ -745,7 +756,7 @@ public abstract class Menu {
 	 * @param periodTicks
 	 * @param task
 	 */
-	protected final void animate(int periodTicks, MenuRunnable task) {
+	protected final void animate(final int periodTicks, final MenuRunnable task) {
 		Valid.checkNotNull(this.viewer, "Cannot call animate() before the menu is shown, call your method in onDisplay() method instead.");
 
 		Common.runTimer(2, periodTicks, this.wrapAnimation(task));
@@ -760,7 +771,7 @@ public abstract class Menu {
 	 * @param periodTicks
 	 * @param task
 	 */
-	protected final void animateAsync(int periodTicks, MenuRunnable task) {
+	protected final void animateAsync(final int periodTicks, final MenuRunnable task) {
 		Valid.checkNotNull(this.viewer, "Cannot call animate() before the menu is shown, call your method in onDisplay() method instead.");
 
 		Common.runTimerAsync(2, periodTicks, this.wrapAnimation(task));
@@ -769,7 +780,7 @@ public abstract class Menu {
 	/*
 	 * Helper method to create a bukkit runnable
 	 */
-	private SimpleRunnable wrapAnimation(MenuRunnable task) {
+	private SimpleRunnable wrapAnimation(final MenuRunnable task) {
 		return new SimpleRunnable() {
 			boolean canceled = false;
 
@@ -896,7 +907,7 @@ public abstract class Menu {
 	 * @return if the action is cancelled in the {@link InventoryClickEvent}, false
 	 * by default
 	 */
-	protected boolean isActionAllowed(final MenuClickLocation location, final int slot, @Nullable final ItemStack clicked, @Nullable final ItemStack cursor, InventoryAction action) {
+	protected boolean isActionAllowed(final MenuClickLocation location, final int slot, @Nullable final ItemStack clicked, @Nullable final ItemStack cursor, final InventoryAction action) {
 		return this.isActionAllowed(location, slot, clicked, cursor);
 	}
 
@@ -1038,7 +1049,7 @@ public abstract class Menu {
 	 * @param slot
 	 * @param item
 	 */
-	protected final void setItem(int slot, ItemStack item) {
+	protected final void setItem(final int slot, final ItemStack item) {
 		final Inventory inventory = this.getInventory();
 
 		inventory.setItem(slot, item);
@@ -1063,7 +1074,7 @@ public abstract class Menu {
 	 * @param player
 	 * @return
 	 */
-	public final boolean isViewing(Player player) {
+	public final boolean isViewing(final Player player) {
 		final Menu menu = Menu.getMenu(player);
 
 		return menu != null && menu.getClass().getName().equals(this.getClass().getName());
@@ -1127,7 +1138,7 @@ public abstract class Menu {
 	 * @param inventory
 	 */
 	@Deprecated
-	public final void handleClose(Inventory inventory) {
+	public final void handleClose(final Inventory inventory) {
 		this.viewer.removeMetadata(FoConstants.NBT.TAG_MENU_CURRENT, SimplePlugin.getInstance());
 		this.viewer.setMetadata(FoConstants.NBT.TAG_MENU_LAST_CLOSED, new FixedMetadataValue(SimplePlugin.getInstance(), this));
 		this.closed = true;

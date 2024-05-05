@@ -14,16 +14,15 @@ public class NBTHandlers {
 		@Override
 		public void set(ReadWriteNBT nbt, String key, ItemStack value) {
 			nbt.removeKey(key);
-			ReadWriteNBT tag = nbt.getOrCreateCompound(key);
+			final ReadWriteNBT tag = nbt.getOrCreateCompound(key);
 			tag.mergeCompound(NBT.itemStackToNBT(value));
 		}
 
 		@Override
 		public ItemStack get(ReadableNBT nbt, String key) {
-			ReadableNBT tag = nbt.getCompound(key);
-			if (tag != null) {
+			final ReadableNBT tag = nbt.getCompound(key);
+			if (tag != null)
 				return NBT.itemStackFromNBT(tag);
-			}
 			return null;
 		}
 
@@ -44,9 +43,9 @@ public class NBTHandlers {
 
 		@Override
 		public ReadableNBT get(ReadableNBT nbt, String key) {
-			ReadableNBT tag = nbt.getCompound(key);
+			final ReadableNBT tag = nbt.getCompound(key);
 			if (tag != null) {
-				ReadWriteNBT value = NBT.createNBTObject();
+				final ReadWriteNBT value = NBT.createNBTObject();
 				value.mergeCompound(tag);
 				return value;
 			}
@@ -70,9 +69,9 @@ public class NBTHandlers {
 
 		@Override
 		public ReadWriteNBT get(ReadableNBT nbt, String key) {
-			ReadableNBT tag = nbt.getCompound(key);
+			final ReadableNBT tag = nbt.getCompound(key);
 			if (tag != null) {
-				ReadWriteNBT value = NBT.createNBTObject();
+				final ReadWriteNBT value = NBT.createNBTObject();
 				value.mergeCompound(tag);
 				return value;
 			}

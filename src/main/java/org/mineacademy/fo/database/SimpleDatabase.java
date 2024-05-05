@@ -2,29 +2,37 @@ package org.mineacademy.fo.database;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.sql.Array;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.DriverManager;
+import java.sql.Ref;
 import java.sql.ResultSet;
+import java.sql.RowId;
 import java.sql.SQLException;
 import java.sql.SQLSyntaxErrorException;
 import java.sql.Statement;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.UUID;
 
+import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Common;
-import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.SerializeUtil;
 import org.mineacademy.fo.SerializeUtil.Mode;
-import org.mineacademy.fo.TimeUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictMap;
 import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.model.ConfigSerializable;
+import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.Remain;
 
 import lombok.AccessLevel;
@@ -58,17 +66,12 @@ public class SimpleDatabase {
 	 * The established connection, or null if none
 	 */
 	@Getter(value = AccessLevel.PROTECTED)
-	private volatile Connection connection;
+	private Connection connection;
 
 	/**
 	 * Map of variables you can use with the {} syntax in SQL
 	 */
 	private final StrictMap<String, String> sqlVariables = new StrictMap<>();
-
-	/**
-	 * The raw URL from which the connection was created
-	 */
-	private String url;
 
 	/**
 	 * The last credentials from the connect function, or null if never called
@@ -80,10 +83,15 @@ public class SimpleDatabase {
 	 */
 	private boolean connecting = false;
 
-	/**
+	/*
 	 * Optional Hikari data source (you plugin needs to include com.zaxxer.HikariCP library in its plugin.yml (MC 1.16+ required)
 	 */
 	private Object hikariDataSource;
+
+	/*
+	 * Is this a SQLite connection?
+	 */
+	private boolean isSQLite = false;
 
 	// --------------------------------------------------------------------
 	// Connecting
@@ -165,8 +173,6 @@ public class SimpleDatabase {
 	 * @param table
 	 */
 	public final void connect(final String url, final String user, final String password, final String table) {
-
-		this.url = url;
 		this.connecting = true;
 
 		try {
@@ -184,6 +190,7 @@ public class SimpleDatabase {
 				Class.forName("org.sqlite.JDBC");
 
 				this.connection = DriverManager.getConnection(url);
+				this.isSQLite = true;
 			}
 
 			// Avoid using imports so that Foundation users don't have to include Hikari, you can
@@ -313,7 +320,7 @@ public class SimpleDatabase {
 	 *
 	 * @param resultSet
 	 */
-	public final void close(ResultSet resultSet) {
+	public final void close(final ResultSet resultSet) {
 		try {
 			if (!resultSet.isClosed())
 				resultSet.close();
@@ -348,14 +355,28 @@ public class SimpleDatabase {
 	 *
 	 * @param creator
 	 */
-	protected final void createTable(TableCreator creator) {
+	protected final void createTable(final TableCreator creator) {
 		String columns = "";
 
 		for (final TableRow column : creator.getColumns()) {
-			columns += (columns.isEmpty() ? "" : ", ") + "`" + column.getName() + "` " + column.getDataType();
+			String dataType = column.getDataType();
+
+			if (this.isSQLite) {
+				if (dataType.equals("datetime"))
+					dataType = "text";
+
+				else if (creator.getPrimaryColumn() != null && creator.getPrimaryColumn().equals(column.getName()))
+					dataType = "INTEGER PRIMARY KEY";
+			}
+
+			columns += (columns.isEmpty() ? "" : ", ") + "`" + column.getName() + "` " + dataType;
 
 			if (column.getAutoIncrement() != null && column.getAutoIncrement())
-				columns += " NOT NULL AUTO_INCREMENT";
+				if (this.isSQLite)
+					columns += " AUTOINCREMENT";
+
+				else
+					columns += " NOT NULL AUTO_INCREMENT";
 
 			else if (column.getNotNull() != null && column.getNotNull())
 				columns += " NOT NULL";
@@ -364,13 +385,11 @@ public class SimpleDatabase {
 				columns += " DEFAULT " + column.getDefaultValue();
 		}
 
-		if (creator.getPrimaryColumn() != null)
+		if (creator.getPrimaryColumn() != null && !this.isSQLite)
 			columns += ", PRIMARY KEY (`" + creator.getPrimaryColumn() + "`)";
 
 		try {
-			final boolean isSQLite = this.url != null && this.url.startsWith("jdbc:sqlite");
-
-			this.update("CREATE TABLE IF NOT EXISTS `" + creator.getName() + "` (" + columns + ")" + (isSQLite ? "" : " DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci") + ";");
+			this.update("CREATE TABLE IF NOT EXISTS `" + creator.getName() + "` (" + columns + ") " + (this.isSQLite ? "" : "DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci") + ";");
 
 		} catch (final Throwable t) {
 			if (t.toString().contains("Unknown collation")) {
@@ -388,7 +407,7 @@ public class SimpleDatabase {
 	 *
 	 * @param columsAndValues
 	 */
-	protected final void insert(@NonNull SerializedMap columsAndValues) {
+	protected final void insert(@NonNull final SerializedMap columsAndValues) {
 		this.insert("{table}", columsAndValues);
 	}
 
@@ -399,7 +418,7 @@ public class SimpleDatabase {
 	 * @param table
 	 * @param serializableObject
 	 */
-	protected final <T extends ConfigSerializable> void insert(String table, @NonNull T serializableObject) {
+	protected final <T extends ConfigSerializable> void insert(final String table, @NonNull final T serializableObject) {
 		this.insert(table, serializableObject.serialize());
 	}
 
@@ -407,14 +426,14 @@ public class SimpleDatabase {
 	 * Insert the given column-values pairs into the given table
 	 *
 	 * @param table
-	 * @param columsAndValues
+	 * @param columnsAndValues
 	 */
-	protected final void insert(String table, @NonNull SerializedMap columsAndValues) {
-		final String columns = Common.join(columsAndValues.keySet());
-		final String values = Common.join(columsAndValues.values(), ", ", value -> value == null || value.equals("NULL") ? "NULL" : "'" + value + "'");
-		final String duplicateUpdate = Common.join(columsAndValues.entrySet(), ", ", entry -> entry.getKey() + "=VALUES(" + entry.getKey() + ")");
+	protected final void insert(final String table, @NonNull final SerializedMap columnsAndValues) {
+		final String columns = Common.join(columnsAndValues.keySet());
+		final String values = Common.join(columnsAndValues.values(), ", ", value -> value == null || value.equals("NULL") ? "NULL" : "'" + value + "'");
+		final String duplicateUpdate = Common.join(columnsAndValues.entrySet(), ", ", entry -> entry.getKey() + "=VALUES(" + entry.getKey() + ")");
 
-		this.update("INSERT INTO " + this.replaceVariables(table) + " (" + columns + ") VALUES (" + values + ") ON DUPLICATE KEY UPDATE " + duplicateUpdate + ";");
+		this.update("INSERT INTO " + this.replaceVariables(table) + " (" + columns + ") VALUES (" + values + ")" + (this.isSQLite ? "" : " ON DUPLICATE KEY UPDATE " + duplicateUpdate + ";"));
 	}
 
 	/**
@@ -422,7 +441,7 @@ public class SimpleDatabase {
 	 *
 	 * @param maps
 	 */
-	protected final void insertBatch(@NonNull List<SerializedMap> maps) {
+	protected final void insertBatch(@NonNull final List<SerializedMap> maps) {
 		this.insertBatch("{table}", maps);
 	}
 
@@ -432,7 +451,7 @@ public class SimpleDatabase {
 	 * @param table
 	 * @param maps
 	 */
-	protected final void insertBatch(String table, @NonNull List<SerializedMap> maps) {
+	protected final void insertBatch(final String table, @NonNull final List<SerializedMap> maps) {
 		final List<String> sqls = new ArrayList<>();
 
 		for (final SerializedMap map : maps) {
@@ -440,7 +459,7 @@ public class SimpleDatabase {
 			final String values = Common.join(map.values(), ", ", this::parseValue);
 			final String duplicateUpdate = Common.join(map.entrySet(), ", ", entry -> entry.getKey() + "=VALUES(" + entry.getKey() + ")");
 
-			sqls.add("INSERT INTO " + table + " (" + columns + ") VALUES (" + values + ") ON DUPLICATE KEY UPDATE " + duplicateUpdate + ";");
+			sqls.add("INSERT INTO " + table + " (" + columns + ") VALUES (" + values + ")" + (this.isSQLite ? "" : " ON DUPLICATE KEY UPDATE " + duplicateUpdate + ";"));
 		}
 
 		this.batchUpdate(sqls);
@@ -449,7 +468,7 @@ public class SimpleDatabase {
 	/*
 	 * A helper method to insert compatible value to db
 	 */
-	private final String parseValue(Object value) {
+	private final String parseValue(final Object value) {
 		return value == null || value.equals("NULL") ? "NULL" : "'" + SerializeUtil.serialize(Mode.YAML, value).toString() + "'";
 	}
 
@@ -461,7 +480,6 @@ public class SimpleDatabase {
 	 * @param sql
 	 */
 	protected final void update(String sql) {
-
 		if (!this.connecting)
 			Valid.checkAsync("Updating database must be done async! Call: " + sql);
 
@@ -489,7 +507,7 @@ public class SimpleDatabase {
 	 * @param table
 	 * @param consumer
 	 */
-	protected final void selectAll(String table, ResultReader consumer) {
+	protected final void selectAll(final String table, final ResultReader consumer) {
 		this.select(table, "*", consumer);
 	}
 
@@ -501,17 +519,22 @@ public class SimpleDatabase {
 	 * @param param
 	 * @param consumer
 	 */
-	protected final void select(String table, String param, ResultReader consumer) {
+	protected final void select(final String table, final String param, final ResultReader consumer) {
 		if (!this.isLoaded())
 			return;
+
+		final String tableName = this.replaceVariables(table);
 
 		try (ResultSet resultSet = this.query("SELECT " + param + " FROM " + table)) {
 			while (resultSet.next())
 				try {
-					consumer.accept(resultSet);
+					consumer.accept(new SimpleResultSet(tableName, resultSet));
+
+				} catch (final InvalidRowException ex) {
+					// Pardoned
 
 				} catch (final Throwable t) {
-					Common.log("Error reading a row from table " + this.replaceVariables(table) + " with param '" + param + "', aborting...");
+					Common.log("Error reading a row from table " + tableName + " with param '" + param + "', aborting...");
 
 					t.printStackTrace();
 					break;
@@ -532,7 +555,7 @@ public class SimpleDatabase {
 	 * @param array
 	 * @return
 	 */
-	protected final int count(String table, Object... array) {
+	protected final int count(final String table, final Object... array) {
 		return this.count(table, SerializedMap.ofArray(array));
 	}
 
@@ -546,7 +569,7 @@ public class SimpleDatabase {
 	 * @param conditions
 	 * @return
 	 */
-	protected final int count(String table, SerializedMap conditions) {
+	protected final int count(final String table, final SerializedMap conditions) {
 
 		// Convert conditions into SQL syntax
 		final Set<String> conditionsList = Common.convertSet(conditions.entrySet(), entry -> entry.getKey() + " = '" + SerializeUtil.serialize(Mode.YAML, entry.getValue()) + "'");
@@ -614,7 +637,7 @@ public class SimpleDatabase {
 	 *
 	 * @param sqls
 	 */
-	protected final void batchUpdate(@NonNull List<String> sqls) {
+	protected final void batchUpdate(@NonNull final List<String> sqls) {
 		if (sqls.isEmpty())
 			return;
 
@@ -623,7 +646,7 @@ public class SimpleDatabase {
 		if (!this.isConnected())
 			this.connectUsingLastCredentials();
 
-		try (Statement batchStatement = this.getConnection().createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
+		try (Statement batchStatement = this.getConnection().createStatement(this.isSQLite ? ResultSet.TYPE_FORWARD_ONLY : ResultSet.TYPE_SCROLL_SENSITIVE, this.isSQLite ? ResultSet.CONCUR_READ_ONLY : ResultSet.CONCUR_UPDATABLE)) {
 			final int processedCount = sqls.size();
 
 			for (final String sql : sqls)
@@ -649,17 +672,6 @@ public class SimpleDatabase {
 			}
 
 		} catch (final Throwable t) {
-			final List<String> errorLog = new ArrayList<>();
-
-			errorLog.add(Common.consoleLine());
-			errorLog.add(" [" + TimeUtil.getFormattedDateShort() + "] Failed to save batch sql, please contact the plugin author with this file content: " + t);
-			errorLog.add(Common.consoleLine());
-
-			for (final String statement : sqls)
-				errorLog.add(this.replaceVariables(statement));
-
-			FileUtil.write("sql-error.log", sqls);
-
 			t.printStackTrace();
 
 		} finally {
@@ -705,7 +717,7 @@ public class SimpleDatabase {
 	 * @return
 	 * @throws SQLException
 	 */
-	protected final java.sql.PreparedStatement prepareStatement(String sql, int type, int concurrency) throws SQLException {
+	protected final java.sql.PreparedStatement prepareStatement(String sql, final int type, final int concurrency) throws SQLException {
 		this.checkEstablished();
 
 		if (!this.isConnected())
@@ -746,7 +758,7 @@ public class SimpleDatabase {
 	 * Checks if there's a collation-related error and prints warning message for the user to
 	 * update his database.
 	 */
-	private void handleError(Throwable t, String fallbackMessage) {
+	private void handleError(final Throwable t, final String fallbackMessage) {
 		if (t.toString().contains("Unknown collation")) {
 			Common.log("You need to update your database provider driver. We switched to support unicode using 4 bits length because the previous system only supported 3 bits.");
 			Common.log("Some characters such as smiley or Chinese are stored in 4 bits so they would crash the 3-bit database leading to more problems. Most hosting providers have now widely adopted the utf8mb4_unicode_520_ci encoding you seem lacking. Disable database connection or update your driver to fix this.");
@@ -772,7 +784,7 @@ public class SimpleDatabase {
 	 * @param key
 	 * @return
 	 */
-	final boolean hasVariable(String key) {
+	final boolean hasVariable(final String key) {
 		return this.sqlVariables.containsKey(key);
 	}
 
@@ -841,7 +853,7 @@ public class SimpleDatabase {
 	 */
 	@Getter
 	@RequiredArgsConstructor
-	protected final static class TableCreator {
+	public final static class TableCreator {
 
 		/**
 		 * The table name
@@ -865,7 +877,7 @@ public class SimpleDatabase {
 		 * @param dataType
 		 * @return
 		 */
-		public TableCreator add(String name, String dataType) {
+		public TableCreator add(final String name, final String dataType) {
 			this.columns.add(TableRow.builder().name(name).dataType(dataType).build());
 
 			return this;
@@ -878,7 +890,7 @@ public class SimpleDatabase {
 		 * @param dataType
 		 * @return
 		 */
-		public TableCreator addNotNull(String name, String dataType) {
+		public TableCreator addNotNull(final String name, final String dataType) {
 			this.columns.add(TableRow.builder().name(name).dataType(dataType).notNull(true).build());
 
 			return this;
@@ -891,7 +903,7 @@ public class SimpleDatabase {
 		 * @param dataType
 		 * @return
 		 */
-		public TableCreator addAutoIncrement(String name, String dataType) {
+		public TableCreator addAutoIncrement(final String name, final String dataType) {
 			this.columns.add(TableRow.builder().name(name).dataType(dataType).autoIncrement(true).build());
 
 			return this;
@@ -905,7 +917,7 @@ public class SimpleDatabase {
 		 * @param def
 		 * @return
 		 */
-		public TableCreator addDefault(String name, String dataType, String def) {
+		public TableCreator addDefault(final String name, final String dataType, final String def) {
 			this.columns.add(TableRow.builder().name(name).dataType(dataType).defaultValue(def).build());
 
 			return this;
@@ -917,7 +929,7 @@ public class SimpleDatabase {
 		 * @param primaryColumn
 		 * @return
 		 */
-		public TableCreator setPrimaryColumn(String primaryColumn) {
+		public TableCreator setPrimaryColumn(final String primaryColumn) {
 			this.primaryColumn = primaryColumn;
 
 			return this;
@@ -929,7 +941,7 @@ public class SimpleDatabase {
 		 * @param name
 		 * @return
 		 */
-		public static TableCreator of(String name) {
+		public static TableCreator of(final String name) {
 			return new TableCreator(name);
 		}
 	}
@@ -979,7 +991,377 @@ public class SimpleDatabase {
 		 * @param set
 		 * @throws SQLException
 		 */
-		void accept(ResultSet set) throws SQLException;
+		void accept(SimpleResultSet set) throws SQLException;
+	}
+
+	private static class InvalidRowException extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+	}
+
+	@Getter
+	@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+	public final static class SimpleResultSet {
+
+		private final String tableName;
+		private final ResultSet delegate;
+
+		public boolean next() throws SQLException {
+			return delegate.next();
+		}
+
+		public void close() throws SQLException {
+			delegate.close();
+		}
+
+		public String getString(int columnIndex) throws SQLException {
+			return Common.getOrEmpty(delegate.getString(columnIndex));
+		}
+
+		public boolean getBoolean(int columnIndex) throws SQLException {
+			return delegate.getBoolean(columnIndex);
+		}
+
+		public byte getByte(int columnIndex) throws SQLException {
+			return delegate.getByte(columnIndex);
+		}
+
+		public short getShort(int columnIndex) throws SQLException {
+			return delegate.getShort(columnIndex);
+		}
+
+		public int getInt(int columnIndex) throws SQLException {
+			return delegate.getInt(columnIndex);
+		}
+
+		public long getLong(int columnIndex) throws SQLException {
+			return delegate.getLong(columnIndex);
+		}
+
+		public float getFloat(int columnIndex) throws SQLException {
+			return delegate.getFloat(columnIndex);
+		}
+
+		public double getDouble(int columnIndex) throws SQLException {
+			return delegate.getDouble(columnIndex);
+		}
+
+		public Date getDate(int columnIndex) throws SQLException {
+			return delegate.getDate(columnIndex);
+		}
+
+		public Time getTime(int columnIndex) throws SQLException {
+			return delegate.getTime(columnIndex);
+		}
+
+		public Timestamp getTimestamp(int columnIndex) throws SQLException {
+			return delegate.getTimestamp(columnIndex);
+		}
+
+		public Object getObject(int columnIndex) throws SQLException {
+			return delegate.getObject(columnIndex);
+		}
+
+		public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
+			return delegate.getObject(columnIndex, type);
+		}
+
+		public String getString(String columnLabel) throws SQLException {
+			return Common.getOrEmpty(delegate.getString(columnLabel));
+		}
+
+		public String getStringStrict(String columnLabel) throws SQLException {
+			final String value = this.getString(columnLabel);
+
+			if (value == null || "".equals(value)) {
+				Common.warning(SimplePlugin.getNamed() + " found invalid row with null/empty column '" + columnLabel + "' in table " + this.tableName + ", ignoring.");
+
+				throw new InvalidRowException();
+			}
+
+			return value;
+		}
+
+		public <T extends Enum<T>> T getEnum(String columnLabel, Class<T> typeOf) throws SQLException {
+			final String value = this.getString(columnLabel);
+
+			if (value != null && !"".equals(value)) {
+				final T enumValue = ReflectionUtil.lookupEnumSilent(typeOf, value);
+
+				if (enumValue == null) {
+					Common.warning(SimplePlugin.getNamed() + " found invalid row with invalid " + typeOf.getSimpleName() + " enum value '" + value + "' in column '" + columnLabel + "' in table " + this.tableName + ", ignoring. Valid values: " + Common.join(typeOf.getEnumConstants(), ", "));
+
+					throw new InvalidRowException();
+				}
+
+				return enumValue;
+			}
+
+			return null;
+		}
+
+		public <T extends Enum<T>> T getEnumStrict(String columnLabel, Class<T> typeOf) throws SQLException {
+			final String value = this.getStringStrict(columnLabel);
+			final T enumValue = ReflectionUtil.lookupEnumSilent(typeOf, value);
+
+			if (enumValue == null) {
+				Common.warning(SimplePlugin.getNamed() + " found invalid row with invalid " + typeOf.getSimpleName() + " enum value '" + value + "' in column '" + columnLabel + "' in table " + this.tableName + ", ignoring. Valid values: " + Common.join(typeOf.getEnumConstants(), ", "));
+
+				throw new InvalidRowException();
+			}
+
+			return enumValue;
+		}
+
+		public boolean getBoolean(String columnLabel) throws SQLException {
+			return delegate.getBoolean(columnLabel);
+		}
+
+		public boolean getBooleanStrict(String columnLabel) throws SQLException {
+			final String value = this.getStringStrict(columnLabel);
+
+			try {
+				return Boolean.parseBoolean(value);
+
+			} catch (final Throwable t) {
+				Common.warning(SimplePlugin.getNamed() + " found invalid row with invalid boolean value '" + value + "' in column '" + columnLabel + "' in table " + this.tableName + ", ignoring.");
+
+				throw new InvalidRowException();
+			}
+		}
+
+		public int getInt(String columnLabel) throws SQLException {
+			return delegate.getInt(columnLabel);
+		}
+
+		public int getIntStrict(String columnLabel) throws SQLException {
+			final String value = this.getStringStrict(columnLabel);
+
+			try {
+				return Integer.parseInt(value);
+
+			} catch (final Throwable t) {
+				Common.warning(SimplePlugin.getNamed() + " found invalid row with invalid integer value '" + value + "' in column '" + columnLabel + "' in table " + this.tableName + ", ignoring.");
+
+				throw new InvalidRowException();
+			}
+		}
+
+		public long getLong(String columnLabel) throws SQLException {
+			return delegate.getLong(columnLabel);
+		}
+
+		public long getLongStrict(String columnLabel) throws SQLException {
+			final String value = this.getStringStrict(columnLabel);
+
+			try {
+				return Long.parseLong(value);
+
+			} catch (final Throwable t) {
+				Common.warning(SimplePlugin.getNamed() + " found invalid row with invalid long value '" + value + "' in column '" + columnLabel + "' in table " + this.tableName + ", ignoring.");
+
+				throw new InvalidRowException();
+			}
+		}
+
+		public double getDouble(String columnLabel) throws SQLException {
+			return delegate.getDouble(columnLabel);
+		}
+
+		public double getDoubleStrict(String columnLabel) throws SQLException {
+			final String value = this.getStringStrict(columnLabel);
+
+			try {
+				return Double.parseDouble(value);
+
+			} catch (final Throwable t) {
+				Common.warning(SimplePlugin.getNamed() + " found invalid row with invalid double value '" + value + "' in column '" + columnLabel + "' in table " + this.tableName + ", ignoring.");
+
+				throw new InvalidRowException();
+			}
+		}
+
+		public UUID getUniqueId(String columnLabel) throws SQLException {
+			final String value = this.getString(columnLabel);
+
+			if (value == null || "".equals(value))
+				return null;
+
+			try {
+				return UUID.fromString(value);
+
+			} catch (final Throwable ex) {
+				Common.warning(SimplePlugin.getNamed() + " found invalid row with invalid UUID value '" + value + "' in column '" + columnLabel + "' in table " + this.tableName + ", ignoring.");
+
+				throw new InvalidRowException();
+			}
+		}
+
+		public UUID getUniqueIdStrict(String columnLabel) throws SQLException {
+			final String value = this.getStringStrict(columnLabel);
+
+			try {
+				return UUID.fromString(value);
+
+			} catch (final Throwable ex) {
+				Common.warning(SimplePlugin.getNamed() + " found invalid row with invalid UUID value '" + value + "' in column '" + columnLabel + "' in table " + this.tableName + ", ignoring.");
+
+				throw new InvalidRowException();
+			}
+		}
+
+		public ItemStack getItem(String columnLabel) throws SQLException {
+			final String value = this.getString(columnLabel);
+
+			if (value == null || "".equals(value))
+				return null;
+
+			try {
+				return SerializeUtil.deserialize(Mode.JSON, ItemStack.class, value);
+
+			} catch (final Throwable ex) {
+				Common.warning(SimplePlugin.getNamed() + " found invalid row with invalid item value '" + value + "' in column '" + columnLabel + "' in table " + this.tableName + ", ignoring.");
+
+				throw new InvalidRowException();
+			}
+		}
+
+		public ItemStack getItemStrict(String columnLabel) throws SQLException {
+			final String value = this.getStringStrict(columnLabel);
+
+			try {
+				return SerializeUtil.deserialize(Mode.JSON, ItemStack.class, value);
+
+			} catch (final Throwable ex) {
+				Common.warning(SimplePlugin.getNamed() + " found invalid row with invalid item value '" + value + "' in column '" + columnLabel + "' in table " + this.tableName + ", ignoring.");
+
+				throw new InvalidRowException();
+			}
+		}
+
+		public Date getDate(String columnLabel) throws SQLException {
+			return delegate.getDate(columnLabel);
+		}
+
+		public Time getTime(String columnLabel) throws SQLException {
+			return delegate.getTime(columnLabel);
+		}
+
+		public long getTimestamp(String columnLabel) throws SQLException {
+			final String rawTimestamp = delegate.getString(columnLabel);
+
+			if (rawTimestamp == null)
+				return 0;
+
+			try {
+				return Timestamp.valueOf(rawTimestamp).getTime();
+
+			} catch (final IllegalArgumentException ex) {
+				Common.warning("Failed to parse timestamp '" + rawTimestamp + "' in column '" + columnLabel + "' in table " + this.tableName + ", ignoring.");
+
+				throw new InvalidRowException();
+			}
+		}
+
+		// TODO test on a real mysql
+		public long getTimestampStrict(String columnLabel) throws SQLException {
+			final String rawTimestamp = delegate.getString(columnLabel);
+
+			if (rawTimestamp == null) {
+				Common.warning(SimplePlugin.getNamed() + " found invalid row with null/empty column '" + columnLabel + "' in table " + this.tableName + ", ignoring.");
+
+				throw new InvalidRowException();
+			}
+
+			try {
+				return Timestamp.valueOf(rawTimestamp).getTime();
+
+			} catch (final IllegalArgumentException ex) {
+				Common.warning("Failed to parse timestamp '" + rawTimestamp + "' in column '" + columnLabel + "' in table " + this.tableName + ", ignoring.");
+
+				throw new InvalidRowException();
+			}
+		}
+
+		public Object getObject(String columnLabel) throws SQLException {
+			return delegate.getObject(columnLabel);
+		}
+
+		public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
+			return delegate.getObject(columnLabel, type);
+		}
+
+		public int findColumn(String columnLabel) throws SQLException {
+			return delegate.findColumn(columnLabel);
+		}
+
+		public boolean isFirst() throws SQLException {
+			return delegate.isFirst();
+		}
+
+		public boolean isLast() throws SQLException {
+			return delegate.isLast();
+		}
+
+		public boolean first() throws SQLException {
+			return delegate.first();
+		}
+
+		public boolean last() throws SQLException {
+			return delegate.last();
+		}
+
+		public int getRow() throws SQLException {
+			return delegate.getRow();
+		}
+
+		public boolean previous() throws SQLException {
+			return delegate.previous();
+		}
+
+		public void insertRow() throws SQLException {
+			delegate.insertRow();
+		}
+
+		public void deleteRow() throws SQLException {
+			delegate.deleteRow();
+		}
+
+		public Object getObject(int columnIndex, Map<String, Class<?>> map) throws SQLException {
+			return delegate.getObject(columnIndex, map);
+		}
+
+		public Ref getRef(int columnIndex) throws SQLException {
+			return delegate.getRef(columnIndex);
+		}
+
+		public Array getArray(int columnIndex) throws SQLException {
+			return delegate.getArray(columnIndex);
+		}
+
+		public Object getObject(String columnLabel, Map<String, Class<?>> map) throws SQLException {
+			return delegate.getObject(columnLabel, map);
+		}
+
+		public Ref getRef(String columnLabel) throws SQLException {
+			return delegate.getRef(columnLabel);
+		}
+
+		public Array getArray(String columnLabel) throws SQLException {
+			return delegate.getArray(columnLabel);
+		}
+
+		public RowId getRowId(int columnIndex) throws SQLException {
+			return delegate.getRowId(columnIndex);
+		}
+
+		public RowId getRowId(String columnLabel) throws SQLException {
+			return delegate.getRowId(columnLabel);
+		}
+
+		public boolean isClosed() throws SQLException {
+			return delegate.isClosed();
+		}
+
 	}
 
 	/**

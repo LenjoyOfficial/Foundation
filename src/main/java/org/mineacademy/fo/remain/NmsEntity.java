@@ -142,17 +142,17 @@ final class NmsAccessor {
 	/**
 	 * Does the {@link #addEntity} field have consumer function input?
 	 */
-	private static volatile boolean hasEntityConsumer = false;
+	private static boolean hasEntityConsumer = false;
 
 	/**
 	 * Does the {@link #addEntity} field have randomize data boolean? 1.17+
 	 */
-	private static volatile boolean hasRandomizeData = false;
+	private static boolean hasRandomizeData = false;
 
 	/**
 	 * Is the current Minecraft version older than 1.8.8 ?
 	 */
-	private static volatile boolean olderThan18;
+	private static boolean olderThan18;
 
 	/**
 	 * Static block initializer
@@ -191,8 +191,6 @@ final class NmsAccessor {
 
 		} catch (final ReflectiveOperationException ex) {
 			ex.printStackTrace();
-
-			Runtime.getRuntime().halt(-0__666_1);
 
 			throw new FoException(ex, "Error setting up nms entity accessor!");
 		}

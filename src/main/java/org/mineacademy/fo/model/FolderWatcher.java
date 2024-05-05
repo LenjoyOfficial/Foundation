@@ -17,7 +17,6 @@ import java.util.Set;
 import org.bukkit.scheduler.BukkitTask;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.Valid;
-import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.plugin.SimplePlugin;
 
@@ -30,7 +29,7 @@ public abstract class FolderWatcher extends Thread {
 	/**
 	 * A list to help Foundation stop threads on reload
 	 */
-	private static volatile Set<FolderWatcher> activeThreads = new HashSet<>();
+	private static final Set<FolderWatcher> activeThreads = new HashSet<>();
 
 	/**
 	 * Stop all active threads
@@ -76,8 +75,6 @@ public abstract class FolderWatcher extends Thread {
 				Common.warning("A duplicate file watcher for '" + folder.getPath() + "' was added. This is untested and may causes fatal issues!");
 
 		activeThreads.add(this);
-
-		Debugger.debug("upload", "Started folder watcher for " + folder + " in " + folder.getAbsolutePath() + " (path: " + this.folder + ")");
 	}
 
 	/**
@@ -91,7 +88,6 @@ public abstract class FolderWatcher extends Thread {
 			final WatchKey registration = this.folder.register(service, ENTRY_MODIFY);
 
 			while (this.watching)
-				//synchronized (activeThreads) {
 				try {
 					final WatchKey watchKey = service.take();
 
@@ -134,7 +130,6 @@ public abstract class FolderWatcher extends Thread {
 				} catch (final Throwable t) {
 					Common.error(t, "Error in handling watching thread loop for folder " + this.getFolder());
 				}
-			//}
 
 			registration.cancel();
 

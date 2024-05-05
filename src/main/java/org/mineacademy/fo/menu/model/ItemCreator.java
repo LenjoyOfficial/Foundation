@@ -52,6 +52,7 @@ import org.mineacademy.fo.menu.button.Button.DummyButton;
 import org.mineacademy.fo.model.ConfigSerializable;
 import org.mineacademy.fo.model.SimplePotionData;
 import org.mineacademy.fo.remain.CompColor;
+import org.mineacademy.fo.remain.CompEnchantment;
 import org.mineacademy.fo.remain.CompItemFlag;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.CompMetadata;
@@ -389,7 +390,8 @@ public final class ItemCreator implements ConfigSerializable {
 	}
 
 	/**
-	 * Add the given enchant to the item.
+	 * Add the given enchant to the item. Use {@link CompEnchantment} for
+	 * familiar names.
 	 *
 	 * @param enchantment
 	 * @param level
@@ -954,8 +956,8 @@ public final class ItemCreator implements ConfigSerializable {
 		}
 
 		if (compiledMeta instanceof ItemMeta) {
-			if (glow) {
-				((ItemMeta) compiledMeta).addEnchant(Enchantment.DURABILITY, 1, true);
+			if (this.glow && this.enchants.isEmpty()) {
+				((ItemMeta) compiledMeta).addEnchant(CompEnchantment.DURABILITY, 1, true);
 
 				this.flags.add(CompItemFlag.HIDE_ENCHANTS);
 			}
@@ -1054,7 +1056,7 @@ public final class ItemCreator implements ConfigSerializable {
 				compiledItem = CompMetadata.setMetadata(compiledItem, entry.getKey(), entry.getValue());
 
 		else if (!this.tags.isEmpty() && this.item != null)
-			Common.log("Item had unsupported tags " + this.tags + " that are not supported on MC " + MinecraftVersion.getServerVersion() + " Item: " + compiledItem);
+			Common.log("Item had unsupported tags " + this.tags + " that are not supported on MC " + MinecraftVersion.getFullVersion() + " Item: " + compiledItem);
 
 		return compiledItem;
 	}

@@ -6,7 +6,7 @@ import java.nio.file.Files;
 
 /**
  * {@link NBTCompound} implementation backed by a {@link File}
- * 
+ *
  * @author tr7zw
  *
  */
@@ -24,13 +24,12 @@ public class NBTFile extends NBTCompound {
 	 */
 	public NBTFile(File file) throws IOException {
 		super(null, null);
-		if (file == null) {
+		if (file == null)
 			throw new NullPointerException("File can't be null!");
-		}
 		this.file = file;
-		if (file.exists()) {
+		if (file.exists())
 			nbt = NBTReflectionUtil.readNBT(Files.newInputStream(file.toPath()));
-		} else {
+		else {
 			nbt = ObjectCreator.NMS_NBTTAGCOMPOUND.getInstance();
 			save();
 		}

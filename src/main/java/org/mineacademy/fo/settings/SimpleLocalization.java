@@ -11,6 +11,7 @@ import org.mineacademy.fo.command.ReloadCommand;
 import org.mineacademy.fo.model.ChatPaginator;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompMaterial;
+import org.mineacademy.fo.settings.FileConfig.AccusativeHelper;
 
 /**
  * A simple implementation of a basic localization file.
@@ -112,12 +113,6 @@ public class SimpleLocalization extends YamlStaticConfig {
 	public static final class Commands {
 
 		/**
-		 * true = https://i.imgur.com/us88BCT.png
-		 * false = https://i.imgur.com/N7jLu7v.png
-		 */
-		public static Boolean SIMPLE_HELP_DESIGN = false;
-
-		/**
 		 * The message at "No_Console" key shown when console is denied executing a command.
 		 */
 		public static String NO_CONSOLE = "&cYou may only use this command as a player";
@@ -162,11 +157,6 @@ public class SimpleLocalization extends YamlStaticConfig {
 		 * The required arguments label
 		 */
 		public static String LABEL_REQUIRED_ARGS = "required arguments";
-
-		/**
-		 * The multiline usages label
-		 */
-		public static String LABEL_USAGES = "&c&lUsages:";
 
 		/**
 		 * The usage label
@@ -289,9 +279,6 @@ public class SimpleLocalization extends YamlStaticConfig {
 		private static void init() {
 			setPathPrefix("Commands");
 
-			if (isSetDefault("Simple_Help_Design"))
-				SIMPLE_HELP_DESIGN = getBoolean("Simple_Help_Design");
-
 			if (isSetDefault("No_Console"))
 				NO_CONSOLE = getString("No_Console");
 
@@ -342,9 +329,6 @@ public class SimpleLocalization extends YamlStaticConfig {
 
 			if (isSetDefault("Label_Subcommand_Description"))
 				LABEL_SUBCOMMAND_DESCRIPTION = getString("Label_Subcommand_Description");
-
-			if (isSetDefault("Label_Usages"))
-				LABEL_USAGES = getString("Label_Usages");
 
 			if (isSetDefault("Help_Tooltip_Description"))
 				HELP_TOOLTIP_DESCRIPTION = getString("Help_Tooltip_Description");
@@ -552,11 +536,12 @@ public class SimpleLocalization extends YamlStaticConfig {
 	public static final class Pages {
 
 		public static String NO_PAGE_NUMBER = "&cPlease specify the page number for this command.";
-		public static String NO_PAGES = "&cYou do not have any pages saved to show.";
+		public static String NO_PAGES = "There are no results to list.";
 		public static String NO_PAGE = "Pages do not contain the given page number.";
 		public static String INVALID_PAGE = "&cYour input '{input}' is not a valid number.";
 		public static String GO_TO_PAGE = "&7Go to page {page}";
 		public static String GO_TO_FIRST_PAGE = "&7Go to the first page";
+		public static String GO_TO_LAST_PAGE = "&7Go to the last page";
 		public static String[] TOOLTIP = {
 				"&7You can also navigate using the",
 				"&7hidden /#flp <page> command."
@@ -585,6 +570,9 @@ public class SimpleLocalization extends YamlStaticConfig {
 
 			if (isSetDefault("Go_To_First_Page"))
 				GO_TO_FIRST_PAGE = getString("Go_To_First_Page");
+
+			if (isSetDefault("Go_To_Last_Page"))
+				GO_TO_LAST_PAGE = getString("Go_To_Last_Page");
 
 			if (isSetDefault("Tooltip"))
 				TOOLTIP = Common.toArray(getStringList("Tooltip"));
@@ -690,6 +678,45 @@ public class SimpleLocalization extends YamlStaticConfig {
 
 			if (isSetDefault("Error"))
 				ERROR = getString("Error");
+		}
+	}
+
+	/**
+	 * Keys related to cases
+	 */
+	public static class Cases {
+
+		public static AccusativeHelper SECOND = AccusativeHelper.of("second", "seconds");
+		public static AccusativeHelper MINUTE = AccusativeHelper.of("minute", "minutes");
+		public static AccusativeHelper HOUR = AccusativeHelper.of("hour", "hours");
+		public static AccusativeHelper DAY = AccusativeHelper.of("day", "days");
+		public static AccusativeHelper WEEK = AccusativeHelper.of("week", "weeks");
+		public static AccusativeHelper MONTH = AccusativeHelper.of("month", "months");
+		public static AccusativeHelper YEAR = AccusativeHelper.of("year", "years");
+
+		private static void init() {
+			setPathPrefix("Cases");
+
+			if (isSetDefault("Second"))
+				SECOND = getCasus("Second");
+
+			if (isSetDefault("Minute"))
+				MINUTE = getCasus("Minute");
+
+			if (isSetDefault("Hour"))
+				HOUR = getCasus("Hour");
+
+			if (isSetDefault("Day"))
+				DAY = getCasus("Day");
+
+			if (isSetDefault("Week"))
+				WEEK = getCasus("Week");
+
+			if (isSetDefault("Month"))
+				MONTH = getCasus("Month");
+
+			if (isSetDefault("Year"))
+				YEAR = getCasus("Year");
 		}
 	}
 

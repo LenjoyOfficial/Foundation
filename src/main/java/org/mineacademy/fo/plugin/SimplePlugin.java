@@ -62,7 +62,6 @@ import org.mineacademy.fo.settings.FileConfig;
 import org.mineacademy.fo.settings.Lang;
 import org.mineacademy.fo.settings.SimpleLocalization;
 import org.mineacademy.fo.settings.SimpleSettings;
-import org.mineacademy.fo.settings.YamlConfig;
 import org.mineacademy.fo.visual.BlockVisualizer;
 
 import lombok.Getter;
@@ -81,7 +80,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	/**
 	 * The instance of this plugin
 	 */
-	private static volatile SimplePlugin instance;
+	private static SimplePlugin instance;
 
 	/**
 	 * Shortcut for getDescription().getVersion()
@@ -111,7 +110,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 * An internal flag to indicate that the plugin is being reloaded.
 	 */
 	@Getter
-	private static volatile boolean reloading = false;
+	private static boolean reloading = false;
 
 	/**
 	 * Returns the instance of {@link SimplePlugin}.
@@ -222,9 +221,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		// Load libraries where Spigot does not do this automatically
 		this.loadLibraries();
 
-		// Unfreeze registries
-		Remain.unfreezeEnchantRegistry();
-
 		// Call parent
 		this.onPluginLoad();
 	}
@@ -293,14 +289,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			// Call the main start method
 			// --------------------------------------------
 
-			final Messenger messenger = this.getServer().getMessenger();
-
-			// Always make the main channel available
-			if (!messenger.isIncomingChannelRegistered(this, "BungeeCord"))
-				messenger.registerIncomingPluginChannel(this, "BungeeCord", BungeeListener.BungeeListenerImpl.getInstance());
-
-			if (!messenger.isOutgoingChannelRegistered(this, "BungeeCord"))
-				messenger.registerOutgoingPluginChannel(this, "BungeeCord");
+			this.registerInitBungee(BungeeListener.DEFAULT_CHANNEL);
 
 			// Hide plugin name before console messages
 			final String oldLogPrefix = Common.getLogPrefix();
@@ -317,8 +306,8 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 				return;
 			}
 
-			// AutoRegister finds this class and saves it
-			CompMetadata.MetadataFile.saveOnce();
+			if (CompMetadata.isLegacy() && CompMetadata.ENABLE_LEGACY_FILE_STORAGE)
+				this.registerEvents(CompMetadata.MetadataFile.getInstance());
 
 			this.onReloadablesStart();
 
@@ -327,8 +316,8 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			this.onPluginStart();
 			// --------------------------------------------
 
-			// Freeze back registries
-			Remain.freezeEnchantRegistry();
+			if (Remain.isEnchantRegistryUnfrozen())
+				Remain.freezeEnchantRegistry();
 
 			// Return if plugin start indicated a fatal problem
 			if (!this.isEnabled())
@@ -408,7 +397,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			if (!libraries.isEmpty() && javaVersion >= 9)
 				Common.logFramed(
 						"Warning: Unsupported Java version: " + javaVersion + " for your server",
-						"version! Minecraft " + MinecraftVersion.getServerVersion() + " was designed for Java 8",
+						"version! Minecraft " + MinecraftVersion.getFullVersion() + " was designed for Java 8",
 						"and we're unable unable to load 'legacy-libraries'",
 						"that this plugin uses:",
 						Common.join(libraries, ", ", Library::getGroupId),
@@ -491,14 +480,14 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 * Then you just call this method and parse the field into it from your onReloadablesStart method.
 	 */
 	protected final void registerBungeeCord(@NonNull BungeeListener bungee) {
-		final String chanelName = bungee.getChannel();
+		/*final String channelName = bungee.getChannel();
 		final Messenger messenger = this.getServer().getMessenger();
 
-		if (!messenger.isIncomingChannelRegistered(this, chanelName))
-			messenger.registerIncomingPluginChannel(this, chanelName, BungeeListener.BungeeListenerImpl.getInstance());
+		if (!messenger.isIncomingChannelRegistered(this, channelName))
+			messenger.registerIncomingPluginChannel(this, channelName, BungeeListener.BungeeListenerImpl.getInstance());
 
-		if (!messenger.isOutgoingChannelRegistered(this, chanelName))
-			messenger.registerOutgoingPluginChannel(this, chanelName);
+		if (!messenger.isOutgoingChannelRegistered(this, channelName))
+			messenger.registerOutgoingPluginChannel(this, channelName);*/
 
 		this.reloadables.registerEvents(bungee);
 
@@ -592,15 +581,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	private boolean checkServerVersions0() {
 
 		// Call the static block to test compatibility early
-		if (!MinecraftVersion.getCurrent().isTested())
-			Common.logFramed(
-					"*** WARNING ***",
-					"Your Minecraft version " + MinecraftVersion.getCurrent() + " has not yet",
-					"been officialy tested with the Foundation,",
-					"the library that " + SimplePlugin.getNamed() + " plugin uses.",
-					"",
-					"Loading the plugin at your own risk...",
-					Common.consoleLine());
+		MinecraftVersion.getCurrent();
 
 		// Check min version
 		final V minimumVersion = this.getMinimumVersion();
@@ -633,7 +614,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 *
 	 * @param throwable
 	 */
-	@SuppressWarnings("removal")
 	protected final void displayError0(Throwable throwable) {
 		Debugger.printStackTrace(throwable);
 
@@ -648,7 +628,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 				"&4             |_|          ",
 				"&4!-----------------------------------------------------!",
 				" &cError loading " + this.getDescription().getName() + " v" + this.getDescription().getVersion() + ", plugin is disabled!",
-				privateDistro ? null : " &cRunning on " + this.getServer().getBukkitVersion() + " (" + MinecraftVersion.getServerVersion() + ") & Java " + System.getProperty("java.version"),
+				privateDistro ? null : " &cRunning on " + Bukkit.getBukkitVersion() + " & Java " + System.getProperty("java.version"),
 				"&4!-----------------------------------------------------!");
 
 		if (throwable instanceof InvalidConfigurationException) {
@@ -693,6 +673,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		} catch (final Throwable t) {
 			Common.log("&cPlugin might not shut down property. Got " + t.getClass().getSimpleName() + ": " + t.getMessage());
 		}
+
+		if (CompMetadata.isLegacy() && CompMetadata.ENABLE_LEGACY_FILE_STORAGE)
+			CompMetadata.MetadataFile.getInstance().save();
 
 		this.unregisterReloadables();
 
@@ -786,16 +769,11 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		try {
 			Debugger.detectDebugMode();
 
+			if (CompMetadata.isLegacy() && CompMetadata.ENABLE_LEGACY_FILE_STORAGE)
+				CompMetadata.MetadataFile.getInstance().save();
+
 			this.unregisterReloadables();
-
-			final Messenger messenger = this.getServer().getMessenger();
-
-			// Always make the main channel available
-			if (!messenger.isIncomingChannelRegistered(this, "BungeeCord"))
-				messenger.registerIncomingPluginChannel(this, "BungeeCord", BungeeListener.BungeeListenerImpl.getInstance());
-
-			if (!messenger.isOutgoingChannelRegistered(this, "BungeeCord"))
-				messenger.registerOutgoingPluginChannel(this, "BungeeCord");
+			this.registerInitBungee(BungeeListener.DEFAULT_CHANNEL);
 
 			// Load our dependency system
 			try {
@@ -807,13 +785,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 			this.onPluginPreReload();
 			this.reloadables.reload();
-
-			if (CompMetadata.isLegacy()) {
-				final YamlConfig metadata = CompMetadata.MetadataFile.getInstance();
-
-				metadata.save();
-				metadata.reload();
-			}
 
 			SimpleHologram.onReload();
 
@@ -859,15 +830,25 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		}
 	}
 
+	private void registerInitBungee(String channelName) {
+		final Messenger messenger = this.getServer().getMessenger();
+
+		System.out.println("Registering initial bungee for channel: " + channelName);
+
+		// Always make the main channel available
+		if (!messenger.isIncomingChannelRegistered(this, channelName))
+			messenger.registerIncomingPluginChannel(this, channelName, BungeeListener.BungeeListenerImpl.getInstance());
+
+		if (!messenger.isOutgoingChannelRegistered(this, channelName))
+			messenger.registerOutgoingPluginChannel(this, channelName);
+	}
+
 	private void unregisterReloadables() {
 		SimpleSettings.resetSettingsCall();
 		SimpleLocalization.resetLocalizationCall();
 
 		BlockVisualizer.stopAll();
 		FolderWatcher.stopThreads();
-
-		// Force metadata save on old MC versions upon reload/disable
-		CompMetadata.MetadataFile.saveOnce();
 
 		FileConfig.clearLoadedSections();
 

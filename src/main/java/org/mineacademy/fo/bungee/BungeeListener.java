@@ -11,7 +11,6 @@ import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.bungee.message.IncomingMessage;
-import org.mineacademy.fo.debug.Debugger;
 
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
@@ -29,6 +28,11 @@ import lombok.NonNull;
  */
 @Getter
 public abstract class BungeeListener implements Listener {
+
+	/**
+	 * The default channel
+	 */
+	public static final String DEFAULT_CHANNEL = "BungeeCord";
 
 	/**
 	 * Holds registered bungee listeners
@@ -119,43 +123,44 @@ public abstract class BungeeListener implements Listener {
 		private static final BungeeListenerImpl instance = new BungeeListenerImpl();
 
 		@Override
-		public void onPluginMessageReceived(String channelName, Player player, byte[] data) {
+		public void onPluginMessageReceived(String channel, Player player, byte[] data) {
+			synchronized (registeredListeners) {
 
-			// Check if the message is for a server (ignore client messages)
-			//if (!channelName.equals("BungeeCord"))
-			//	return;
+				// Check if the message is for a server (ignore client messages)
+				if (!channel.equals(DEFAULT_CHANNEL))
+					return;
 
-			for (final BungeeListener listener : registeredListeners)
-				if (channelName.equals(listener.getChannel())) {
+				// Read the plugin message
+				final ByteArrayInputStream stream = new ByteArrayInputStream(data);
+				ByteArrayDataInput input;
 
-					// Read the plugin message
-					final ByteArrayInputStream stream = new ByteArrayInputStream(data);
-					ByteArrayDataInput input;
+				try {
+					input = ByteStreams.newDataInput(stream);
 
-					try {
-						input = ByteStreams.newDataInput(stream);
-
-					} catch (final Throwable t) {
-						input = ByteStreams.newDataInput(data);
-					}
-
-					input.readUTF(); // unused channel name
-					final UUID senderUid = UUID.fromString(input.readUTF());
-					final String serverName = input.readUTF();
-					final String actionName = input.readUTF();
-
-					final BungeeMessageType action = BungeeMessageType.getByName(listener, actionName);
-					Valid.checkNotNull(action, "Unknown plugin action '" + actionName + "'. IF YOU UPDATED THE PLUGIN BY RELOADING, stop your entire network, ensure all servers were updated and start it again.");
-
-					final IncomingMessage message = new IncomingMessage(listener, senderUid, serverName, action, data, input, stream);
-
-					listener.data = data;
-
-					Debugger.debug("bungee-all", "Channel " + channelName + " received " + message.getAction() + " message from " + message.getServerName() + " server.");
-					listener.onMessageReceived(player, message);
-
-					break;
+				} catch (final Throwable t) {
+					input = ByteStreams.newDataInput(data);
 				}
+
+				String channelName = input.readUTF();
+
+				for (final BungeeListener listener : registeredListeners)
+					if (channelName.equals(listener.getChannel())) {
+
+						final UUID senderUid = UUID.fromString(input.readUTF());
+						final String serverName = input.readUTF();
+						final String actionName = input.readUTF();
+
+						final BungeeMessageType action = BungeeMessageType.getByName(listener, actionName);
+						Valid.checkNotNull(action, "Unknown plugin action '" + actionName + "'. IF YOU UPDATED THE PLUGIN BY RELOADING, stop your entire network, ensure all servers were updated and start it again.");
+
+						final IncomingMessage message = new IncomingMessage(listener, senderUid, serverName, action, data, input, stream);
+
+						listener.data = data;
+						listener.onMessageReceived(player, message);
+
+						break;
+					}
+			}
 		}
 	}
 }

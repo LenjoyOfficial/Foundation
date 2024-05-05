@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -41,8 +42,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.Listener;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -50,7 +49,6 @@ import org.bukkit.util.Vector;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictList;
 import org.mineacademy.fo.collection.StrictMap;
-import org.mineacademy.fo.constants.FoConstants;
 import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.exception.RegexTimeoutException;
@@ -61,9 +59,7 @@ import org.mineacademy.fo.model.SimpleRunnable;
 import org.mineacademy.fo.model.SimpleTask;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompChatColor;
-import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.Remain;
-import org.mineacademy.fo.remain.nbt.NBTItem;
 import org.mineacademy.fo.settings.ConfigSection;
 import org.mineacademy.fo.settings.SimpleLocalization;
 import org.mineacademy.fo.settings.SimpleSettings;
@@ -85,7 +81,7 @@ public final class Common {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Pattern used to match colors with & or {@link ChatColor#COLOR_CHAR}
+	 * Pattern used to match colors with & or {@link CompChatColor#COLOR_CHAR}
 	 */
 	private static final Pattern COLOR_AND_DECORATION_REGEX = Pattern.compile("(&|" + COLOR_CHAR + ")[0-9a-fk-orA-FK-OR]");
 
@@ -222,6 +218,24 @@ public final class Common {
 
 			if (log)
 				log(message);
+		}
+	}
+
+	/**
+	 * Broadcast the message to everyone with permission without {@link #getTellPrefix()} and {@link #getLogPrefix()}
+	 *
+	 * @param showPermission
+	 * @param message
+	 * @param log
+	 */
+	public static void broadcastWithPermNoPrefix(final String showPermission, final String message, final boolean log) {
+		if (message != null) {
+			for (final Player online : Remain.getOnlinePlayers())
+				if (PlayerUtil.hasPerm(online, showPermission))
+					tellNoPrefix(online, message);
+
+			if (log)
+				logNoPrefix(message);
 		}
 	}
 
@@ -581,16 +595,7 @@ public final class Common {
 		if (message == null || message.isEmpty())
 			return "";
 
-		final char[] letters = message.toCharArray();
-
-		for (int index = 0; index < letters.length - 1; index++)
-			if (letters[index] == '&' && "0123456789AaBbCcDdEeFfKkLlMmNnOoRrXx".indexOf(letters[index + 1]) > -1) {
-				letters[index] = ChatColor.COLOR_CHAR;
-
-				letters[index + 1] = Character.toLowerCase(letters[index + 1]);
-			}
-
-		String result = new String(letters)
+		String result = CompChatColor.translateColorCodes(message)
 				.replace("{prefix}", message.startsWith(tellPrefix) ? "" : removeSurroundingSpaces(tellPrefix.trim()))
 				.replace("{server}", SimpleLocalization.SERVER_PREFIX)
 				.replace("{plugin_name}", SimplePlugin.getNamed())
@@ -674,15 +679,15 @@ public final class Common {
 		// Replace hex colors, both raw and parsed
 		/*if (Remain.hasHexColors()) {
 			matcher = HEX_COLOR_REGEX.matcher(message);
-		
+
 			while (matcher.find())
 				message = matcher.replaceAll("");
-		
+
 			matcher = RGB_X_COLOR_REGEX.matcher(message);
-		
+
 			while (matcher.find())
 				message = matcher.replaceAll("");
-		
+
 			message = message.replace(ChatColor.COLOR_CHAR + "x", "");
 		}*/
 
@@ -700,7 +705,7 @@ public final class Common {
 	}
 
 	/**
-	 * Returns if the message contains either {@link ChatColor#COLOR_CHAR} or & letter colors
+	 * Returns if the message contains either {@link CompChatColor#COLOR_CHAR} or & letter colors
 	 *
 	 * @param message
 	 * @return
@@ -1005,49 +1010,6 @@ public final class Common {
 	 */
 	public static String shortLocation(final Vector vec) {
 		return " [" + MathUtil.formatOneDigit(vec.getX()) + ", " + MathUtil.formatOneDigit(vec.getY()) + ", " + MathUtil.formatOneDigit(vec.getZ()) + "]";
-	}
-
-	/**
-	 * Formats the item stack into a readable useful console log
-	 * printing only its name, lore and nbt tags
-	 *
-	 * DO NOT USE FOR SAVING, ONLY INTENDED FOR DEBUGGING
-	 *
-	 * @param item
-	 * @return
-	 */
-	public static String shortItemStack(ItemStack item) {
-		if (item == null)
-			return "null";
-
-		if (CompMaterial.isAir(item.getType()))
-			return "Air";
-
-		String name = ItemUtil.bountifyCapitalized(item.getType());
-
-		if (Remain.hasItemMeta() && item.hasItemMeta()) {
-			final ItemMeta meta = item.getItemMeta();
-
-			name += "{";
-
-			if (meta.hasDisplayName())
-				name += "name='" + Common.stripColors(meta.getDisplayName()) + "', ";
-
-			if (meta.hasLore())
-				name += "lore=[" + Common.stripColors(String.join(", ", meta.getLore())) + "], ";
-
-			final NBTItem nbt = new NBTItem(item);
-
-			if (nbt.hasTag(FoConstants.NBT.TAG))
-				name += "tags=" + nbt.getCompound(FoConstants.NBT.TAG) + ", ";
-
-			if (name.endsWith(", "))
-				name = name.substring(0, name.length() - 2);
-
-			name += "}";
-		}
-
-		return name;
 	}
 
 	/**
@@ -1953,7 +1915,9 @@ public final class Common {
 				} else
 					break;
 
-			pages.put(i, pageItems);
+			// If the menu is completely empty, at least allow the first page
+			if (i == 0 || !pageItems.isEmpty())
+				pages.put(i, pageItems);
 		}
 
 		return pages;
@@ -2566,6 +2530,24 @@ public final class Common {
 		return list;
 	}
 
+	/**
+	 * Return a map sorted by values (i.e. from smallest to highest for numbers)
+	 *
+	 * @param map
+	 * @return
+	 */
+	public static Map<String, Integer> sortByValue(Map<String, Integer> map) {
+		final List<Map.Entry<String, Integer>> list = new LinkedList<>(map.entrySet());
+		list.sort(Map.Entry.comparingByValue());
+
+		final Map<String, Integer> sortedMap = new LinkedHashMap<>();
+
+		for (final Map.Entry<String, Integer> entry : list)
+			sortedMap.put(entry.getKey(), entry.getValue());
+
+		return sortedMap;
+	}
+
 	// ------------------------------------------------------------------------------------------------------------
 	// Scheduling
 	// ------------------------------------------------------------------------------------------------------------
@@ -2623,9 +2605,9 @@ public final class Common {
 			final Object taskHandle;
 
 			if (delayTicks == 0)
-				taskHandle = ReflectionUtil.invoke(execute, foliaScheduler, SimplePlugin.getInstance(), (Consumer<Object>) (t -> runnable.run()));
+				taskHandle = ReflectionUtil.invoke(execute, foliaScheduler, SimplePlugin.getInstance(), (Consumer<Object>) t -> runnable.run());
 			else
-				taskHandle = ReflectionUtil.invoke(runDelayed, foliaScheduler, SimplePlugin.getInstance(), (Consumer<Object>) (t -> runnable.run()), delayTicks);
+				taskHandle = ReflectionUtil.invoke(runDelayed, foliaScheduler, SimplePlugin.getInstance(), (Consumer<Object>) t -> runnable.run(), delayTicks);
 
 			return SimpleTask.fromFolia(cancel, taskHandle);
 		}
@@ -2678,9 +2660,9 @@ public final class Common {
 			final Object taskHandle;
 
 			if (delayTicks == 0)
-				taskHandle = ReflectionUtil.invoke(execute, foliaScheduler, SimplePlugin.getInstance(), (Consumer<Object>) (t -> runnable.run()));
+				taskHandle = ReflectionUtil.invoke(execute, foliaScheduler, SimplePlugin.getInstance(), (Consumer<Object>) t -> runnable.run());
 			else
-				taskHandle = ReflectionUtil.invoke(runDelayed, foliaScheduler, SimplePlugin.getInstance(), (Consumer<Object>) (t -> runnable.run()), delayTicks);
+				taskHandle = ReflectionUtil.invoke(runDelayed, foliaScheduler, SimplePlugin.getInstance(), (Consumer<Object>) t -> runnable.run(), delayTicks);
 
 			return SimpleTask.fromFolia(cancel, taskHandle);
 		}
@@ -2730,7 +2712,7 @@ public final class Common {
 			return null;
 
 		if (Remain.isFolia()) {
-			final Object taskHandle = ReflectionUtil.invoke(runAtFixedRate, foliaScheduler, SimplePlugin.getInstance(), (Consumer<Object>) (t -> runnable.run()), Math.max(1, delayTicks), repeatTicks);
+			final Object taskHandle = ReflectionUtil.invoke(runAtFixedRate, foliaScheduler, SimplePlugin.getInstance(), (Consumer<Object>) t -> runnable.run(), Math.max(1, delayTicks), repeatTicks);
 
 			return SimpleTask.fromFolia(cancel, taskHandle);
 		}
@@ -2780,7 +2762,7 @@ public final class Common {
 			return null;
 
 		if (Remain.isFolia()) {
-			final Object taskHandle = ReflectionUtil.invoke(runAtFixedRate, foliaScheduler, SimplePlugin.getInstance(), (Consumer<Object>) (t -> runnable.run()), Math.max(1, delayTicks), repeatTicks);
+			final Object taskHandle = ReflectionUtil.invoke(runAtFixedRate, foliaScheduler, SimplePlugin.getInstance(), (Consumer<Object>) t -> runnable.run(), Math.max(1, delayTicks), repeatTicks);
 
 			return SimpleTask.fromFolia(cancel, taskHandle);
 		}

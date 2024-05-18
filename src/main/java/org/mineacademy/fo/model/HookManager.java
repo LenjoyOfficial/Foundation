@@ -51,7 +51,6 @@ import com.bekvon.bukkit.residence.Residence;
 import com.bekvon.bukkit.residence.protection.ClaimedResidence;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
-import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketListener;
 import com.earth2me.essentials.CommandSource;
@@ -1320,21 +1319,21 @@ public final class HookManager {
 	}
 
 	/**
-	 * Return the singular currency name, or null if Vault isn't loaded.
+	 * Return the singular currency name, or empty if Vault isn't loaded.
 	 *
 	 * @return
 	 */
 	public static String getCurrencySingular() {
-		return isVaultLoaded() ? vaultHook.getCurrencyNameSG() : null;
+		return isVaultLoaded() ? vaultHook.getCurrencyNameSG() : "";
 	}
 
 	/**
-	 * Return the plural currency name, or null if Vault isn't loaded.
+	 * Return the plural currency name, or empty if Vault isn't loaded.
 	 *
 	 * @return
 	 */
 	public static String getCurrencyPlural() {
-		return isVaultLoaded() ? vaultHook.getCurrencyNamePL() : null;
+		return isVaultLoaded() ? vaultHook.getCurrencyNamePL() : "";
 	}
 
 	/**
@@ -2227,43 +2226,54 @@ class ProtocolLibHook {
 
 	ProtocolLibHook() {
 		this.manager = ProtocolLibrary.getProtocolManager();
+
+		if (this.manager == null)
+			Common.warning("Unable to get protocol manager. Ensure ProtocolLib threw no errors in your startup log and is compatible with your server version. "
+					+ "If you're a developer, place ProtocolLib to softDepend in plugin.yml. Packet features won't function.");
 	}
 
 	final void addPacketListener(final Object listener) {
 		Valid.checkBoolean(listener instanceof PacketListener, "Listener must extend or implements PacketListener or PacketAdapter");
 
-		try {
-			this.manager.addPacketListener((PacketListener) listener);
+		if (this.manager != null) {
+			try {
+				this.manager.addPacketListener((PacketListener) listener);
 
-		} catch (final Throwable t) {
-			Common.error(t, "Failed to register ProtocolLib packet listener! Ensure you have the latest ProtocolLib. If you reloaded, try a fresh startup (some ProtocolLib esp. for 1.8.8 fails on reload).");
+			} catch (final Throwable t) {
+				Common.error(t, "Failed to register ProtocolLib packet listener! Ensure you have the latest ProtocolLib. If you reloaded, try a fresh startup (some ProtocolLib esp. for 1.8.8 fails on reload).");
 
-			return;
+				return;
+			}
+
+			this.registeredListeners.add(listener);
 		}
-
-		this.registeredListeners.add(listener);
 	}
 
 	final void removePacketListener(final Object listener) {
 		Valid.checkBoolean(listener instanceof PacketListener, "Listener must extend or implements PacketListener or PacketAdapter");
-		Valid.checkBoolean(this.registeredListeners.contains(listener), "Listener must already be registered with ProtocolLib.");
 
-		try {
-			this.manager.removePacketListener((PacketListener) listener);
+		if (this.manager != null) {
+			Valid.checkBoolean(this.registeredListeners.contains(listener), "Listener must already be registered with ProtocolLib.");
 
-		} catch (final Throwable t) {
-			Common.error(t, "Failed to unregister ProtocolLib packet listener!");
+			try {
+				this.manager.removePacketListener((PacketListener) listener);
 
-			return;
+			} catch (final Throwable t) {
+				Common.error(t, "Failed to unregister ProtocolLib packet listener!");
+
+				return;
+			}
+
+			this.registeredListeners.remove(listener);
 		}
-
-		this.registeredListeners.remove(listener);
 	}
 
 	final void removePacketListeners(final Plugin plugin) {
-		this.manager.removePacketListeners(plugin);
+		if (this.manager != null) {
+			this.manager.removePacketListeners(plugin);
 
-		this.registeredListeners.clear();
+			this.registeredListeners.clear();
+		}
 	}
 
 	final void sendPacket(final PacketContainer packet) {
@@ -2275,12 +2285,13 @@ class ProtocolLibHook {
 		Valid.checkNotNull(player);
 		Valid.checkBoolean(packet instanceof PacketContainer, "Packet must be instance of PacketContainer from ProtocolLib");
 
-		try {
-			this.manager.sendServerPacket(player, (PacketContainer) packet);
+		if (this.manager != null)
+			try {
+				this.manager.sendServerPacket(player, (PacketContainer) packet);
 
-		} catch (final Exception e) {
-			Common.error(e, "Failed to send " + ((PacketContainer) packet).getType() + " packet to " + player.getName());
-		}
+			} catch (final Exception e) {
+				Common.error(e, "Failed to send " + ((PacketContainer) packet).getType() + " packet to " + player.getName());
+			}
 	}
 
 	final boolean isTemporaryPlayer(Player player) {

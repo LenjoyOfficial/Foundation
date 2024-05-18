@@ -474,7 +474,9 @@ public abstract class SimpleCommandGroup {
 				}
 
 				final List<SimpleComponent> lines = new ArrayList<>();
+
 				final boolean atLeast17 = MinecraftVersion.atLeast(V.v1_7);
+				final boolean atLeast13 = MinecraftVersion.atLeast(V.v1_13);
 
 				for (final SimpleSubCommand subcommand : SimpleCommandGroup.this.subcommands)
 					if (subcommand.showInHelp() && this.hasPerm(subcommand.getPermission())) {
@@ -517,13 +519,13 @@ public abstract class SimpleCommandGroup {
 							} else
 								hover.add(this.replacePlaceholders(SimpleLocalization.Commands.HELP_TOOLTIP_USAGE + (usage.isEmpty() ? command : usage)));
 
-							for (int i = 0; i < hover.size(); i++) {
-								final String hoverLine = String.join("\n    ", Common.split(hover.get(i), 80));
+							final List<String> hoverShortened = new ArrayList<>();
 
-								hover.set(i, hoverLine);
-							}
+							for (final String hoverLine : hover)
+								for (final String hoverLineSplit : Common.split(hoverLine, atLeast13 ? 100 : 55))
+									hoverShortened.add(hoverLineSplit);
 
-							line.onHover(hover);
+							line.onHover(hoverShortened);
 							line.onClickSuggestCmd("/" + this.getLabel() + " " + subcommand.getSublabel());
 						}
 

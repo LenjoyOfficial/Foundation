@@ -48,6 +48,27 @@ public abstract class Button {
 	@Setter
 	private static String infoButtonTitle = SimpleLocalization.Menu.TOOLTIP_INFO;
 
+	/**
+	 * The slot of this button in the menu
+	 */
+	@Getter
+	private int slot = -1;
+
+	/**
+	 * Create a new button with the given slot
+	 *
+	 * @param slot
+	 */
+	public Button(int slot) {
+		this.slot = slot;
+	}
+
+	/**
+	 * Create a new button with no slot.
+	 */
+	public Button() {
+	}
+
 	// ----------------------------------------------------------------
 	// Button functions
 	// ----------------------------------------------------------------

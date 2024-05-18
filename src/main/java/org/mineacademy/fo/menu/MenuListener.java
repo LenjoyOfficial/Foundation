@@ -76,6 +76,7 @@ public final class MenuListener implements Listener {
 		final Menu menu = Menu.getMenu(player);
 
 		if (menu != null) {
+			final int slot = event.getSlot();
 			final ItemStack slotItem = event.getCurrentItem();
 			final ItemStack cursor = event.getCursor();
 			final Inventory clickedInv = Remain.getClickedInventory(event);
@@ -83,11 +84,14 @@ public final class MenuListener implements Listener {
 			final InventoryAction action = event.getAction();
 			final MenuClickLocation whereClicked = clickedInv != null ? clickedInv.getType() == InventoryType.CHEST ? MenuClickLocation.MENU : MenuClickLocation.PLAYER_INVENTORY : MenuClickLocation.OUTSIDE;
 
-			final boolean allowed = menu.isActionAllowed(whereClicked, event.getSlot(), slotItem, cursor, action);
+			final boolean allowed = menu.isActionAllowed(whereClicked, slot, slotItem, cursor, action);
 
-			if (whereClicked == MenuClickLocation.MENU)
+			if (whereClicked == MenuClickLocation.MENU && slotItem != null)
 				try {
-					final Button button = menu.getButton(slotItem);
+					Button button = menu.getButton(slot);
+
+					if (button == null)
+						button = menu.getButton(slotItem);
 
 					if (button != null)
 						menu.onButtonClick(player, event.getSlot(), action, event.getClick(), button);

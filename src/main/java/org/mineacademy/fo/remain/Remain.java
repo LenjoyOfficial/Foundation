@@ -1,7 +1,6 @@
 package org.mineacademy.fo.remain;
 
 import java.io.File;
-import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -50,8 +49,8 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.SimpleCommandMap;
-import org.bukkit.configuration.MemorySection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.conversations.ConversationContext;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -68,6 +67,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -75,7 +75,6 @@ import org.bukkit.potion.PotionType;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
 import org.mineacademy.fo.Common;
-import org.mineacademy.fo.EntityUtil;
 import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.MathUtil;
@@ -222,6 +221,11 @@ public final class Remain {
 	 * Return true if we have the overcomplicated io.papermc.paper.event.player.AsyncChatEvent
 	 */
 	private static boolean hasAdventureChatEvent = true;
+
+	/**
+	 * Return true if PlayerInventory class has the getExtraContents method
+	 */
+	private static boolean hasPlayerExtraInventoryContent = true;
 
 	/**
 	 * Stores player cooldowns for old MC versions
@@ -375,6 +379,11 @@ public final class Remain {
 		} catch (final Throwable t) {
 			hasAdventureChatEvent = false;
 		}
+
+		final Method getExtraContents = ReflectionUtil.getMethod(PlayerInventory.class, "getExtraContents");
+
+		if (getExtraContents == null)
+			hasPlayerExtraInventoryContent = false;
 
 		try {
 			sectionPathDataClass = ReflectionUtil.lookupClass("org.bukkit.configuration.SectionPathData");
@@ -2917,6 +2926,21 @@ public final class Remain {
 		return obj != null && sectionPathDataClass == obj.getClass();
 	}
 
+	/**
+	 * Get the session data map from the conversation context.
+	 *
+	 * @param context
+	 * @return
+	 */
+	public static Map<Object, Object> getAllSessionData(ConversationContext context) {
+		try {
+			return context.getAllSessionData();
+
+		} catch (final NoSuchMethodError err) {
+			return ReflectionUtil.getFieldContent(context, "sessionData");
+		}
+	}
+
 	// ----------------------------------------------------------------------------------------------------
 	// Getters for various server functions
 	// ----------------------------------------------------------------------------------------------------
@@ -3009,6 +3033,16 @@ public final class Remain {
 	 */
 	public static boolean hasAdventureChatEvent() {
 		return hasAdventureChatEvent;
+	}
+
+	/**
+	 *
+	 * Return true if player inventory class has extra inventory content
+	 *
+	 * @return
+	 */
+	public static boolean hasPlayerExtraInventoryContent() {
+		return hasPlayerExtraInventoryContent;
 	}
 
 	/**
@@ -3306,20 +3340,26 @@ class PotionSetter {
 
 				ReflectionUtil.invoke(setBasePotionData, meta, potionData);
 			}
-
-			meta.addEnchant(CompEnchantment.DURABILITY, 1, true);
 		}
 
 		// For some reason this does not get added so we have to add it manually on top of the lore
 		if (MinecraftVersion.olderThan(V.v1_9)) {
-			final List<String> lore = new ArrayList<>();
+			if (item.getData().getData() == 0) {
+				final List<String> lore = new ArrayList<>();
+				final String potionLine = Common.colorize("&7" + ItemUtil.bountifyCapitalized(type) + " (" + TimeUtil.formatTimeColon(durationTicks / 20) + ")");
 
-			lore.add(Common.colorize("&7" + ItemUtil.bountifyCapitalized(type) + " (" + TimeUtil.formatTimeColon(durationTicks / 20) + ")"));
+				lore.add(potionLine);
 
-			if (meta.getLore() != null)
-				lore.addAll(meta.getLore());
+				if (meta.getLore() != null)
+					for (final String otherLore : meta.getLore())
+						if (!otherLore.contains(potionLine))
+							lore.add(otherLore);
 
-			meta.setLore(lore);
+				item.getData().setData((byte) 45);
+
+				meta.setDisplayName(Common.colorize("&rPotion Of " + ItemUtil.bountifyCapitalized(type)));
+				meta.setLore(lore);
+			}
 		}
 
 		//meta.setMainEffect(type);

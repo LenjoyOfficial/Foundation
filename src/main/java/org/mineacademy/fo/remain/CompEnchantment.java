@@ -1,11 +1,16 @@
 package org.mineacademy.fo.remain;
 
 import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
 import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
+import org.mineacademy.fo.Common;
+import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.ReflectionUtil;
@@ -16,6 +21,16 @@ import org.mineacademy.fo.ReflectionUtil;
  * Some enchants might be null on old Minecraft versions.
  */
 public final class CompEnchantment {
+
+	/*
+	 * Store all items by name
+	 */
+	private static final Map<String, Enchantment> byName = new HashMap<>();
+
+	/*
+	 * Holds the formatted name for each enchant i.e. "Blast Protection"
+	 */
+	private static final Map<Enchantment, String> loreName = new HashMap<>();
 
 	/**
 	 * Provides protection against environmental damage
@@ -232,14 +247,54 @@ public final class CompEnchantment {
 	@Nullable
 	public static final Enchantment SWIFT_SNEAK = find(-1, "SWIFT_SNEAK", "swift_sneak");
 
-	/*
-	 * Find the enchantment by ID or name
+	/**
+	 * Get the enchantment by name
+	 *
+	 * @param name
+	 * @return
 	 */
-	private static Enchantment find(int id, String oldName, String key) {
+	@Nullable
+	public static Enchantment getByName(String name) {
+		return byName.get(name.toUpperCase());
+	}
+
+	/**
+	 * Return all available enchantments
+	 *
+	 * @return
+	 */
+	public static Collection<Enchantment> getEnchantments() {
+		return byName.values();
+	}
+
+	/**
+	 * Return the name as it appears on the item lore
+	 *
+	 * @param enchantment
+	 * @return
+	 */
+	@Nullable
+	public static String getLoreName(Enchantment enchantment) {
+		return loreName.get(enchantment);
+	}
+
+	/**
+	 * Return all available enchantment names
+	 *
+	 * @return
+	 */
+	public static Collection<String> getEnchantmentNames() {
+		return Common.convert(getEnchantments(), ench -> ench.getName());
+	}
+
+	/*
+	 * Find the enchantment by ID or name, returns null if unsupported by server
+	 */
+	private static Enchantment find(int id, String oldName, String modernName) {
 		Enchantment enchantment;
 
 		try {
-			enchantment = Enchantment.getByKey(NamespacedKey.minecraft(key));
+			enchantment = Enchantment.getByKey(NamespacedKey.minecraft(modernName));
 
 		} catch (final NoClassDefFoundError | NoSuchMethodError ex) {
 			enchantment = Enchantment.getByName(oldName);
@@ -249,7 +304,14 @@ public final class CompEnchantment {
 
 				enchantment = ReflectionUtil.invokeStatic(getById, id);
 			}
+		}
 
+		if (enchantment != null) {
+			byName.put(oldName, enchantment);
+			byName.put(modernName.toUpperCase(), enchantment);
+			byName.put(enchantment.getName(), enchantment);
+
+			loreName.put(enchantment, ItemUtil.bountifyCapitalized(modernName));
 		}
 
 		return enchantment;

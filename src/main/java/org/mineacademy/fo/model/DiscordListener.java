@@ -267,7 +267,7 @@ public abstract class DiscordListener implements Listener {
 	 * @param roleName
 	 * @return
 	 */
-	protected final boolean hasRole(Member member, String roleName) {
+	public final boolean hasRole(Member member, String roleName) {
 		for (final Role role : member.getRoles())
 			if (role.getName().equalsIgnoreCase(roleName))
 				return true;
@@ -284,7 +284,7 @@ public abstract class DiscordListener implements Listener {
 	 * @param channelName
 	 * @param message
 	 */
-	protected final void sendMessage(Player sender, String channelName, String message) {
+	public final void sendMessage(Player sender, String channelName, String message) {
 		HookManager.sendDiscordMessage(sender, channelName, message);
 	}
 
@@ -294,7 +294,7 @@ public abstract class DiscordListener implements Listener {
 	 * @param channelName
 	 * @param message
 	 */
-	protected final void sendMessage(String channelName, String message) {
+	public final void sendMessage(String channelName, String message) {
 		HookManager.sendDiscordMessage(channelName, message);
 	}
 
@@ -305,7 +305,7 @@ public abstract class DiscordListener implements Listener {
 	 * @param channelName
 	 * @param message
 	 */
-	protected final void sendWebhookMessage(@Nullable CommandSender sender, String channelName, String message) {
+	public final void sendWebhookMessage(@Nullable CommandSender sender, String channelName, String message) {
 		final List<TextChannel> channels = this.findChannels(channelName);
 		final TextChannel channel = channels.isEmpty() ? null : channels.get(0);
 
@@ -334,7 +334,7 @@ public abstract class DiscordListener implements Listener {
 	 * @param channel
 	 * @param message
 	 */
-	protected final void flashMessage(TextChannel channel, String message) {
+	public final void flashMessage(TextChannel channel, String message) {
 		final String finalMessage = Common.stripColors(message);
 
 		Common.runAsync(() -> {
@@ -360,7 +360,7 @@ public abstract class DiscordListener implements Listener {
 	 * @param channel
 	 * @param messageId
 	 */
-	protected final void deleteMessageById(TextChannel channel, long messageId) {
+	public final void deleteMessageById(TextChannel channel, long messageId) {
 		Common.runAsync(() -> {
 
 			// Try updating the message ID in case it has been edited
@@ -389,7 +389,7 @@ public abstract class DiscordListener implements Listener {
 	 * @param messageId
 	 * @param format
 	 */
-	protected final void editMessageById(TextChannel channel, long messageId, String format) {
+	public final void editMessageById(TextChannel channel, long messageId, String format) {
 		Common.runAsync(() -> {
 			try {
 				final Message message = channel.retrieveMessageById(messageId).complete();
@@ -509,20 +509,22 @@ public abstract class DiscordListener implements Listener {
 		 */
 		@Subscribe(priority = ListenerPriority.HIGH)
 		public void onMessageReceived(DiscordGuildMessagePreProcessEvent event) {
-			for (final DiscordListener listener : registeredListeners)
-				try {
-					listener.handleMessageReceived(event);
+			synchronized (SimplePlugin.getInstance()) {
+				for (final DiscordListener listener : registeredListeners)
+					try {
+						listener.handleMessageReceived(event);
 
-				} catch (final RemovedMessageException ex) {
-					// Fail through since we handled that
+					} catch (final RemovedMessageException ex) {
+						// Fail through since we handled that
 
-				} catch (final Throwable t) {
-					Common.error(t,
-							"Failed to handle DiscordSRV->Minecraft message (pre process)!",
-							"Sender: " + event.getAuthor().getName(),
-							"Channel: " + event.getChannel().getName(),
-							"Message: " + event.getMessage().getContentDisplay());
-				}
+					} catch (final Throwable t) {
+						Common.error(t,
+								"Failed to handle DiscordSRV->Minecraft message (pre process)!",
+								"Sender: " + event.getAuthor().getName(),
+								"Channel: " + event.getChannel().getName(),
+								"Message: " + event.getMessage().getContentDisplay());
+					}
+			}
 		}
 
 		/**
@@ -532,20 +534,22 @@ public abstract class DiscordListener implements Listener {
 		 */
 		@Subscribe(priority = ListenerPriority.HIGH)
 		public void onMessageReceivedLate(DiscordGuildMessagePostProcessEvent event) {
-			for (final DiscordListener listener : registeredListeners)
-				try {
-					listener.handleMessageReceivedLate(event);
+			synchronized (SimplePlugin.getInstance()) {
+				for (final DiscordListener listener : registeredListeners)
+					try {
+						listener.handleMessageReceivedLate(event);
 
-				} catch (final RemovedMessageException ex) {
-					// Fail through since we handled that
+					} catch (final RemovedMessageException ex) {
+						// Fail through since we handled that
 
-				} catch (final Throwable t) {
-					Common.error(t,
-							"Failed to handle DiscordSRV->Minecraft message (post process)!",
-							"Sender: " + event.getAuthor().getName(),
-							"Channel: " + event.getChannel().getName(),
-							"Message: " + event.getMessage().getContentDisplay());
-				}
+					} catch (final Throwable t) {
+						Common.error(t,
+								"Failed to handle DiscordSRV->Minecraft message (post process)!",
+								"Sender: " + event.getAuthor().getName(),
+								"Channel: " + event.getChannel().getName(),
+								"Message: " + event.getMessage().getContentDisplay());
+					}
+			}
 		}
 
 		/**
@@ -556,20 +560,22 @@ public abstract class DiscordListener implements Listener {
 		 */
 		@Subscribe(priority = ListenerPriority.HIGH)
 		public void onMessageSend(GameChatMessagePreProcessEvent event) {
-			for (final DiscordListener listener : registeredListeners)
-				try {
-					listener.onMessageSent(event);
+			synchronized (SimplePlugin.getInstance()) {
+				for (final DiscordListener listener : registeredListeners)
+					try {
+						listener.onMessageSent(event);
 
-				} catch (final RemovedMessageException ex) {
-					// Fail through since we handled that
+					} catch (final RemovedMessageException ex) {
+						// Fail through since we handled that
 
-				} catch (final Throwable t) {
-					Common.error(t,
-							"Failed to handle Minecraft->DiscordSRV message!",
-							"Sender: " + event.getPlayer().getName(),
-							"Channel: " + event.getChannel(),
-							"Message: " + event.getMessage());
-				}
+					} catch (final Throwable t) {
+						Common.error(t,
+								"Failed to handle Minecraft->DiscordSRV message!",
+								"Sender: " + event.getPlayer().getName(),
+								"Channel: " + event.getChannel(),
+								"Message: " + event.getMessage());
+					}
+			}
 		}
 	}
 }

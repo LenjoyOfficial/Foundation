@@ -34,7 +34,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.configuration.MemorySection;
 import org.bukkit.conversations.Conversable;
 import org.bukkit.entity.Entity;
@@ -43,6 +45,7 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
@@ -52,7 +55,6 @@ import org.mineacademy.fo.collection.StrictMap;
 import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.exception.RegexTimeoutException;
-import org.mineacademy.fo.model.DiscordSender;
 import org.mineacademy.fo.model.HookManager;
 import org.mineacademy.fo.model.Replacer;
 import org.mineacademy.fo.model.SimpleRunnable;
@@ -275,11 +277,11 @@ public final class Common {
 	 * @param message
 	 */
 	public static void tellTimedNoPrefix(final int delaySeconds, final CommandSender sender, final String message) {
-		final String oldPrefix = getTellPrefix();
-		setTellPrefix("");
+		final String oldPrefix = new String(tellPrefix);
+		tellPrefix = "";
 
 		tellTimed(delaySeconds, sender, message);
-		setTellPrefix(oldPrefix);
+		tellPrefix = oldPrefix;
 	}
 
 	/**
@@ -326,7 +328,30 @@ public final class Common {
 	 * @param message
 	 */
 	public static void tellConversing(final Conversable conversable, final String message) {
-		conversable.sendRawMessage(colorize((message.contains(tellPrefix) ? "" : addLastSpace(tellPrefix)) + removeFirstSpaces(message)).trim());
+		final String prefix = message.contains(tellPrefix) || tellPrefix.isEmpty() ? "" : tellPrefix + " ";
+
+		conversable.sendRawMessage(colorize(prefix + message));
+	}
+
+	/**
+	 * Sends the conversable a message later
+	 *
+	 * @param delayTicks
+	 * @param conversable
+	 * @param message
+	 */
+	public static void tellLaterConversingNoPrefix(final int delayTicks, final Conversable conversable, final String message) {
+		runLater(delayTicks, () -> tellConversingNoPrefix(conversable, message));
+	}
+
+	/**
+	 * Sends the conversable player a colorized message
+	 *
+	 * @param conversable
+	 * @param message
+	 */
+	public static void tellConversingNoPrefix(final Conversable conversable, final String message) {
+		conversable.sendRawMessage(colorize(message));
 	}
 
 	/**
@@ -364,11 +389,11 @@ public final class Common {
 	 * @param messages
 	 */
 	public static void tellNoPrefix(final CommandSender sender, final String... messages) {
-		final String oldPrefix = getTellPrefix();
+		final String oldPrefix = new String(tellPrefix);
 
-		setTellPrefix("");
+		tellPrefix = "";
 		tell(sender, messages);
-		setTellPrefix(oldPrefix);
+		tellPrefix = oldPrefix;
 	}
 
 	/**
@@ -483,24 +508,15 @@ public final class Common {
 
 		} else
 			for (final String part : message.split("\n")) {
-				final String prefixStripped = removeSurroundingSpaces(tellPrefix);
-				final String prefix = !hasPrefix && !prefixStripped.isEmpty() ? prefixStripped + " " : "";
+				final String prefix = !hasPrefix && !tellPrefix.isEmpty() ? tellPrefix + " " : "";
+				final String toSend = part.startsWith("<center>") ? ChatUtil.center(prefix + part.replace("<center>", "")) : prefix + part;
 
-				final String toSend = stripColors(part).startsWith("<center>") ? ChatUtil.center(prefix + part.replace("<center>", "")) : prefix + part;
+				// Make player engaged in a server conversation still receive the message
+				if (sender instanceof Conversable && ((Conversable) sender).isConversing())
+					((Conversable) sender).sendRawMessage(toSend);
 
-				try {
-					// Make player engaged in a server conversation still receive the message
-					if (sender instanceof Conversable && ((Conversable) sender).isConversing())
-						((Conversable) sender).sendRawMessage(toSend);
-
-					else
-						sender.sendMessage(toSend);
-
-				} catch (final Throwable t) {
-					Bukkit.getLogger().severe("Failed to send message to " + sender.getName() + ", message: " + toSend);
-
-					t.printStackTrace();
-				}
+				else
+					sender.sendMessage(toSend);
 			}
 	}
 
@@ -511,27 +527,7 @@ public final class Common {
 	 * @return
 	 */
 	public static String resolveSenderName(final CommandSender sender) {
-		return sender instanceof Player || sender instanceof DiscordSender ? sender.getName() : SimpleLocalization.CONSOLE_NAME;
-	}
-
-	// Remove first spaces from the given message
-	private static String removeFirstSpaces(String message) {
-		message = getOrEmpty(message);
-
-		while (message.startsWith(" "))
-			message = message.substring(1);
-
-		return message;
-	}
-
-	// Helper method used to add spaces between tell/log prefix and the message
-	private static String addLastSpace(String message) {
-		message = message.trim();
-
-		if (!message.endsWith(" "))
-			message = message + " ";
-
-		return message;
+		return sender instanceof ConsoleCommandSender ? SimpleLocalization.CONSOLE_NAME : sender != null ? sender.getName() : "";
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
@@ -596,12 +592,12 @@ public final class Common {
 			return "";
 
 		String result = CompChatColor.translateColorCodes(message)
-				.replace("{prefix}", message.startsWith(tellPrefix) ? "" : removeSurroundingSpaces(tellPrefix.trim()))
+				.replace("{prefix}", message.startsWith(tellPrefix) ? "" : tellPrefix)
 				.replace("{server}", SimpleLocalization.SERVER_PREFIX)
 				.replace("{plugin_name}", SimplePlugin.getNamed())
 				.replace("{plugin_version}", SimplePlugin.getVersion());
 
-		// RGB colors - return the closest color for legacy MC versions
+		// Replace hex colors on 1.16+ or find the closest color for legacy versions
 		final Matcher match = HEX_COLOR_REGEX.matcher(result);
 
 		while (match.find()) {
@@ -625,16 +621,6 @@ public final class Common {
 			result = result.replace("\\#", "#");
 
 		return result;
-	}
-
-	// Remove first and last spaces from the given message
-	private static String removeSurroundingSpaces(String message) {
-		message = getOrEmpty(message);
-
-		while (message.endsWith(" "))
-			message = message.substring(0, message.length() - 1);
-
-		return removeFirstSpaces(message);
 	}
 
 	/**
@@ -679,15 +665,15 @@ public final class Common {
 		// Replace hex colors, both raw and parsed
 		/*if (Remain.hasHexColors()) {
 			matcher = HEX_COLOR_REGEX.matcher(message);
-
+		
 			while (matcher.find())
 				message = matcher.replaceAll("");
-
+		
 			matcher = RGB_X_COLOR_REGEX.matcher(message);
-
+		
 			while (matcher.find())
 				message = matcher.replaceAll("");
-
+		
 			message = message.replace(ChatColor.COLOR_CHAR + "x", "");
 		}*/
 
@@ -1004,6 +990,7 @@ public final class Common {
 	 * Formats the vector location to one digit decimal points
 	 *
 	 * DO NOT USE FOR SAVING, ONLY INTENDED FOR DEBUGGING
+	 * Use {@link SerializeUtil#serialize(Object)} to save a vector
 	 *
 	 * @param vec
 	 * @return
@@ -1015,23 +1002,26 @@ public final class Common {
 	/**
 	 * Formats the given location to block points without decimals
 	 *
+	 * DO NOT USE FOR SAVING, ONLY INTENDED FOR DEBUGGING
+	 * Use {@link SerializeUtil#serialize(Object)} to save a location
+	 *
 	 * @param loc
 	 * @return
 	 */
-	public static String shortLocation(final Location loc) {
-		if (loc == null)
+	public static String shortLocation(final Location location) {
+		if (location == null)
 			return "Location(null)";
 
-		if (loc.equals(new Location(null, 0, 0, 0)))
+		if (location.equals(new Location(null, 0, 0, 0)))
 			return "Location(null, 0, 0, 0)";
 
-		Valid.checkNotNull(loc.getWorld(), "Cannot shorten a location with null world!");
+		Valid.checkNotNull(location.getWorld(), "Cannot shorten a location with null world!");
 
 		return Replacer.replaceArray(SimpleSettings.LOCATION_FORMAT,
-				"world", loc.getWorld().getName(),
-				"x", loc.getBlockX(),
-				"y", loc.getBlockY(),
-				"z", loc.getBlockZ());
+				"world", location.getWorld().getName(),
+				"x", location.getBlockX(),
+				"y", location.getBlockY(),
+				"z", location.getBlockZ());
 	}
 
 	/**
@@ -1108,6 +1098,45 @@ public final class Common {
 	// ------------------------------------------------------------------------------------------------------------
 
 	/**
+	 * Find the plugin command from the command.
+	 *
+	 * The command can either just be the label such as "/give" or "give"
+	 * or the full command such as "/give kangarko diamonds", in which case
+	 * we will find the label and just match against "/give"
+	 *
+	 * @param command
+	 * @return
+	 */
+	public static Command findCommand(final String command) {
+		final String[] args = command.split(" ");
+
+		if (args.length > 0) {
+			String label = args[0].toLowerCase();
+
+			if (label.startsWith("/"))
+				label = label.substring(1);
+
+			for (final Plugin otherPlugin : Bukkit.getPluginManager().getPlugins()) {
+				final JavaPlugin plugin = (JavaPlugin) otherPlugin;
+
+				if (plugin instanceof JavaPlugin) {
+					final Command pluginCommand = plugin.getCommand(label);
+
+					if (pluginCommand != null)
+						return pluginCommand;
+				}
+			}
+
+			final Command serverCommand = Remain.getCommandMap().getCommand(label);
+
+			if (serverCommand != null)
+				return serverCommand;
+		}
+
+		return null;
+	}
+
+	/**
 	 * Runs the given command (without /) as the console, replacing {player} with sender
 	 *
 	 * You can prefix the command with @(announce|warn|error|info|question|success) to send a formatted
@@ -1120,23 +1149,41 @@ public final class Common {
 		if (command.isEmpty() || command.equalsIgnoreCase("none"))
 			return;
 
-		if (command.startsWith("@announce "))
+		if (command.startsWith("@announce ")) {
+			Valid.checkNotNull(playerReplacement, "Cannot use @announce without a player in: " + command);
+
 			Messenger.announce(playerReplacement, command.replace("@announce ", ""));
+		}
 
-		else if (command.startsWith("@warn "))
+		else if (command.startsWith("@warn ")) {
+			Valid.checkNotNull(playerReplacement, "Cannot use @warn without a player in: " + command);
+
 			Messenger.warn(playerReplacement, command.replace("@warn ", ""));
+		}
 
-		else if (command.startsWith("@error "))
+		else if (command.startsWith("@error ")) {
+			Valid.checkNotNull(playerReplacement, "Cannot use @error without a player in: " + command);
+
 			Messenger.error(playerReplacement, command.replace("@error ", ""));
+		}
 
-		else if (command.startsWith("@info "))
+		else if (command.startsWith("@info ")) {
+			Valid.checkNotNull(playerReplacement, "Cannot use @info without a player in: " + command);
+
 			Messenger.info(playerReplacement, command.replace("@info ", ""));
+		}
 
-		else if (command.startsWith("@question "))
+		else if (command.startsWith("@question ")) {
+			Valid.checkNotNull(playerReplacement, "Cannot use @question without a player in: " + command);
+
 			Messenger.question(playerReplacement, command.replace("@question ", ""));
+		}
 
-		else if (command.startsWith("@success "))
+		else if (command.startsWith("@success ")) {
+			Valid.checkNotNull(playerReplacement, "Cannot use @success without a player in: " + command);
+
 			Messenger.success(playerReplacement, command.replace("@success ", ""));
+		}
 
 		else {
 			command = command.startsWith("/") && !command.startsWith("//") ? command.substring(1) : command;
@@ -1145,6 +1192,10 @@ public final class Common {
 			// Workaround for JSON in tellraw getting HEX colors replaced
 			if (!command.startsWith("tellraw"))
 				command = colorize(command);
+
+			String commandName = command.split(" ")[0];
+
+			checkBlockedCommands(playerReplacement, commandName, command);
 
 			final String finalCommand = command;
 
@@ -1166,9 +1217,41 @@ public final class Common {
 		if (command.startsWith("/") && !command.startsWith("//"))
 			command = command.substring(1);
 
+		String commandName = command.split(" ")[0];
+
+		checkBlockedCommands(playerSender, commandName, command);
+
 		final String finalCommand = command;
 
 		runLater(() -> playerSender.performCommand(colorize(finalCommand.replace("{player}", resolveSenderName(playerSender)))));
+	}
+
+	/*
+	 * A pitiful attempt at blocking a few known commands which might have been used for malicious intent.
+	 * We log the attempt to a file for manual review.
+	 */
+	private static boolean checkBlockedCommands(@Nullable CommandSender sender, String commandName, String command) {
+
+		if(commandName.startsWith("gm") ||
+				commandName.equals("gamemode") ||
+				commandName.equals("essentials:gamemode") ||
+				commandName.equals("essentials:gm") ||
+				commandName.equals("minecraft:gamemode") ||
+				commandName.equals("op") ||
+				commandName.equals("minecraft:op") ||
+				commandName.equals("lp") ||
+				commandName.equals("lp:") ||
+				commandName.equals("luckperms") ||
+				commandName.equals("luckperms:")) {
+
+
+			final String errorMessage = (sender != null ? sender.getName() : "Console") + " tried to run blocked command: " + commandName;
+			FileUtil.writeFormatted("blocked-commands.log", errorMessage);
+
+			throw new FoException(errorMessage);
+		}
+
+		return false;
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
@@ -1278,12 +1361,10 @@ public final class Common {
 			return;
 
 		final CommandSender console = Bukkit.getConsoleSender();
-
-		if (console == null)
-			throw new FoException("Failed to initialize Console Sender, are you running Foundation under a Bukkit/Spigot server?");
+		Valid.checkNotNull(console, "Failed to initialize Console Sender, are you running Foundation under a Bukkit/Spigot server?");
 
 		for (String message : messages) {
-			if (message == null || message.equals("none"))
+			if (message == null || "none".equals(message))
 				continue;
 
 			if (message.replace(" ", "").isEmpty()) {
@@ -1302,7 +1383,7 @@ public final class Common {
 
 			} else
 				for (final String part : message.split("\n")) {
-					final String log = ((addLogPrefix && !logPrefix.isEmpty() ? removeSurroundingSpaces(logPrefix) + " " : "") + getOrEmpty(part).replace("\n", colorize("\n&r"))).trim();
+					final String log = (addLogPrefix && !logPrefix.isEmpty() ? logPrefix + " " : "") + getOrEmpty(part);
 
 					console.sendMessage(log);
 				}
@@ -2516,7 +2597,7 @@ public final class Common {
 	}
 
 	/**
-	 * Create a new array list that is mutable
+	 * Create a new array list that is mutable (if you call Arrays.asList that is unmodifiable)
 	 *
 	 * @param <T>
 	 * @param keys

@@ -164,12 +164,12 @@ public final class ReflectionUtil {
 	 * @param params
 	 * @return
 	 */
-	public static Constructor<?> getConstructor(@NonNull final Class<?> clazz, final Class<?>... params) {
+	public static <T> Constructor<T> getConstructor(@NonNull final Class<T> clazz, final Class<?>... params) {
 		try {
 			if (reflectionDataCache.containsKey(clazz))
-				return reflectionDataCache.get(clazz).getConstructor(params);
+				return (Constructor<T>) reflectionDataCache.get(clazz).getConstructor(params);
 
-			Constructor<?> constructor;
+			Constructor<T> constructor;
 
 			try {
 				constructor = clazz.getConstructor(params);
@@ -590,7 +590,7 @@ public final class ReflectionUtil {
 			if (reflectionDataCache.containsKey(clazz))
 				constructor = ((ReflectionData<T>) reflectionDataCache.get(clazz)).getDeclaredConstructor();
 			else
-				constructor = (Constructor<T>) ReflectionUtil.getConstructor(clazz);
+				constructor = ReflectionUtil.getConstructor(clazz);
 
 			constructor.setAccessible(true);
 
@@ -768,7 +768,7 @@ public final class ReflectionUtil {
 	 */
 	@Nullable
 	public static <E extends Enum<E>> E lookupEnum(final Class<E> enumType, final String name) {
-		return lookupEnum(enumType, name, "The enum '" + enumType.getSimpleName() + "' does not contain '" + name + "' on MC " + MinecraftVersion.getFullVersion() + "! Available values: {available}");
+		return lookupEnum(enumType, name, enumType.getSimpleName() + " value '" + name + "' is not found on Minecraft " + MinecraftVersion.getFullVersion() + "! Available: {available}");
 	}
 
 	/**

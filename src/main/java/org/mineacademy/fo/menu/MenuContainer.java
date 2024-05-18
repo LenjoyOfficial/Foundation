@@ -33,12 +33,29 @@ public abstract class MenuContainer extends Menu {
 
 	/**
 	 * Create a new menu that can edit chances of the items you put inside.
+	 */
+	protected MenuContainer() {
+		this(null);
+	}
+
+	/**
+	 * Create a new menu that can edit chances of the items you put inside.
 	 *
 	 * @param parent
-	 * @param startMode
 	 */
 	protected MenuContainer(Menu parent) {
-		super(parent);
+		this(parent, false);
+	}
+
+	/**
+	 * Create a new menu that can edit chances of the items you put inside.
+	 *
+	 * @param parent
+	 * @param returnMakesNewInstance should we re-instatiate the parent menu when
+	 *                               returning to it?
+	 */
+	protected MenuContainer(Menu parent, boolean returnMakesNewInstance) {
+		super(parent, returnMakesNewInstance);
 
 		// Default the size to 3 rows (+ 1 bottom row is added automatically)
 		this.setSize(9 * 3);
@@ -75,7 +92,7 @@ public abstract class MenuContainer extends Menu {
 	@Override
 	public final boolean isActionAllowed(final MenuClickLocation location, final int slot, final ItemStack clicked, final ItemStack cursor, final InventoryAction action) {
 
-		if (location != MenuClickLocation.MENU)
+		if (location != MenuClickLocation.MENU && action != InventoryAction.MOVE_TO_OTHER_INVENTORY)
 			return true;
 
 		if (!this.canEditItem(location, slot, clicked, cursor, action))

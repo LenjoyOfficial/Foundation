@@ -30,7 +30,6 @@ import org.bukkit.event.Event;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.Messenger;
-import org.mineacademy.fo.BungeeUtil;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.MinecraftVersion;
@@ -47,7 +46,6 @@ import org.mineacademy.fo.event.SimpleListener;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.menu.Menu;
 import org.mineacademy.fo.menu.MenuListener;
-import org.mineacademy.fo.menu.tool.Tool;
 import org.mineacademy.fo.menu.tool.ToolsListener;
 import org.mineacademy.fo.metrics.Metrics;
 import org.mineacademy.fo.model.DiscordListener;
@@ -56,6 +54,7 @@ import org.mineacademy.fo.model.HookManager;
 import org.mineacademy.fo.model.SimpleHologram;
 import org.mineacademy.fo.model.SimpleScoreboard;
 import org.mineacademy.fo.model.SpigotUpdater;
+import org.mineacademy.fo.region.DiskRegion;
 import org.mineacademy.fo.remain.CompMetadata;
 import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.settings.FileConfig;
@@ -309,6 +308,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			if (CompMetadata.isLegacy() && CompMetadata.ENABLE_LEGACY_FILE_STORAGE)
 				this.registerEvents(CompMetadata.MetadataFile.getInstance());
 
+			if (this.areRegionsEnabled())
+				DiskRegion.loadRegions();
+
 			this.onReloadablesStart();
 
 			this.startingReloadables = false;
@@ -394,18 +396,10 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			}
 
 			// Load normally
-			if (!libraries.isEmpty() && javaVersion >= 9)
-				Common.logFramed(
-						"Warning: Unsupported Java version: " + javaVersion + " for your server",
-						"version! Minecraft " + MinecraftVersion.getFullVersion() + " was designed for Java 8",
-						"and we're unable unable to load 'legacy-libraries'",
-						"that this plugin uses:",
-						Common.join(libraries, ", ", Library::getGroupId),
-						"",
-						"To fix this, start your server using Java 8 or",
-						"upgrade to Minecraft 1.16 or greater.");
+			if (!libraries.isEmpty() && javaVersion >= 9) {
+				// Unsupported > upstream should shade libraries manually
 
-			else
+			} else
 				for (final Library library : libraries)
 					library.load();
 		}
@@ -482,10 +476,10 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	protected final void registerBungeeCord(@NonNull BungeeListener bungee) {
 		/*final String channelName = bungee.getChannel();
 		final Messenger messenger = this.getServer().getMessenger();
-
+		
 		if (!messenger.isIncomingChannelRegistered(this, channelName))
 			messenger.registerIncomingPluginChannel(this, channelName, BungeeListener.BungeeListenerImpl.getInstance());
-
+		
 		if (!messenger.isOutgoingChannelRegistered(this, channelName))
 			messenger.registerOutgoingPluginChannel(this, channelName);*/
 
@@ -702,6 +696,16 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			t.printStackTrace();
 		}
 
+		if (this.areRegionsEnabled())
+			for (final DiskRegion region : DiskRegion.getRegions())
+				try {
+					region.save();
+				} catch (final Throwable t) {
+					Common.log("Error saving region " + region.getName() + "...");
+
+					t.printStackTrace();
+				}
+
 		Objects.requireNonNull(instance, "Instance of " + this.getDataFolder().getName() + " already nulled!");
 		instance = null;
 	}
@@ -759,11 +763,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		final String oldLogPrefix = Common.getLogPrefix();
 		Common.setLogPrefix("");
 
-		Common.log(Common.consoleLineSmooth());
-		Common.log(" ");
-		Common.log("Reloading plugin " + this.getDataFolder().getName() + " v" + getVersion());
-		Common.log(" ");
-
 		reloading = true;
 
 		try {
@@ -808,6 +807,9 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 			Lang.reloadLang();
 			Lang.loadPrefixes();
 
+			if (this.areRegionsEnabled())
+				DiskRegion.loadRegions();
+
 			this.onReloadablesStart();
 
 			this.startingReloadables = false;
@@ -817,8 +819,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 				this.reloadables.registerEvents(DiscordListener.DiscordListenerImpl.getInstance());
 			}
-
-			Common.log(Common.consoleLineSmooth());
 
 		} catch (final Throwable t) {
 			Common.throwError(t, "Error reloading " + this.getDataFolder().getName() + " " + getVersion());
@@ -832,8 +832,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 
 	private void registerInitBungee(String channelName) {
 		final Messenger messenger = this.getServer().getMessenger();
-
-		System.out.println("Registering initial bungee for channel: " + channelName);
 
 		// Always make the main channel available
 		if (!messenger.isIncomingChannelRegistered(this, channelName))
@@ -1217,6 +1215,16 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	 */
 	public boolean areToolsEnabled() {
 		return true;
+	}
+
+	/**
+	 * Should we enable the region system? Loads {@link DiskRegion#loadRegions()}
+	 * You still need to register the subcommand {@link RegionCommand} manually.
+	 *
+	 * @return
+	 */
+	public boolean areRegionsEnabled() {
+		return false;
 	}
 
 	/**

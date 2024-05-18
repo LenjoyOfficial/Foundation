@@ -34,8 +34,6 @@ import org.mineacademy.fo.SerializeUtil.Mode;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictList;
-import org.mineacademy.fo.command.SimpleCommand;
-import org.mineacademy.fo.command.SimpleCommandGroup;
 import org.mineacademy.fo.exception.EventHandledException;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.menu.model.ItemCreator;
@@ -47,6 +45,7 @@ import org.mineacademy.fo.model.SimpleProgressBar;
 import org.mineacademy.fo.model.SimpleSound;
 import org.mineacademy.fo.model.SimpleTime;
 import org.mineacademy.fo.model.Tuple;
+import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.settings.model.SimpleDisplay;
@@ -1598,7 +1597,10 @@ public abstract class FileConfig {
 	 * @param values
 	 */
 	public final void setHeader(String... values) {
-		this.header = values == null ? null : String.join("\n", values);
+		this.header = values == null ? null
+				: String.join("\n", values)
+						.replace("{plugin}", SimplePlugin.getNamed())
+						.replace("{label}", !SimpleSettings.MAIN_COMMAND_ALIASES.isEmpty() ? SimpleSettings.MAIN_COMMAND_ALIASES.first() : "");
 	}
 
 	/**

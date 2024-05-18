@@ -1,12 +1,30 @@
 package org.mineacademy.fo.remain;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.annotation.Nullable;
+
 import org.bukkit.potion.PotionEffectType;
+import org.mineacademy.fo.Common;
+import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.ReflectionUtil;
 
 /**
  * Wrapper for 1.20.5 naming changes in PotionEffectType
  */
 public final class CompPotionEffectType {
+
+	/*
+	 * Store all items by name
+	 */
+	private static final Map<String, PotionEffectType> byName = new HashMap<>();
+
+	/*
+	 * Holds the formatted name for each potion i.e. "Mining Fatigue" for SLOW_DIGGING etc.
+	 */
+	private static final Map<PotionEffectType, String> loreName = new HashMap<>();
 
 	/**
 	 * Increases movement speed.
@@ -178,23 +196,72 @@ public final class CompPotionEffectType {
 	 */
 	public static final PotionEffectType DARKNESS = find("DARKNESS", "DARKNESS");
 
+	/**
+	 * Get the potion by name
+	 *
+	 * @param name
+	 * @return
+	 */
+	@Nullable
+	public static PotionEffectType getByName(String name) {
+		return byName.get(name.toUpperCase());
+	}
+
+	/**
+	 * Return all available potion effect types
+	 *
+	 * @return
+	 */
+	public static Collection<PotionEffectType> getPotions() {
+		return byName.values();
+	}
+
+	/**
+	 * Return the name as it appears on the item lore
+	 *
+	 * @param type
+	 * @return
+	 */
+	@Nullable
+	public static String getLoreName(PotionEffectType type) {
+		return loreName.get(type);
+	}
+
+	/**
+	 * Return all available potion effect types
+	 *
+	 * @return
+	 */
+	public static Collection<String> getPotionNames() {
+		return Common.convert(getPotions(), ench -> ench.getName());
+	}
+
 	/*
 	 * Get the potion effect type by its name
 	 */
 	private static PotionEffectType find(String legacyName, String modernName) {
+		PotionEffectType type = null;
 
 		try {
-			return ReflectionUtil.getStaticFieldContent(PotionEffectType.class, modernName);
+			type = ReflectionUtil.getStaticFieldContent(PotionEffectType.class, modernName);
 
 		} catch (final Throwable t) {
 			try {
-				return ReflectionUtil.getStaticFieldContent(PotionEffectType.class, legacyName);
+				type = ReflectionUtil.getStaticFieldContent(PotionEffectType.class, legacyName);
 
-			} catch (Throwable tt) {
-				// Unavailable for this MC version
-				return null;
+			} catch (final Throwable tt) {
 			}
 		}
+
+		if (type != null) {
+			byName.put(legacyName, type);
+			byName.put(modernName, type);
+			byName.put(type.getName(), type);
+
+			loreName.put(type, ItemUtil.bountifyCapitalized(modernName));
+		}
+
+		return type;
 	}
 
 }

@@ -6,6 +6,7 @@ import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Particle.DustOptions;
+import org.bukkit.Vibration;
 import org.bukkit.entity.Player;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
@@ -62,6 +63,7 @@ public enum CompParticle {
 	BLOCK_CRACK("blockcrack_", "BLOCK_CRACK", "BLOCK"),
 	BLOCK_DUST("blockdust_", "BLOCK_DUST", "BLOCK"),
 	WATER_DROP("droplet", "WATER_DROP", "RAIN"),
+	FOOTSTEP("footstep", "FOOTSTEP", "FOOTSTEP"),
 
 	/**
 	 * @deprecated removed in 1.20.5

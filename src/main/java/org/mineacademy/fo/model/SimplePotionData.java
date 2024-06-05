@@ -1,8 +1,14 @@
 package org.mineacademy.fo.model;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+import com.google.common.collect.Maps;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.potion.Potion;
 import org.bukkit.potion.PotionType;
+import org.mineacademy.fo.Common;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.Valid;
@@ -17,6 +23,26 @@ import lombok.NonNull;
  */
 @Getter
 public final class SimplePotionData {
+
+	// Legacy
+	private static final int EXTENDED_BIT = 64;
+	private static final int POTION_BIT = 15;
+	private static final int SPLASH_BIT = 16384;
+	private static final int TIER_BIT = 32;
+	private static final int TIER_SHIFT = 5;
+	private static final int NAME_BIT = 63;
+
+	private static final Map<String, String> FIX_LONG_STRONG_POTIONS = new HashMap<String, String>() {{
+		put("LONG_SPEED", "LONG_SWIFTNESS");
+		put("STRONG_SPEED", "STRONG_SWIFTNESS");
+		put("LONG_REGEN", "LONG_REGENERATION");
+		put("STRONG_REGEN", "STRONG_REGENERATION");
+		put("LONG_JUMP", "LONG_LEAPING");
+		put("STRONG_JUMP", "STRONG_LEAPING");
+		put("STRONG_INSTANT_HEAL", "STRONG_HEALING");
+		put("STRONG_INSTANT_DAMAGE", "STRONG_HARMING");
+	}};
+
 	/**
 	 * The type of the potion
 	 */
@@ -72,16 +98,43 @@ public final class SimplePotionData {
 				CompMaterial.SPLASH_POTION.setType(item);
 
 			final org.bukkit.inventory.meta.PotionMeta potionMeta = (org.bukkit.inventory.meta.PotionMeta) meta;
-			final org.bukkit.potion.PotionData data = new org.bukkit.potion.PotionData(type, extended, upgraded);
 
-			potionMeta.setBasePotionData(data);
+			// Extended and upgraded PotionTypes are separated now
+			if (MinecraftVersion.atLeast(V.v1_20)) {
+				String string = (upgraded ? "STRONG_" : extended ? "LONG_" : "") + type;
+
+				string = FIX_LONG_STRONG_POTIONS.getOrDefault(string, string);
+				potionMeta.setBasePotionType(PotionType.valueOf(string));
+
+			} else {
+				final org.bukkit.potion.PotionData data = new org.bukkit.potion.PotionData(type, extended, upgraded);
+				potionMeta.setBasePotionData(data);
+			}
 
 			item.setItemMeta(potionMeta);
 
 		} else {
-			final Potion data = new Potion(type, upgraded ? 2 : 1, splash, extended);
+			short damage;
+			final int level = upgraded ? 2 : 1;
 
-			data.apply(item);
+			if (this.type == PotionType.WATER) {
+				damage = 0;
+
+			} else {
+				damage = (short) (level - 1);
+				damage = (short)(damage << 5);
+				damage |= (short) (this.type.ordinal() > 6 ? this.type.ordinal() + 1 : this.type.ordinal()); // potion damage value
+
+				if (this.splash) {
+					damage = (short)(damage | SPLASH_BIT);
+				}
+
+				if (this.extended) {
+					damage = (short)(damage | EXTENDED_BIT);
+				}
+			}
+
+			item.setDurability(damage);
 		}
 	}
 
@@ -95,9 +148,8 @@ public final class SimplePotionData {
 		if (item == null)
 			return null;
 
-		final boolean splash;
-
 		final PotionType type;
+		final boolean splash;
 		final boolean extended;
 		final boolean upgraded;
 
@@ -108,20 +160,39 @@ public final class SimplePotionData {
 			Valid.checkBoolean(meta instanceof org.bukkit.inventory.meta.PotionMeta, "Can only apply potion for items with PotionMeta not: " + meta);
 
 			final org.bukkit.inventory.meta.PotionMeta potionMeta = (org.bukkit.inventory.meta.PotionMeta) meta;
-			final org.bukkit.potion.PotionData potionData = potionMeta.getBasePotionData();
-
 			splash = CompMaterial.fromItem(item) == CompMaterial.SPLASH_POTION;
-			type = potionData.getType();
-			extended = potionData.isExtended();
-			upgraded = potionData.isUpgraded();
+
+			// Extended and upgraded PotionTypes are separated now
+			if (MinecraftVersion.atLeast(V.v1_20)) {
+				type = potionMeta.getBasePotionType();
+				final String string = type.toString();
+
+				extended = string.startsWith("LONG_");
+				upgraded = string.startsWith("STRONG_");
+
+			} else {
+				final org.bukkit.potion.PotionData potionData = potionMeta.getBasePotionData();
+
+				type = potionData.getType();
+				extended = potionData.isExtended();
+				upgraded = potionData.isUpgraded();
+			}
 
 		} else {
-			final Potion potionData = Potion.fromItemStack(item);
+			final int damage = item.getDurability();
+			final int ordinal = (damage & POTION_BIT) > 6 ? (damage & POTION_BIT) - 1 : damage & POTION_BIT;
+			boolean upgr = false;
 
-			splash = potionData.isSplash();
-			type = potionData.getType();
-			extended = potionData.hasExtendedDuration();
-			upgraded = potionData.getLevel() == 2;
+			type = PotionType.values()[ordinal];
+			splash = (damage & SPLASH_BIT) > 0;
+
+			if (type != null && type != PotionType.WATER) {
+				final int level = ((damage & TIER_BIT) >> TIER_SHIFT) + 1;
+				upgr = level > 1;
+			}
+
+			upgraded = upgr;
+			extended = (type == null || !type.isInstant()) && (damage & EXTENDED_BIT) > 0;
 		}
 
 		return new SimplePotionData(type, splash, extended, upgraded);

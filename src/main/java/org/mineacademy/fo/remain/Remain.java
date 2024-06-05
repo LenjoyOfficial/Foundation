@@ -49,6 +49,7 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.SimpleCommandMap;
+import org.bukkit.configuration.MemorySection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.conversations.ConversationContext;
 import org.bukkit.enchantments.Enchantment;
@@ -75,6 +76,7 @@ import org.bukkit.potion.PotionType;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.EntityUtil;
 import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.MathUtil;
@@ -93,6 +95,8 @@ import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.internal.BossBarInternals;
 import org.mineacademy.fo.remain.internal.ChatInternals;
 import org.mineacademy.fo.remain.nbt.NBTEntity;
+
+import lombok.Getter;
 
 import static org.mineacademy.fo.ReflectionUtil.*;
 
@@ -408,8 +412,8 @@ public final class Remain {
 			fieldPlayerConnection = getNMSClass("EntityPlayer", "net.minecraft.server.level.EntityPlayer")
 					.getField(MinecraftVersion.atLeast(V.v1_20) ? "c" : MinecraftVersion.atLeast(V.v1_17) ? "b" : atLeast1_4 ? "playerConnection" : "netServerHandler");
 
-			sendPacket = getNMSClass(atLeast1_4 ? "PlayerConnection" : "NetServerHandler", "net.minecraft.server.network.PlayerConnection")
-					.getMethod(MinecraftVersion.atLeast(V.v1_18) ? "a" : "sendPacket", getNMSClass("Packet", "net.minecraft.network.protocol.Packet"));
+			sendPacket = getNMSClass(atLeast1_4 ? "PlayerConnection" : "NetServerHandler", MinecraftVersion.atLeast(V.v1_20) ? "net.minecraft.server.network.ServerCommonPacketListenerImpl" : "net.minecraft.server.network.PlayerConnection")
+					.getMethod(MinecraftVersion.atLeast(V.v1_20) ? "b" : MinecraftVersion.atLeast(V.v1_18) ? "a" : "sendPacket", getNMSClass("Packet", "net.minecraft.network.protocol.Packet"));
 
 			if (MinecraftVersion.olderThan(V.v1_12))
 				try {

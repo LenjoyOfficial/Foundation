@@ -2,6 +2,7 @@ package org.mineacademy.fo.model;
 
 import static org.mineacademy.fo.ReflectionUtil.*;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,6 +50,10 @@ public class PacketScoreboard {
 	private static final Class<?> DISPLAY_OBJECTIVE_PACKET;
 	private static final Class<?> SCORE_PACKET;
 	private static final Class<?> TEAM_PACKET;
+	// 1.20
+	private static final Object DISPLAY_SLOT_SIDEBAR;
+	private static final Constructor<?> SCORE_PACKET_CONSTRUCTOR;
+	private static final Constructor<?> RESET_SCORE_PACKET;
 
 	// 1.17 team packet
 	private static Class<?> TEAM_PARAMETERS;
@@ -76,11 +81,17 @@ public class PacketScoreboard {
 		ALLOCATE_INSTANCE = getMethod(unsafe, "allocateInstance", Class.class);
 
 		final boolean atLeast1_17 = MinecraftVersion.atLeast(V.v1_17);
+		final boolean atLeast1_20 = MinecraftVersion.atLeast(V.v1_20);
 
 		OBJECTIVE_PACKET = getNMSClass("PacketPlayOutScoreboardObjective", "net.minecraft.network.protocol.game.PacketPlayOutScoreboardObjective");
 		DISPLAY_OBJECTIVE_PACKET = getNMSClass("PacketPlayOutScoreboardDisplayObjective", "net.minecraft.network.protocol.game.PacketPlayOutScoreboardDisplayObjective");
-
 		SCORE_PACKET = getNMSClass("PacketPlayOutScoreboardScore", "net.minecraft.network.protocol.game.PacketPlayOutScoreboardScore");
+
+		DISPLAY_SLOT_SIDEBAR = atLeast1_20 ? lookupEnumSilent(lookupClass("net.minecraft.world.scores.DisplaySlot").asSubclass(Enum.class), "SIDEBAR") : null;
+
+		final Class<Object> numberFormat = atLeast1_20 ? lookupClass("net.minecraft.network.chat.numbers.NumberFormat") : null;
+		SCORE_PACKET_CONSTRUCTOR = atLeast1_20 ? getConstructor(SCORE_PACKET, String.class, String.class, int.class, CHAT_COMPONENT_CLASS, numberFormat) : null;
+		RESET_SCORE_PACKET = atLeast1_20 ? getConstructor("net.minecraft.network.protocol.game.ClientboundResetScorePacket", String.class, String.class) : null;
 
 		// 1.13 moved ScoreAction to ScoreboardServer from the packet class
 		SCORE_ACTION_ENUM = MinecraftVersion.atLeast(MinecraftVersion.V.v1_13) ?
@@ -486,8 +497,10 @@ public class PacketScoreboard {
 			// If creating the objective, send a display packet to show the scoreboard to the player
 			if (mode == 0) {
 				final Object displayPacket = newInstance(DISPLAY_OBJECTIVE_PACKET);
+				final Class<?> slotClass = MinecraftVersion.atLeast(V.v1_20) ? DISPLAY_SLOT_SIDEBAR.getClass() : int.class;
+				final Object sidebarSlot = MinecraftVersion.atLeast(V.v1_20) ? DISPLAY_SLOT_SIDEBAR : 1;
 
-				setDeclaredField(displayPacket, int.class, 0, 1);
+				setDeclaredField(displayPacket, slotClass, 0, sidebarSlot);
 				setDeclaredField(displayPacket, String.class, 0, objectiveID);
 
 				Remain.sendPacket(viewer, displayPacket);
@@ -502,6 +515,17 @@ public class PacketScoreboard {
 		 * @param size
 		 */
 		private void updateScore(final int index, final ScoreAction action, final int size) {
+			// Score packet is a record and reset packet exists now
+			if (MinecraftVersion.atLeast(V.v1_20)) {
+				if (action == ScoreAction.REMOVE) {
+					Remain.sendPacket(viewer, instantiate(RESET_SCORE_PACKET, CHAT_COLORS[index], objectiveID));
+					return;
+				}
+
+				Remain.sendPacket(viewer, instantiate(SCORE_PACKET_CONSTRUCTOR, CHAT_COLORS[index], objectiveID, size - 1 - index, null, null));
+				return;
+			}
+
 			final Object packet = newInstance(SCORE_PACKET);
 
 			setDeclaredField(packet, String.class, 0, CHAT_COLORS[index]);

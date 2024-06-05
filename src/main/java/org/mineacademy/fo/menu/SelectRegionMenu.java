@@ -46,10 +46,10 @@ public class SelectRegionMenu extends MenuPagged<String> {
 	}
 
 	/**
-	 * @see org.mineacademy.fo.menu.MenuPagged#onPostDisplay(org.mineacademy.fo.menu.model.InventoryDrawer)
+	 * @see org.mineacademy.fo.menu.Menu#onPostDisplay(Player)
 	 */
 	@Override
-	protected void onPostDisplay(InventoryDrawer drawer) {
+	protected void onPostDisplay(Player viewer) {
 		this.colorMask = 0;
 	}
 

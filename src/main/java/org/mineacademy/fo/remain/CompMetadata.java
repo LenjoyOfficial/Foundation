@@ -28,7 +28,6 @@ import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.SerializeUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
-import org.mineacademy.fo.constants.FoConstants;
 import org.mineacademy.fo.model.ConfigSerializable;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.nbt.NBT;
@@ -306,16 +305,25 @@ public final class CompMetadata {
 		return !hasPersistentMetadata;
 	}
 
+	/*
+	 * Helper method to get a tag from a raw string
+	 */
 	private static String getTag(final String raw, final String key) {
 		final String[] parts = raw.split(DELIMITER);
 
 		return parts.length == 3 && parts[0].equals(SimplePlugin.getNamed()) && parts[1].equals(key) ? parts[2] : null;
 	}
 
+	/*
+	 * Helper method to format a tag
+	 */
 	private static String formatTag(final String key, final String value) {
 		return SimplePlugin.getNamed() + DELIMITER + key + DELIMITER + value;
 	}
 
+	/*
+	 * Returns persistent metadata with our plugin assigned as namedspaced key for MC 1.14+
+	 */
 	private static String getPersistentMetadata(final Object entity, final String key) {
 		Valid.checkBoolean(entity instanceof PersistentDataHolder, "Can only use CompMetadata#setMetadata(" + key + ") for persistent data holders, got " + entity.getClass());
 		final PersistentDataContainer data = ((PersistentDataHolder) entity).getPersistentDataContainer(); // Prevents no class def error on legacy MC
@@ -323,6 +331,9 @@ public final class CompMetadata {
 		return Common.getOrNull(data.get(new NamespacedKey(SimplePlugin.getInstance(), key), PersistentDataType.STRING));
 	}
 
+	/*
+	 * Sets persistent metadata with our plugin assigned as namedspaced key for MC 1.14+
+	 */
 	private static void setPersistentMetadata(final Object entity, final String key, final String value) {
 		Valid.checkBoolean(entity instanceof PersistentDataHolder, "Can only use CompMetadata#setMetadata(" + key + ") for persistent data holders, got " + entity.getClass());
 
@@ -354,12 +365,28 @@ public final class CompMetadata {
 		 */
 		private final Map<Location, BlockCache> blockMetadata = new HashMap<>();
 
+		private boolean loaded = false;
+
 		private MetadataFile() {
 			if (!hasPersistentMetadata && ENABLE_LEGACY_FILE_STORAGE) {
 				this.setPathPrefix("Metadata");
 				this.setSaveEmptyValues(false);
 
-				this.loadConfiguration(NO_DEFAULT, FoConstants.File.DATA);
+				this.setHeader(
+						"-------------------------------------------------------------------------------------------------",
+						"This file is used to store metadata for entities and blocks in Minecraft versions below 1.14.",
+						"If you delete this file or upgrade to Minecraft 1.14+, all metadata will be lost.",
+						"",
+						"THIS FILE IS MACHINE GENERATED. DO NOT EDIT",
+						"-------------------------------------------------------------------------------------------------");
+			}
+		}
+
+		private void loadIfHasnt() {
+			if (!this.loaded) {
+				this.loadConfiguration(NO_DEFAULT, "legacy-metadata.yml");
+
+				this.loaded = true;
 			}
 		}
 
@@ -392,7 +419,8 @@ public final class CompMetadata {
 			final UUID uniqueId = entity.getUniqueId();
 
 			this.entityMetadata.remove(uniqueId);
-			this.save();
+
+			//this.save(); -> handled in onPluginStop()
 		}
 
 		private void loadEntities() {
@@ -431,6 +459,8 @@ public final class CompMetadata {
 		}
 
 		protected String getMetadata(final Entity entity, @NonNull final String key) {
+			this.loadIfHasnt();
+
 			final UUID uniqueId = entity.getUniqueId();
 			final Set<String> metadata = this.entityMetadata.getOrDefault(uniqueId, new HashSet<>());
 
@@ -446,6 +476,8 @@ public final class CompMetadata {
 		}
 
 		protected void setMetadata(final Entity entity, @NonNull final String key, final String value) {
+			this.loadIfHasnt();
+
 			final UUID uniqueId = entity.getUniqueId();
 			final Set<String> metadata = this.entityMetadata.getOrDefault(uniqueId, new HashSet<>());
 			final boolean remove = value == null || "".equals(value);
@@ -468,10 +500,12 @@ public final class CompMetadata {
 			if (metadata.isEmpty())
 				this.entityMetadata.remove(uniqueId);
 
-			this.save("Entity", this.entityMetadata);
+			//this.save("Entity", this.entityMetadata); -> handled in onPluginStop()
 		}
 
 		protected String getMetadata(final BlockState entity, @NonNull final String key) {
+			this.loadIfHasnt();
+
 			final Location location = entity.getLocation();
 			final BlockCache blockCache = this.blockMetadata.get(location);
 
@@ -496,6 +530,8 @@ public final class CompMetadata {
 		}
 
 		protected void setMetadata(final BlockState entity, final String key, final String value) {
+			this.loadIfHasnt();
+
 			final Location location = entity.getLocation();
 			BlockCache blockCache = this.blockMetadata.get(location);
 			final boolean remove = value == null || "".equals(value);
@@ -522,7 +558,7 @@ public final class CompMetadata {
 			if (blockCache != null && blockCache.getMetadata().isEmpty())
 				this.blockMetadata.remove(location);
 
-			this.save("Block", this.blockMetadata);
+			//this.save("Block", this.blockMetadata); -> handled in onPluginStop()
 		}
 
 		@Getter

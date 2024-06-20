@@ -280,14 +280,13 @@ public final class Remain {
 	 * Initialize all fields and methods automatically when we set the plugin
 	 */
 	static {
-		final String version = Bukkit.getVersion();
 		final boolean atLeast1_4 = MinecraftVersion.atLeast(V.v1_4);
 
 		try {
 			Class.forName("net.md_5.bungee.chat.ComponentSerializer");
 
 		} catch (final Throwable ex) {
-			throw new FoException("&cYour server &f" + Bukkit.getBukkitVersion().replace("-SNAPSHOT", "") + "&c doesn't\n" +
+			throw new FoException("&cYour server &f" + Bukkit.getVersion().replace("-SNAPSHOT", "") + "&c doesn't\n" +
 					" &cinclude &elibraries required&c for " + SimplePlugin.getNamed() + " to\n" +
 					" &crun. Install BungeeChatAPI from:\n" +
 					" &fhttps://mineacademy.org/plugins#misc");
@@ -300,7 +299,7 @@ public final class Remain {
 		} catch (final Throwable e) {
 		}
 
-		isFolia = version.contains("Folia") || version.contains("Kaiiju");
+		isFolia = ReflectionUtil.isClassAvailable("io.papermc.paper.threadedregions.RegionizedServer");
 
 		try {
 			Class.forName("thermos.ThermosRemapper");
@@ -477,6 +476,26 @@ public final class Remain {
 		}
 
 		return nms_entity;
+	}
+
+	/**
+	 * Get the server handle
+	 *
+	 * @return
+	 */
+	public static Object getHandleServer() {
+		Object nms_server = null;
+
+		final org.bukkit.Server server = Bukkit.getServer();
+		final Method handle = ReflectionUtil.getMethod(server.getClass(), "getServer");
+
+		try {
+			nms_server = handle.invoke(server);
+		} catch (final ReflectiveOperationException e) {
+			e.printStackTrace();
+		}
+
+		return nms_server;
 	}
 
 	/**
@@ -947,17 +966,36 @@ public final class Remain {
 			final Class<?> craftItemstack = getOBCClass("inventory.CraftItemStack");
 			final Method asNMSCopyMethod = getMethod(craftItemstack, "asNMSCopy", ItemStack.class);
 
+			Valid.checkNotNull(asNMSCopyMethod, "Unable to find " + craftItemstack + "#asNMSCopy() method for server version " + Bukkit.getBukkitVersion());
+
 			// NMS Method to serialize a net.minecraft.server.ItemStack to a valid Json string
-			final Class<?> nmsItemStack = getNMSClass("ItemStack", "net.minecraft.world.item.ItemStack");
-			final Class<?> nbtTagCompound = getNMSClass("NBTTagCompound", "net.minecraft.nbt.NBTTagCompound");
-			final Method saveItemstackMethod = getMethod(nmsItemStack, MinecraftVersion.atLeast(V.v1_18) ? "b" : "save", nbtTagCompound);
+			final Class<?> nmsItemStack = ReflectionUtil.getNMSClass("ItemStack", "net.minecraft.world.item.ItemStack");
+			final Object nmsItemStackObj = ReflectionUtil.invoke(asNMSCopyMethod, null, item);
 
-			final Object nmsNbtTagCompoundObj = instantiate(nbtTagCompound);
-			final Object nmsItemStackObj = invoke(asNMSCopyMethod, null, item);
-			final Object itemAsJsonObject = invoke(saveItemstackMethod, nmsItemStackObj, nmsNbtTagCompoundObj);
+			if (MinecraftVersion.newerThan(V.v1_20) || (MinecraftVersion.atLeast(V.v1_20) && MinecraftVersion.getSubversion() > 4)) {
+				if (Remain.isPaper()) {
+					final Class<?> providerClass = ReflectionUtil.lookupClass("net.minecraft.core.HolderLookup$Provider");
+					final Method saveMethod = ReflectionUtil.getMethod(nmsItemStack, "saveOptional", providerClass);
 
-			// Return a string representation of the serialized object
-			return itemAsJsonObject.toString();
+					final Object registryAccess = ReflectionUtil.invoke("registryAccess", Remain.getHandleServer());
+					final Object compoundTag = ReflectionUtil.invoke(saveMethod, nmsItemStackObj, registryAccess);
+
+					return compoundTag.toString();
+				} else
+					// Spigot has different mappings so we just give up and render the base item
+					return "{Count:" + item.getAmount() + "b,id:\"" + item.getType().getKey().toString() + "\"}";
+
+			} else {
+				final Class<?> nbtTagCompound = ReflectionUtil.getNMSClass("NBTTagCompound", "net.minecraft.nbt.NBTTagCompound");
+				final Method saveItemstackMethod = ReflectionUtil.getMethod(nmsItemStack, MinecraftVersion.equals(V.v1_18) || MinecraftVersion.equals(V.v1_19) || (MinecraftVersion.equals(V.v1_20) && MinecraftVersion.getSubversion() < 5) ? "b" : "save", nbtTagCompound);
+
+				Valid.checkNotNull(saveItemstackMethod, "Unable to find " + nmsItemStack + "#save() method for server version " + Bukkit.getBukkitVersion());
+
+				final Object nmsNbtTagCompoundObj = ReflectionUtil.instantiate(nbtTagCompound);
+				final Object itemAsJsonObject = ReflectionUtil.invoke(saveItemstackMethod, nmsItemStackObj, nmsNbtTagCompoundObj);
+
+				return itemAsJsonObject.toString();
+			}
 		}
 
 		return item.getType().toString();

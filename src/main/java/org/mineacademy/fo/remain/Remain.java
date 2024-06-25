@@ -63,10 +63,10 @@ import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.Plugin;
@@ -1637,9 +1637,17 @@ public final class Remain {
 	@Deprecated
 	public static void updateInventoryTitle(final Player player, String title) {
 		try {
-			player.getOpenInventory().setTitle(Common.colorize(title));
+			final Object view = ReflectionUtil.invoke("getOpenInventory", player);
+			final Method setTitle = ReflectionUtil.getMethod(view.getClass(), "setTitle", String.class);
+
+			if (setTitle == null)
+				throw new NoSuchMethodError();
+
+			ReflectionUtil.invoke(setTitle, view, Common.colorize(title));
 
 		} catch (final NoSuchMethodError err) {
+
+			final Inventory topInventory = Remain.getTopInventoryFromOpenInventory(player);
 
 			try {
 				final Class<?> packetOpenWindowClass = getNMSClass(MinecraftVersion.atLeast(V.v1_7) ? "PacketPlayOutOpenWindow" : "Packet100OpenWindow",
@@ -1650,7 +1658,7 @@ public final class Remain {
 					final Object chatComponent = toIChatBaseComponentPlain(ChatColor.translateAlternateColorCodes('&', title));
 
 					final Class<?> containersClass = getNMSClass("Containers", "net.minecraft.world.inventory.Containers");
-					final int inventorySize = player.getOpenInventory().getTopInventory().getSize() / 9;
+					final int inventorySize = topInventory.getSize() / 9;
 
 					if (!Valid.isInRange(inventorySize, 1, 6))
 						throw new FoException("Cannot generate NMS container class to update inventory of size " + inventorySize);
@@ -1689,23 +1697,23 @@ public final class Remain {
 
 					if (MinecraftVersion.newerThan(V.v1_13)) {
 						final Class<?> containersClass = getNMSClass("Containers", "net.minecraft.world.inventory.Containers");
-						final int inventorySize = player.getOpenInventory().getTopInventory().getSize() / 9;
+						final int inventorySize = topInventory.getSize() / 9;
 
-							if (inventorySize < 1 || inventorySize > 6) {
-								Common.log("Cannot update title for " + player.getName() + " as their inventory has non typical size: " + inventorySize + " rows");
+						if (inventorySize < 1 || inventorySize > 6) {
+							Common.log("Cannot update title for " + player.getName() + " as their inventory has non typical size: " + inventorySize + " rows");
 
-							return;
+						return;
 						}
 						final Constructor<?> packetConst = packetOpenWindowClass.getConstructor(
 								int.class, //windowID
 								containersClass, //containers
 								CHAT_COMPONENT_CLASS); //msg
 
-							final String containerName = "GENERIC_9X" + inventorySize;
+						final String containerName = "GENERIC_9X" + inventorySize;
 
-							final Object container = containersClass.getField(containerName).get(null);
+						final Object container = containersClass.getField(containerName).get(null);
 
-							packetOpenWindow = packetConst.newInstance(windowId, container, chatMessage);
+						packetOpenWindow = packetConst.newInstance(windowId, container, chatMessage);
 
 					} else {
 						final Constructor<?> packetConst = packetOpenWindowClass.getConstructor(
@@ -1714,7 +1722,7 @@ public final class Remain {
 								CHAT_COMPONENT_CLASS,
 								int.class);
 
-						packetOpenWindow = packetConst.newInstance(windowId, "minecraft:chest", chatMessage, player.getOpenInventory().getTopInventory().getSize());
+						packetOpenWindow = packetConst.newInstance(windowId, "minecraft:chest", chatMessage, topInventory.getSize());
 					}
 				} else {
 					final Constructor<?> openWindow = packetOpenWindowClass.getConstructor(
@@ -1724,7 +1732,7 @@ public final class Remain {
 							int.class,
 							boolean.class);
 
-					packetOpenWindow = instantiate(openWindow, windowId, 0, ChatColor.translateAlternateColorCodes('&', title), player.getOpenInventory().getTopInventory().getSize(), true);
+					packetOpenWindow = instantiate(openWindow, windowId, 0, ChatColor.translateAlternateColorCodes('&', title), topInventory.getSize(), true);
 				}
 
 				sendPacket(player, packetOpenWindow);
@@ -1953,9 +1961,60 @@ public final class Remain {
 	 */
 	public static Inventory getClickedInventory(final InventoryClickEvent event) {
 		final int slot = event.getRawSlot();
-		final InventoryView view = event.getView();
 
-		return slot < 0 ? null : view.getTopInventory() != null && slot < view.getTopInventory().getSize() ? view.getTopInventory() : view.getBottomInventory();
+		if (slot < 0)
+			return null;
+
+		final Inventory topInventory = invokeInventoryViewMethod(event, "getTopInventory");
+		final Inventory bottomInventory = invokeInventoryViewMethod(event, "getBottomInventory");
+
+		return topInventory != null && slot < topInventory.getSize() ? topInventory : bottomInventory;
+	}
+
+	/**
+	 *
+	 * @param <T>
+	 * @param event
+	 * @param methodName
+	 * @return
+	 */
+	public static <T> T invokeInventoryViewMethod(InventoryEvent event, String methodName) {
+		final Object view = ReflectionUtil.invoke("getView", event);
+
+		return ReflectionUtil.invoke(methodName, view);
+	}
+
+	/**
+	 * Return the top inventory of the player's open inventory
+	 *
+	 * @param player
+	 * @return
+	 */
+	public static Inventory getTopInventoryFromOpenInventory(Player player) {
+		return invokeOpenInventoryMethod(player, "getTopInventory");
+	}
+
+	/**
+	 * Return the top inventory of the player's open inventory
+	 *
+	 * @param player
+	 * @return
+	 */
+	public static Inventory getBottomInventoryFromOpenInventory(Player player) {
+		return invokeOpenInventoryMethod(player, "getBottomInventory");
+	}
+
+	/**
+	 *
+	 * @param <T>
+	 * @param player
+	 * @param methodName
+	 * @return
+	 */
+	public static <T> T invokeOpenInventoryMethod(Player player, String methodName) {
+		final Object view = ReflectionUtil.invoke("getOpenInventory", player);
+
+		return ReflectionUtil.invoke(methodName, view);
 	}
 
 	/**

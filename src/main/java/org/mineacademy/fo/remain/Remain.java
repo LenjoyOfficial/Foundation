@@ -43,6 +43,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
+import org.bukkit.block.Sign;
 import org.bukkit.block.data.type.Bed;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandMap;
@@ -1582,6 +1583,35 @@ public final class Remain {
 	}
 
 	/**
+	 * Opens the sign for the player - on legacy versions, the sign is uneditable.
+	 *
+	 * @param player
+	 * @param signBlock
+	 */
+	public static void openSign(Player player, Block signBlock) {
+		final BlockState state = signBlock.getState();
+		Valid.checkBoolean(state instanceof Sign, "Block is not a sign: " + signBlock);
+
+		final Sign sign = (Sign) state;
+
+		try {
+			player.openSign(sign);
+
+		} catch (final NoSuchMethodError ex) {
+			final Class<?> chatComponentClass = ReflectionUtil.getNMSClass("IChatBaseComponent");
+			final Class<?> blockPositionClass = ReflectionUtil.getNMSClass("BlockPosition");
+
+			final Object blockPosition = ReflectionUtil.instantiate(ReflectionUtil.getConstructor(blockPositionClass, int.class, int.class, int.class), signBlock.getX(), signBlock.getY(), signBlock.getZ());
+			final Object[] chatComponent = (Object[]) java.lang.reflect.Array.newInstance(chatComponentClass, 4);
+
+			for (int i = 0; i < 4; i++)
+				chatComponent[i] = Remain.toIChatBaseComponentPlain(sign.getLine(i));
+
+			Remain.sendPacket(player, ReflectionUtil.instantiate(ReflectionUtil.getConstructorNMS("PacketPlayOutOpenSignEditor", blockPositionClass), blockPosition));
+		}
+	}
+
+	/**
 	 * Opens the book for the player given the book is a WRITTEN_BOOK
 	 *
 	 * @param player
@@ -1590,6 +1620,7 @@ public final class Remain {
 	public static void openBook(Player player, ItemStack book) {
 		Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_8), "Opening books is only supported on MC 1.8 and greater");
 		Valid.checkBoolean(book.getItemMeta() instanceof org.bukkit.inventory.meta.BookMeta, "openBook method called for not a book item: " + book);
+		Valid.checkBoolean(CompMaterial.fromMaterial(book.getType()) == CompMaterial.WRITTEN_BOOK, "Can only call openBook for WRITTEN_BOOK! Got: " + book);
 
 		// Fix "Invalid book tag" error when author/title is empty
 		final org.bukkit.inventory.meta.BookMeta meta = (org.bukkit.inventory.meta.BookMeta) book.getItemMeta();

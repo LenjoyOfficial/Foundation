@@ -34,6 +34,8 @@ import org.mineacademy.fo.SerializeUtil.Mode;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictList;
+import org.mineacademy.fo.command.SimpleCommand;
+import org.mineacademy.fo.command.SimpleCommandGroup;
 import org.mineacademy.fo.exception.EventHandledException;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.menu.model.ItemCreator;
@@ -1087,7 +1089,9 @@ public abstract class FileConfig {
 		}
 
 		// Load key-value pairs from config to our map
-		if (exists)
+		final Object savedKeys = this.section.retrieve(path);
+
+		if (savedKeys != null)
 			for (final Map.Entry<String, Object> entry : SerializedMap.of(this.section.retrieve(path))) {
 				final Key key = SerializeUtil.deserialize(this.mode, keyType, entry.getKey());
 				final Value value;

@@ -6,6 +6,7 @@ import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Particle.DustOptions;
+import org.bukkit.Particle.DustTransition;
 import org.bukkit.Vibration;
 import org.bukkit.entity.Player;
 import org.mineacademy.fo.MinecraftVersion;

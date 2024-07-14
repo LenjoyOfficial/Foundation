@@ -1,6 +1,7 @@
 package org.mineacademy.fo.remain;
 
 import java.io.File;
+import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -90,6 +91,7 @@ import org.mineacademy.fo.TimeUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.collection.StrictMap;
+import org.mineacademy.fo.constants.FoConstants;
 import org.mineacademy.fo.exception.FoException;
 import org.mineacademy.fo.model.UUIDToNameConverter;
 import org.mineacademy.fo.plugin.SimplePlugin;
@@ -231,6 +233,11 @@ public final class Remain {
 	 * Return true if PlayerInventory class has the getExtraContents method
 	 */
 	private static boolean hasPlayerExtraInventoryContent = true;
+
+	/**
+	 * Return true if Player has openSign method.
+	 */
+	private static boolean hasPlayerOpenSignMethod = true;
 
 	/**
 	 * Stores player cooldowns for old MC versions
@@ -379,7 +386,6 @@ public final class Remain {
 
 		try {
 			Class.forName("io.papermc.paper.event.player.AsyncChatEvent");
-
 		} catch (final Throwable t) {
 			hasAdventureChatEvent = false;
 		}
@@ -392,6 +398,12 @@ public final class Remain {
 		try {
 			sectionPathDataClass = ReflectionUtil.lookupClass("org.bukkit.configuration.SectionPathData");
 		} catch (final Throwable ex) {
+		}
+
+		try {
+			Player.class.getMethod("openSign", org.bukkit.block.Sign.class);
+		} catch (final Throwable ex) {
+			hasPlayerOpenSignMethod = false;
 		}
 
 		try {
@@ -450,14 +462,10 @@ public final class Remain {
 	 * @return
 	 */
 	public static Object getHandleWorld(final World world) {
-		Object nms = null;
 		final Method handle = ReflectionUtil.getMethod(world.getClass(), "getHandle");
-		try {
-			nms = handle.invoke(world);
-		} catch (final ReflectiveOperationException e) {
-			e.printStackTrace();
-		}
-		return nms;
+		Valid.checkNotNull(handle, "Cannot call getHandle() for " + world.getClass() + " (" + world + ")");
+
+		return ReflectionUtil.invoke(handle, world);
 	}
 
 	/**
@@ -466,17 +474,12 @@ public final class Remain {
 	 * @param entity
 	 * @return
 	 */
-	public static Object getHandleEntity(final Entity entity) {
-		Object nms_entity = null;
-		final Method handle = ReflectionUtil.getMethod(entity.getClass(), "getHandle");
+	public static Object getHandleEntity(final Object entity) {
+		final String methodName = entity instanceof BlockState ? "getTileEntity" : "getHandle";
+		final Method handle = ReflectionUtil.getMethod(entity.getClass(), methodName);
+		Valid.checkNotNull(handle, "Cannot call " + methodName + "() for " + entity.getClass() + " (" + entity + ")");
 
-		try {
-			nms_entity = handle.invoke(entity);
-		} catch (final ReflectiveOperationException e) {
-			e.printStackTrace();
-		}
-
-		return nms_entity;
+		return ReflectionUtil.invoke(handle, entity);
 	}
 
 	/**
@@ -485,18 +488,11 @@ public final class Remain {
 	 * @return
 	 */
 	public static Object getHandleServer() {
-		Object nms_server = null;
-
 		final org.bukkit.Server server = Bukkit.getServer();
 		final Method handle = ReflectionUtil.getMethod(server.getClass(), "getServer");
+		Valid.checkNotNull(handle, "Cannot call getServer() for " + server.getClass() + " (" + server + ")");
 
-		try {
-			nms_server = handle.invoke(server);
-		} catch (final ReflectiveOperationException e) {
-			e.printStackTrace();
-		}
-
-		return nms_server;
+		return ReflectionUtil.invoke(handle, server);
 	}
 
 	/**
@@ -1583,7 +1579,8 @@ public final class Remain {
 	}
 
 	/**
-	 * Opens the sign for the player - on legacy versions, the sign is uneditable.
+	 * Opens the sign for the player. On legacy versions, ProtocolLib is
+	 * required to save the edits to the sign after updating it.
 	 *
 	 * @param player
 	 * @param signBlock
@@ -1594,10 +1591,10 @@ public final class Remain {
 
 		final Sign sign = (Sign) state;
 
-		try {
+		if (hasPlayerOpenSignMethod) {
 			player.openSign(sign);
 
-		} catch (final NoSuchMethodError ex) {
+		} else {
 			final Class<?> chatComponentClass = ReflectionUtil.getNMSClass("IChatBaseComponent");
 			final Class<?> blockPositionClass = ReflectionUtil.getNMSClass("BlockPosition");
 
@@ -1607,6 +1604,14 @@ public final class Remain {
 			for (int i = 0; i < 4; i++)
 				chatComponent[i] = Remain.toIChatBaseComponentPlain(sign.getLine(i));
 
+			final Object nmsSign = Remain.getHandleEntity(sign);
+			final Object nmsPlayer = Remain.getHandleEntity(player);
+
+			// Set the sign to be editable and assign the editing player to it
+			ReflectionUtil.setDeclaredField(nmsSign, "isEditable", true);
+			ReflectionUtil.setDeclaredField(nmsSign, "h", nmsPlayer);
+
+			CompMetadata.setTempMetadata(player, FoConstants.NBT.METADATA_OPENED_SIGN, sign.getLocation());
 			Remain.sendPacket(player, ReflectionUtil.instantiate(ReflectionUtil.getConstructorNMS("PacketPlayOutOpenSignEditor", blockPositionClass), blockPosition));
 		}
 	}
@@ -2243,7 +2248,7 @@ public final class Remain {
 			((LivingEntity) entity).setInvisible(invisible);
 
 		else {
-			final Object nmsEntity = entity.getClass().toString().startsWith("net.minecraft") ? entity : entity instanceof LivingEntity ? getHandleEntity((LivingEntity) entity) : null;
+			final Object nmsEntity = entity.getClass().toString().startsWith("net.minecraft.server") ? entity : entity instanceof LivingEntity ? getHandleEntity((LivingEntity) entity) : null;
 			Valid.checkNotNull(nmsEntity, "setInvisible requires either a LivingEntity or a NMS Entity, got: " + entity.getClass());
 			final Method setInvisible = ReflectionUtil.getMethod(nmsEntity.getClass(), "setInvisible", boolean.class);
 
@@ -3178,6 +3183,15 @@ public final class Remain {
 	}
 
 	/**
+	 * Return true if the Player class has the open sign method
+	 *
+	 * @return
+	 */
+	public static boolean hasPlayerOpenSignMethod() {
+		return hasPlayerOpenSignMethod;
+	}
+
+	/**
 	 * Return true if this is a Folia server
 	 *
 	 * @return
@@ -3384,7 +3398,10 @@ class AdvancementAccessor {
 		final JsonObject json = new JsonObject();
 
 		final JsonObject icon = new JsonObject();
-		icon.addProperty("item", this.icon);
+		if (MinecraftVersion.atLeast(V.v1_20)) {
+			icon.addProperty("id", this.icon);
+		} else
+			icon.addProperty("item", this.icon);
 
 		final JsonObject display = new JsonObject();
 		display.add("icon", icon);

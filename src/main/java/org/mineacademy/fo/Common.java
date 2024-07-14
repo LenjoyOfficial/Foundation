@@ -1005,7 +1005,7 @@ public final class Common {
 	 * DO NOT USE FOR SAVING, ONLY INTENDED FOR DEBUGGING
 	 * Use {@link SerializeUtil#serialize(Object)} to save a location
 	 *
-	 * @param loc
+	 * @param location
 	 * @return
 	 */
 	public static String shortLocation(final Location location) {
@@ -1444,6 +1444,9 @@ public final class Common {
 			logFramed(false, replaceErrorVariable(t, messages));
 
 		Debugger.saveError(t, messages);
+
+		t.printStackTrace();
+
 		Remain.sneaky(t);
 	}
 

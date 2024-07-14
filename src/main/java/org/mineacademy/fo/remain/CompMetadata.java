@@ -12,6 +12,7 @@ import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.CreatureSpawner;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -31,6 +32,7 @@ import org.mineacademy.fo.collection.SerializedMap;
 import org.mineacademy.fo.model.ConfigSerializable;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.nbt.NBT;
+import org.mineacademy.fo.remain.nbt.ReadableNBT;
 import org.mineacademy.fo.settings.YamlConfig;
 
 import lombok.AccessLevel;
@@ -124,6 +126,8 @@ public final class CompMetadata {
 		if (hasPersistentMetadata) {
 			setPersistentMetadata(entity, key, value);
 
+			entity.update(true);
+
 		} else
 			MetadataFile.getInstance().setMetadata(entity, key, value);
 	}
@@ -184,7 +188,16 @@ public final class CompMetadata {
 		Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_7), "Using CompMetadata for ItemStacks requires Minecraft 1.7.10 or newer");
 
 		return CompMaterial.isAir(item.getType()) ? null : NBT.get(item, nbt -> {
-			return Common.getOrNull(nbt.getString(key));
+			String value = Common.getOrNull(nbt.getString(key));
+
+			if (value == null) {
+				final ReadableNBT compound = nbt.getCompound(SimplePlugin.getNamed() + "_NbtTag");
+
+				if (compound != null && compound.hasTag(key))
+					value = Common.getOrNull(compound.getString(key));
+			}
+
+			return value;
 		});
 	}
 
@@ -201,10 +214,13 @@ public final class CompMetadata {
 		// PENDING REMOVAL
 		if (Remain.hasScoreboardTags())
 			for (final String line : entity.getScoreboardTags()) {
-				final String tag = getTag(line, key);
+				final String value = getTag(line, key);
 
-				if (tag != null && !tag.isEmpty())
-					return tag;
+				if (value != null && !value.isEmpty()) {
+					setMetadata(entity, key, value); // Set the metadata the new way
+
+					return value;
+				}
 			}
 
 		if (hasPersistentMetadata) {
@@ -288,8 +304,7 @@ public final class CompMetadata {
 	 * @param key
 	 */
 	public static void removeTempMetadata(final Entity player, final String key) {
-		if (player.hasMetadata(key))
-			player.removeMetadata(key, SimplePlugin.getInstance());
+		player.removeMetadata(key, SimplePlugin.getInstance());
 	}
 
 	// ----------------------------------------------------------------------------------------

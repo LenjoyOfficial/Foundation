@@ -10,7 +10,7 @@
 
     <groupId>org.mineacademy</groupId>
     <artifactId>Foundation</artifactId>
-    <version>6.8.5</version>
+    <version>6.9.1</version>
     <packaging>jar</packaging>
 
     <name>Foundation</name>
@@ -48,7 +48,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.32</version>
+            <version>1.18.34</version>
         </dependency>
 
         <!-- This is NOT used anywhere in Foundation, only here to prevent compile
@@ -106,7 +106,7 @@
         <dependency>
             <groupId>org.mineacademy.plugin</groupId>
             <artifactId>DiscordSRV</artifactId>
-            <version>1.27.1</version>
+            <version>1.28.0</version>
         </dependency>
         <dependency>
             <groupId>org.mineacademy.plugin</groupId>

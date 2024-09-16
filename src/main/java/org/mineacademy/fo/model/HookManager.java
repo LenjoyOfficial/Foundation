@@ -27,6 +27,7 @@ import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.permissions.Permissible;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -2271,7 +2272,10 @@ class ProtocolLibHook {
 
 	final void removePacketListeners(final Plugin plugin) {
 		if (this.manager != null) {
-			this.manager.removePacketListeners(plugin);
+			try {
+				this.manager.removePacketListeners(plugin);
+			} catch (final Throwable t) {
+			}
 
 			this.registeredListeners.clear();
 		}
@@ -3809,17 +3813,17 @@ class MythicMobsHook {
 		/*try {
 			final Object mythicPlugin = ReflectionUtil.invokeStatic(ReflectionUtil.lookupClass("io.lumine.mythic.api.MythicProvider"), "get");
 			final Object mobManager = ReflectionUtil.invoke("getMobManager", mythicPlugin);
-
+		
 			final Method getActiveMobsMethod = ReflectionUtil.getMethod(mobManager.getClass(), "getActiveMobs");
 			final Collection<?> activeMobs = ReflectionUtil.invoke(getActiveMobsMethod, mobManager);
-
+		
 			for (final Object mob : activeMobs) {
 				final UUID uniqueId = ReflectionUtil.invoke("getUniqueId", mob);
-
+		
 				if (uniqueId.equals(entity.getUniqueId()))
 					return ReflectionUtil.invoke("getName", mob);
 			}
-
+		
 		} catch (Throwable t) {
 			Common.error(t, "MythicMobs integration failed getting mob name, contact plugin developer to update the integration!");
 		}*/
@@ -3889,16 +3893,16 @@ class LiteBansHook {
 		/*try {
 			final Class<?> api = ReflectionUtil.lookupClass("litebans.api.Database");
 			final Object instance = ReflectionUtil.invokeStatic(api, "get");
-
+		
 			return ReflectionUtil.invoke("isPlayerMuted", instance, player.getUniqueId());
-
+		
 		} catch (final Throwable t) {
 			if (!t.toString().contains("Could not find class")) {
 				Common.log("Unable to check if " + player.getName() + " is muted at LiteBans. Is the API hook outdated? See console error:");
-
+		
 				t.printStackTrace();
 			}
-
+		
 			return false;
 		}*/
 	}
@@ -3906,23 +3910,48 @@ class LiteBansHook {
 
 class ItemsAdderHook {
 
-	private final Class<?> itemsAdder;
-	private final Method replaceFontImagesMethod;
-	private final Method replaceFontImagesMethodNoPlayer;
+	private Class<?> itemsAdder;
+	private Method replaceFontImages;
+	private Method replaceFontImagesNoPlayer;
+	private boolean failed = false;
 
 	ItemsAdderHook() {
-		this.itemsAdder = ReflectionUtil.lookupClass("dev.lone.itemsadder.api.FontImages.FontImageWrapper");
-		this.replaceFontImagesMethod = ReflectionUtil.getDeclaredMethod(this.itemsAdder, "replaceFontImages", Player.class, String.class);
-		this.replaceFontImagesMethodNoPlayer = ReflectionUtil.getDeclaredMethod(this.itemsAdder, "replaceFontImages", String.class);
 	}
 
 	/*
 	 * Return true if the given player is muted.
 	 */
 	String replaceFontImages(@Nullable final Player player, final String message) {
-		if (player == null)
-			return ReflectionUtil.invokeStatic(this.replaceFontImagesMethodNoPlayer, message);
 
-		return ReflectionUtil.invokeStatic(this.replaceFontImagesMethod, player, message);
+		if (this.replaceFontImages == null) {
+
+			// integration failed, do not spam
+			if (this.failed)
+				return message;
+
+			try {
+				this.itemsAdder = ReflectionUtil.lookupClass("dev.lone.itemsadder.api.FontImages.FontImageWrapper");
+
+				this.replaceFontImages = ReflectionUtil.getDeclaredMethod(this.itemsAdder, "replaceFontImages", Permissible.class, String.class);
+				this.replaceFontImagesNoPlayer = ReflectionUtil.getDeclaredMethod(this.itemsAdder, "replaceFontImages", String.class);
+
+			} catch (final Throwable original) {
+				try {
+					this.replaceFontImages = ReflectionUtil.getDeclaredMethod(this.itemsAdder, "replaceFontImages", Player.class, String.class);
+					this.replaceFontImagesNoPlayer = ReflectionUtil.getDeclaredMethod(this.itemsAdder, "replaceFontImages", String.class);
+
+				} catch (final Throwable tt) {
+					Common.warning("Unable to resolve ItemsAdder API. The plugin will continue to function, but no font images will be replaced. Is the integration outdated?");
+
+					original.printStackTrace();
+					this.failed = true;
+				}
+			}
+		}
+
+		if (player == null)
+			return ReflectionUtil.invokeStatic(this.replaceFontImagesNoPlayer, message);
+
+		return ReflectionUtil.invokeStatic(this.replaceFontImages, player, message);
 	}
 }

@@ -1031,8 +1031,6 @@ public final class ItemCreator implements ConfigSerializable {
 		// From now on we have to re-set the item
 		//
 
-		// Apply custom enchantment lores
-		compiledItem = Common.getOrDefault(SimpleEnchantment.addEnchantmentLores(compiledItem), compiledItem);
 
 		// Apply the skull skin AFTER we applied the item meta
 		if (skullSkin != null && compiledMeta instanceof SkullMeta)

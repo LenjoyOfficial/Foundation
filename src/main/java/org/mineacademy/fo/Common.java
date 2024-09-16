@@ -665,15 +665,15 @@ public final class Common {
 		// Replace hex colors, both raw and parsed
 		/*if (Remain.hasHexColors()) {
 			matcher = HEX_COLOR_REGEX.matcher(message);
-
+		
 			while (matcher.find())
 				message = matcher.replaceAll("");
-
+		
 			matcher = RGB_X_COLOR_REGEX.matcher(message);
-
+		
 			while (matcher.find())
 				message = matcher.replaceAll("");
-
+		
 			message = message.replace(ChatColor.COLOR_CHAR + "x", "");
 		}*/
 
@@ -1197,7 +1197,11 @@ public final class Common {
 
 			final String finalCommand = command;
 
-			runLater(() -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand));
+			if (Bukkit.isPrimaryThread())
+				Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand);
+
+			else
+				runLater(() -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand));
 		}
 	}
 
@@ -1217,9 +1221,19 @@ public final class Common {
 
 		checkBlockedCommands(playerSender, command);
 
-		final String finalCommand = command;
+		final String finalCommand = colorize(command.replace("{player}", resolveSenderName(playerSender)));
 
-		runLater(() -> playerSender.performCommand(colorize(finalCommand.replace("{player}", resolveSenderName(playerSender)))));
+		if (Bukkit.isPrimaryThread())
+			playerSender.performCommand(finalCommand);
+
+		else if (Remain.isFolia())
+			playerSender.getScheduler().run(SimplePlugin.getInstance(), task -> {
+				playerSender.performCommand(finalCommand);
+			}, () -> {
+			});
+
+		else
+			runLater(() -> playerSender.performCommand(finalCommand));
 	}
 
 	/*

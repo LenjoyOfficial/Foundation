@@ -85,10 +85,12 @@ public final class MenuListener implements Listener {
 			final MenuClickLocation whereClicked = clickedInv != null ? clickedInv.getType() == InventoryType.CHEST ? MenuClickLocation.MENU : MenuClickLocation.PLAYER_INVENTORY : MenuClickLocation.OUTSIDE;
 
 			final boolean allowed = menu.isActionAllowed(whereClicked, slot, slotItem, cursor, action);
+			final boolean clickAllowed = ((menu.isAllowShift() || menu.isAllowShift(slot))&& (event.getClick().isRightClick() || event.getClick().isLeftClick())) || action.toString().contains("PICKUP") || action.toString().contains("PLACE") || action.toString().equals("SWAP_WITH_CURSOR");
 
-			if (whereClicked == MenuClickLocation.MENU && slotItem != null)
-				try {
-					Button button = menu.getButton(slot);
+			if (clickAllowed || action == InventoryAction.CLONE_STACK) {
+				if (whereClicked == MenuClickLocation.MENU && slotItem != null)
+					try {
+						Button button = menu.getButton(slot);
 
 					if (button == null)
 						button = menu.getButton(slotItem);
@@ -98,20 +100,21 @@ public final class MenuListener implements Listener {
 					else
 						menu.onMenuClick(player, event.getSlot(), action, event.getClick(), cursor, slotItem, !allowed);
 
-				} catch (final Throwable t) {
-					Common.tell(player, "&cOups! There was a problem with this menu! Please contact the administrator to review the console for details.");
-					player.closeInventory();
+					} catch (final Throwable t) {
+						Common.tell(player, "&cOups! There was a problem with this menu! Please contact the administrator to review the console for details.");
+						player.closeInventory();
 
-					Common.error(t, "Error clicking in menu " + menu);
+						Common.error(t, "Error clicking in menu " + menu);
+					}
+
+				if (!allowed) {
+					event.setResult(Result.DENY);
+
+					player.updateInventory();
 				}
 
-			if (!allowed) {
-				event.setResult(Result.DENY);
+			} else if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY || whereClicked != MenuClickLocation.PLAYER_INVENTORY) {
 
-				player.updateInventory();
-			}
-
-			if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY || whereClicked != MenuClickLocation.PLAYER_INVENTORY) {
 				if (!allowed) {
 					event.setResult(Result.DENY);
 					player.updateInventory();

@@ -12,7 +12,9 @@ package org.mineacademy.fo.plugin;
 
 import java.io.File;
 import java.lang.reflect.Constructor;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -22,6 +24,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.Listener;
@@ -29,6 +32,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.Messenger;
 import org.mineacademy.fo.BungeeUtil;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.ReflectionUtil;
@@ -42,8 +46,6 @@ import org.mineacademy.fo.command.SimpleSubCommand;
 import org.mineacademy.fo.debug.Debugger;
 import org.mineacademy.fo.event.SimpleListener;
 import org.mineacademy.fo.exception.FoException;
-import org.mineacademy.fo.library.BukkitLibraryManager;
-import org.mineacademy.fo.library.LibraryManager;
 import org.mineacademy.fo.menu.Menu;
 import org.mineacademy.fo.menu.MenuListener;
 import org.mineacademy.fo.menu.tool.Tool;
@@ -159,11 +161,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	private final Reloadables reloadables = new Reloadables();
 
 	/**
-	 * The library manager
-	 */
-	private LibraryManager libraryManager;
-
-	/**
 	 * An internal flag to indicate whether we are calling the {@link #onReloadablesStart()}
 	 * block. We register things using {@link #reloadables} during this block
 	 */
@@ -223,18 +220,100 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 		source = instance.getFile();
 		data = instance.getDataFolder();
 
+		this.loadLibraries();
+
 		// Load libraries where Spigot does not do this automatically
-		if (!ReflectionUtil.isClassAvailable("net.md_5.bungee.api.ChatColor"))
-			this.loadLibrary("net.md-5", "bungeecord-chat", "1.16-R0.4");
+		if (!ReflectionUtil.isClassAvailable("net.md_5.bungee.api.ChatColor") || !ReflectionUtil.isClassAvailable("com.google.gson.Gson")) {
+			this.getLogger().severe("Fatal: The required Gson and BungeeCord chat libraries are missing.");
+			this.getLogger().severe("Please download BungeeChatAPI and install it as a plugin from:");
+			this.getLogger().severe("https://bitbucket.org/kangarko/bungeechatapi/downloads/");
+			this.getLogger().severe("");
+			this.getLogger().severe("The plugin is now disabled.");
 
-		if (!ReflectionUtil.isClassAvailable("com.google.gson.Gson"))
-			this.loadLibrary("com.google.code.gson", "gson", "2.11.0");
-
-		if (getJavaVersion() >= 11)
-			this.loadLibrary("org.openjdk.nashorn", "nashorn-core", "15.4");
+			this.getServer().getPluginManager().disablePlugin(this);
+			throw new FoException("Missing libraries, see above for instructions.");
+		}
 
 		// Call parent
 		this.onPluginLoad();
+	}
+
+	/*
+	 * Loads libraries from plugin.yml or from getLibraries()
+	 */
+	private void loadLibraries() {
+		final int javaVersion = getJavaVersion();
+		final List<Library> libraries = new ArrayList<>();
+
+		// Force add md_5 bungee chat since it's needed
+		if (!ReflectionUtil.isClassAvailable("net.md_5.bungee.api.ChatColor"))
+			libraries.add(Library.fromMavenRepo("net.md-5", "bungeecord-chat", "1.16-R0.4"));
+
+		if (MinecraftVersion.olderThan(V.v1_16)) {
+			final YamlConfiguration pluginFile = new YamlConfiguration();
+
+			// We have to load it using the legacy way for ancient MC versions
+			try {
+				pluginFile.loadFromString(String.join("\n", FileUtil.getInternalFileContent("plugin.yml")));
+
+			} catch (final Throwable t) {
+				throw new RuntimeException(t);
+			}
+
+			for (final String libraryPath : pluginFile.getStringList("legacy-libraries")) {
+				if (javaVersion < 15 && libraryPath.contains("org.openjdk.nashorn:nashorn-core"))
+					continue;
+
+				final Library library = Library.fromMavenRepo(libraryPath);
+
+				libraries.add(library);
+			}
+
+			// Load normally
+			if (!libraries.isEmpty() && javaVersion >= 9) {
+				// Unsupported > upstream should shade libraries manually
+
+			} else
+				for (final Library library : libraries)
+					library.load();
+		}
+
+		// Always load user-defined libraries
+		final List<Library> manualLibraries = this.getLibraries();
+
+		// But only on Java 8 (for now)
+		if (!manualLibraries.isEmpty() && javaVersion > 8)
+			Common.warning("The getLibraries() feature only supports Java 8 for now and does not work on Java " + javaVersion + ". To load the following libraries, "
+					+ "install Java 8 or upgrade to Minecraft 16 where you use the 'libraries' feature of plugin.yml to load. Skipping loading: " + manualLibraries);
+
+		else
+			methodLibraryLoader:
+			for (final Library library : manualLibraries) {
+
+				// Detect conflicts
+				for (final Library otherLibrary : libraries)
+					if (library.getArtifactId().equals(otherLibrary.getArtifactId()) && library.getGroupId().equals(otherLibrary.getGroupId())) {
+						Common.warning("Detected library conflict: '" + library.getGroupId() + "." + library.getArtifactId() + "' is defined both in getLibraries() and plugin.yml! "
+								+ "We'll prefer the version from plugin.yml, if you want to use the one from getLibraries() then remove it from your plugin.yml file.");
+
+						continue methodLibraryLoader;
+					}
+
+				library.load();
+			}
+	}
+
+	/**
+	 * A list of libraries to automatically download and load.
+	 *
+	 * **REQUIRES JAVA 8 FOR THE TIME BEING**
+	 *
+	 * @deprecated requires Java 8 thus only works on Minecraft 1.16 or lower with such Java version installed
+	 * @return
+	 */
+	@Deprecated
+	protected List<Library> getLibraries() {
+		return new ArrayList<>();
 	}
 
 	@Override
@@ -505,8 +584,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	protected final void displayError0(Throwable throwable) {
 		Debugger.printStackTrace(throwable);
 
-		final boolean privateDistro = this.getServer().getBukkitVersion().contains("1.8.8-R0.2");
-
 		Common.log(
 				"&4    ___                  _ ",
 				"&4   / _ \\  ___  _ __  ___| |",
@@ -516,7 +593,7 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 				"&4             |_|          ",
 				"&4!-----------------------------------------------------!",
 				" &cError loading " + this.getDescription().getName() + " v" + this.getDescription().getVersion() + ", plugin is disabled!",
-				privateDistro ? null : " &cRunning on " + Bukkit.getBukkitVersion() + " & Java " + System.getProperty("java.version"),
+				" &cRunning on " + Bukkit.getBukkitVersion() + " & Java " + System.getProperty("java.version"),
 				"&4!-----------------------------------------------------!");
 
 		if (throwable instanceof InvalidConfigurationException) {
@@ -1089,33 +1166,6 @@ public abstract class SimplePlugin extends JavaPlugin implements Listener {
 	@Deprecated
 	public final void setBungeeCord(BungeeListener bungeeListener) {
 		this.bungeeListener = bungeeListener;
-	}
-
-	/**
-	 * Loads a library jar into the classloader classpath. If the library jar
-	 * doesn't exist locally, it will be downloaded.
-	 * <p>
-	 * If the provided library has any relocations, they will be applied to
-	 * create a relocated jar and the relocated jar will be loaded instead.
-	 *
-	 * @param groupId
-	 * @param artifactId
-	 * @param version
-	 */
-	public void loadLibrary(String groupId, String artifactId, String version) {
-		this.getLibraryManager().loadLibrary(groupId, artifactId, version);
-	}
-
-	/**
-	 * Get the Libby library manager
-	 *
-	 * @return
-	 */
-	public final LibraryManager getLibraryManager() {
-		if (this.libraryManager == null)
-			this.libraryManager = new BukkitLibraryManager(this);
-
-		return this.libraryManager;
 	}
 
 	/**

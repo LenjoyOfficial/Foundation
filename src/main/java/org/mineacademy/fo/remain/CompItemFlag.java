@@ -37,7 +37,22 @@ public enum CompItemFlag {
 	/**
 	 * Setting to show/hide potion effects on this ItemStack
 	 */
-	HIDE_POTION_EFFECTS;
+	HIDE_POTION_EFFECTS,
+	
+	/**
+	 * Setting to show/hide dyes from colored leather armor
+	 */
+	HIDE_DYE,
+	
+	/**
+	 * Setting to show/hide armor trim from armor
+	 */
+	HIDE_ARMOR_TRIM,
+
+	/**
+	 * Setting to show/hide potion effects, book and firework information, map tooltips, patterns of banners
+	 */
+	HIDE_ADDITIONAL_TOOLTIP;
 
 	/**
 	 * Tries to apply this item flag to the given item, fails silently
@@ -55,6 +70,28 @@ public enum CompItemFlag {
 
 		} catch (final Throwable t) {
 			// Unsupported MC version
+		}
+	}
+
+	/**
+	 * Checks if the given item has this item flag
+	 * Fails silently and returns false
+	 * @param item
+	 * @return true if the item has this flag
+	 */
+	public final boolean has(ItemStack item) {
+		try {
+			final ItemMeta meta = item.getItemMeta();
+			if (meta == null)
+				return false;
+
+			final ItemFlag bukkitFlag = ItemFlag.valueOf(this.toString());
+
+			return meta.hasItemFlag(bukkitFlag);
+
+		} catch (final Throwable t) {
+			// Unsupported MC version
+			return false;
 		}
 	}
 }

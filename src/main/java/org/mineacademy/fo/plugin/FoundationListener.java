@@ -32,6 +32,9 @@ import org.mineacademy.fo.settings.SimpleLocalization;
  */
 final class FoundationListener implements Listener {
 
+	FoundationListener() {
+	}
+
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onQuit(PlayerQuitEvent event) {
 		SimpleScoreboard.clearBoardsFor(event.getPlayer());

@@ -27,21 +27,21 @@ public class NbtApiException extends FoException {
 	 * @param message
 	 * @param cause
 	 */
-	public NbtApiException(String message, Throwable cause) {
+	public NbtApiException(final String message, final Throwable cause) {
 		super(message, cause);
 	}
 
 	/**
 	 * @param message
 	 */
-	public NbtApiException(String message) {
+	public NbtApiException(final String message) {
 		super(message);
 	}
 
 	/**
 	 * @param cause
 	 */
-	public NbtApiException(Throwable cause) {
+	public NbtApiException(final Throwable cause) {
 		super(cause == null ? null : cause.toString(), cause);
 	}
 }

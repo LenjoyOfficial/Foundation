@@ -75,7 +75,7 @@ public abstract class Menu {
 	@Getter
 	@Setter
 	@Nullable
-	private static SimpleSound sound = new SimpleSound(CompSound.NOTE_STICKS.getSound(), .4F);
+	private static SimpleSound sound = new SimpleSound(CompSound.BLOCK_NOTE_BLOCK_HAT.getSound(), .4F);
 
 	/**
 	 * Should we animate menu titles?
@@ -673,7 +673,7 @@ public abstract class Menu {
 	 * @return true if allow the click.
 	 */
 	public boolean isAllowShift(int slot) {
-			return false;
+		return false;
 	}
 
 	/**

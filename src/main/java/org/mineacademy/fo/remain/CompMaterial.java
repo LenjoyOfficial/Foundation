@@ -35,13 +35,13 @@ import javax.annotation.Nullable;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
+import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.Valid;
 
 import lombok.Getter;
@@ -219,6 +219,7 @@ public enum CompMaterial {
 	BLUE_CONCRETE(11, "CONCRETE"),
 	BLUE_CONCRETE_POWDER(11, "CONCRETE_POWDER"),
 	BLUE_DYE(4, "INK_SACK", "LAPIS_LAZULI"),
+	BLUE_EGG,
 	BLUE_GLAZED_TERRACOTTA,
 	BLUE_ICE,
 	BLUE_ORCHID(1, "RED_ROSE"),
@@ -259,6 +260,7 @@ public enum CompMaterial {
 	BROWN_CONCRETE(12, "CONCRETE"),
 	BROWN_CONCRETE_POWDER(12, "CONCRETE_POWDER"),
 	BROWN_DYE(3, "INK_SACK", "DYE", "COCOA_BEANS"),
+	BROWN_EGG,
 	BROWN_GLAZED_TERRACOTTA,
 	BROWN_MUSHROOM,
 	BROWN_MUSHROOM_BLOCK("BROWN_MUSHROOM", "HUGE_MUSHROOM_1"),
@@ -278,7 +280,9 @@ public enum CompMaterial {
 	BUDDING_AMETHYST,
 	BUNDLE,
 	BURN_POTTERY_SHERD,
+	BUSH,
 	CACTUS,
+	CACTUS_FLOWER,
 	CAKE("CAKE_BLOCK"),
 	CALCITE,
 	CALIBRATED_SCULK_SENSOR,
@@ -606,6 +610,7 @@ public enum CompMaterial {
 	 */
 	FILLED_MAP("MAP"),
 	FIRE,
+	FIREFLY_BUSH,
 	FIREWORK_ROCKET("FIREWORK"),
 	FIREWORK_STAR("FIREWORK_CHARGE"),
 	FIRE_CHARGE("FIREBALL"),
@@ -803,6 +808,7 @@ public enum CompMaterial {
 	LAVA_BUCKET,
 	LAVA_CAULDRON,
 	LEAD("LEASH"),
+	LEAF_LITTER,
 	LEATHER,
 	LEATHER_BOOTS,
 	LEATHER_CHESTPLATE,
@@ -1322,6 +1328,7 @@ public enum CompMaterial {
 	SHEEP_SPAWN_EGG(91, "MONSTER_EGG"),
 	SHELTER_POTTERY_SHERD,
 	SHIELD,
+	SHORT_DRY_GRASS,
 	/**
 	 * 1.13.0: LONG_GRASS:1
 	 * 1.20.4: GRASS -> SHORT_GRASS
@@ -1462,10 +1469,13 @@ public enum CompMaterial {
 	SWEET_BERRY_BUSH,
 	TADPOLE_BUCKET,
 	TADPOLE_SPAWN_EGG,
+	TALL_DRY_GRASS,
 	TALL_GRASS(2, "DOUBLE_PLANT"),
 	TALL_SEAGRASS,
 	TARGET,
 	TERRACOTTA("HARD_CLAY"),
+	TEST_BLOCK,
+	TEST_INSTANCE_BLOCK,
 	TIDE_ARMOR_TRIM_SMITHING_TEMPLATE,
 	TINTED_GLASS,
 	TIPPED_ARROW,
@@ -1596,6 +1606,51 @@ public enum CompMaterial {
 	WEATHERED_CUT_COPPER,
 	WEATHERED_CUT_COPPER_SLAB,
 	WEATHERED_CUT_COPPER_STAIRS,
+	PALE_OAK_PLANKS,
+	PALE_OAK_SAPLING,
+	PALE_OAK_LOG,
+	STRIPPED_PALE_OAK_LOG,
+	STRIPPED_PALE_OAK_WOOD,
+	PALE_OAK_WOOD,
+	PALE_OAK_LEAVES,
+	PALE_MOSS_CARPET,
+	PALE_HANGING_MOSS,
+	PALE_MOSS_BLOCK,
+	PALE_OAK_SLAB,
+	CREAKING_HEART,
+	PALE_OAK_FENCE,
+	PALE_OAK_STAIRS,
+	PALE_OAK_BUTTON,
+	PALE_OAK_PRESSURE_PLATE,
+	PALE_OAK_DOOR,
+	PALE_OAK_TRAPDOOR,
+	PALE_OAK_FENCE_GATE,
+	PALE_OAK_BOAT,
+	PALE_OAK_CHEST_BOAT,
+	PALE_OAK_SIGN,
+	PALE_OAK_HANGING_SIGN,
+	WHITE_BUNDLE,
+	ORANGE_BUNDLE,
+	MAGENTA_BUNDLE,
+	LIGHT_BLUE_BUNDLE,
+	YELLOW_BUNDLE,
+	LIME_BUNDLE,
+	PINK_BUNDLE,
+	GRAY_BUNDLE,
+	LIGHT_GRAY_BUNDLE,
+	CYAN_BUNDLE,
+	PURPLE_BUNDLE,
+	BLUE_BUNDLE,
+	BROWN_BUNDLE,
+	GREEN_BUNDLE,
+	RED_BUNDLE,
+	BLACK_BUNDLE,
+	CREAKING_SPAWN_EGG,
+	FIELD_MASONED_BANNER_PATTERN,
+	BORDURE_INDENTED_BANNER_PATTERN,
+	PALE_OAK_WALL_SIGN,
+	PALE_OAK_WALL_HANGING_SIGN,
+	POTTED_PALE_OAK_SAPLING,
 	WEEPING_VINES,
 	WEEPING_VINES_PLANT,
 	WET_SPONGE(1, "SPONGE"),
@@ -1620,6 +1675,7 @@ public enum CompMaterial {
 	WHITE_TULIP(6, "RED_ROSE"),
 	WHITE_WALL_BANNER(15, "WALL_BANNER"),
 	WHITE_WOOL("WOOL"),
+	WILDFLOWERS,
 	WILD_ARMOR_TRIM_SMITHING_TEMPLATE,
 	WIND_CHARGE,
 	WITCH_SPAWN_EGG(66, "MONSTER_EGG"),
@@ -1662,7 +1718,48 @@ public enum CompMaterial {
 	ZOMBIE_SPAWN_EGG(54, "MONSTER_EGG"),
 	ZOMBIE_VILLAGER_SPAWN_EGG(27, "MONSTER_EGG"),
 	ZOMBIE_WALL_HEAD(2, "SKULL", "SKULL_ITEM"),
-	ZOMBIFIED_PIGLIN_SPAWN_EGG(57, "MONSTER_EGG", "ZOMBIE_PIGMAN_SPAWN_EGG");
+	ZOMBIFIED_PIGLIN_SPAWN_EGG(57, "MONSTER_EGG", "ZOMBIE_PIGMAN_SPAWN_EGG"),
+
+	// 1.21.4 new names:
+	PEN_EYEBLOSSOM,
+	CLOSED_EYEBLOSSOM,
+	RESIN_CLUMP,
+	RESIN_BLOCK,
+	RESIN_BRICKS,
+	RESIN_BRICK_STAIRS,
+	RESIN_BRICK_SLAB,
+	RESIN_BRICK_WALL,
+	CHISELED_RESIN_BRICKS,
+	RESIN_BRICK,
+	POTTED_OPEN_EYEBLOSSOM,
+	POTTED_CLOSED_EYEBLOSSOM,
+	OPEN_EYEBLOSSOM,
+
+	// 1.21.6 new names:
+	BLACK_HARNESS,
+	BLUE_HARNESS,
+	BROWN_HARNESS,
+	CYAN_HARNESS,
+	GRAY_HARNESS,
+	GREEN_HARNESS,
+	HAPPY_GHAST_SPAWN_EGG,
+	LIGHT_BLUE_HARNESS,
+	LIGHT_GRAY_HARNESS,
+	LIME_HARNESS,
+	MAGENTA_HARNESS,
+	MUSIC_DISC_TEARS,
+	ORANGE_HARNESS,
+	PINK_HARNESS,
+	PURPLE_HARNESS,
+	RED_HARNESS,
+	WHITE_HARNESS,
+	YELLOW_HARNESS,
+	DRIED_GHAST,
+
+	// 1.21.7 new names:
+	MUSIC_DISC_LAVA_CHICKEN
+
+	;
 
 	/**
 	 * Cached array of {@link CompMaterial#values()} to avoid allocating memory for
@@ -1719,9 +1816,7 @@ public enum CompMaterial {
 	static {
 		for (final CompMaterial material : VALUES)
 			NAMES.put(material.name(), material);
-	}
 
-	static {
 		if (Data.ISFLAT)
 			// It's not needed at all if it's the newer version. We can save some memory.
 			DUPLICATED = null;
@@ -1756,14 +1851,14 @@ public enum CompMaterial {
 	/**
 	 * A list of material names that was being used for older verions.
 	 *
-	 * @see #getLegacy()
+	 * @see #getClosestLegacyAlternatives()
 	 */
 	private final String[] legacy;
 
 	/**
 	 * The cached Bukkit parsed material.
 	 *
-	 * @see #toMaterial()
+	 * @see #getMaterial()
 	 * @since 9.0.0
 	 */
 	@Getter
@@ -1845,23 +1940,12 @@ public enum CompMaterial {
 	 */
 
 	public ItemStack toItem(int amount) {
-		final Material material = this.toMaterial();
+		final Material material = this.getMaterial();
 
 		if (material == null)
 			return null;
 
 		return Data.ISFLAT ? new ItemStack(material, amount) : new ItemStack(material, amount, this.data);
-	}
-
-	/**
-	 * Parses the material of this CompMaterial.
-	 *
-	 * @return the material related to this CompMaterial based on the server version.
-	 * @since 1.0.0
-	 */
-
-	public Material toMaterial() {
-		return this.material;
 	}
 
 	/**
@@ -1914,12 +1998,12 @@ public enum CompMaterial {
 		if (MinecraftVersion.atLeast(V.v1_13))
 			return type == this.material;
 
-		if (type == this.toMaterial() && data == this.data)
+		if (type == this.getMaterial() && data == this.data)
 			return true;
 
 		final CompMaterial compMat = fromMaterial(type);
 
-		return isDamageable(compMat) && this.toMaterial() == type;
+		return isDamageable(compMat) && this.getMaterial() == type;
 	}
 
 	/**
@@ -2005,7 +2089,7 @@ public enum CompMaterial {
 	 * @return
 	 */
 	public static boolean isAir(final Material material) {
-		return material == null || isAir(material.name());
+		return material == null || isAir(ReflectionUtil.getEnumName(material));
 	}
 
 	/**
@@ -2287,93 +2371,10 @@ public enum CompMaterial {
 	 */
 	public static ItemStack makeWool(final CompColor color, final int amount) {
 		if (MinecraftVersion.atLeast(V.v1_13))
-			return new ItemStack(Material.valueOf(color.getDye() + "_WOOL"), amount);
+			return new ItemStack(ReflectionUtil.lookupEnum(Material.class, color.getDye() + "_WOOL"), amount);
 
 		else
-			return new ItemStack(Material.valueOf("WOOL"), amount, color.getDye().getWoolData());
-	}
-
-	/**
-	 * Attempts to convert an {@link EntityType} into a valid {@link CompMaterial}
-	 * representing a spawnable Monster Egg.
-	 * <p>
-	 * In case the entity given is not a valid entity or does not have an egg, we
-	 * return Sheep Monster Egg instead.
-	 *
-	 * @param type
-	 * @return the corresponding egg, or Sheep Monster Egg if does not exist
-	 */
-	public static CompMaterial makeMonsterEgg(final EntityType type) {
-		CompMaterial created = CompMaterial.SHEEP_SPAWN_EGG;
-
-		try {
-			String name = type.toString() + "_SPAWN_EGG";
-
-			// Special cases
-			if (type.name().equals("ZOMBIFIED_PIGLIN"))
-				if (MinecraftVersion.newerThan(V.v1_15))
-					name = "ZOMBIFIED_PIGLIN_SPAWN_EGG";
-				else
-					name = "ZOMBIE_PIGMAN_SPAWN_EGG";
-
-			else if (type.name().equals("MUSHROOM_COW") || type.name().equals("MOOSHROOM"))
-				name = "MOOSHROOM_SPAWN_EGG";
-
-			// Parse normally, backwards compatible
-			final CompMaterial mat = fromString(name);
-
-			if (mat == null || mat.getMaterial().toString().equals("STONE"))
-				created = CompMaterial.SHEEP_SPAWN_EGG;
-
-			else
-				// Return the egg or sheep egg if does not exist
-				created = Common.getOrDefault(mat, CompMaterial.SHEEP_SPAWN_EGG);
-
-		} catch (final Throwable throwable) {
-			Common.error(throwable, "Something went wrong while creating spawn egg!", "Type: " + type);
-		}
-
-		return created;
-	}
-
-	/**
-	 * Reverts back the 1.13+ spawn egg material to {@link EntityType}
-	 *
-	 * @param monsterEgg the monster egg
-	 * @return the egg, or null if does not exist in the current MC version
-	 */
-	public static EntityType makeEntityType(final CompMaterial monsterEgg) {
-		Valid.checkBoolean(monsterEgg.toString().endsWith("_SPAWN_EGG"), "Material " + monsterEgg + " is not a valid monster egg! (Must end with _SPAWN_EGG)");
-
-		final String name = monsterEgg.toString().replace("_SPAWN_EGG", "");
-
-		// Special cases
-		if (name.equals("ZOMBIE_PIGMAN_SPAWN_EGG"))
-			try {
-				return EntityType.ZOMBIFIED_PIGLIN; // PIGMAN
-
-			} catch (final Throwable t) {
-				// MC compatible
-				return EntityType.valueOf("PIG_ZOMBIE");
-			}
-
-		else if (name.equals("MOOSHROOM_SPAWN_EGG")) {
-			try {
-				return EntityType.MOOSHROOM;
-
-			} catch (final Throwable t) {
-				return EntityType.valueOf("MUSHROOM_COW");
-			}
-
-		} else
-			// Parse normally, backwards compatible
-			try {
-				return EntityType.valueOf(name);
-			} catch (final IllegalArgumentException ex) {
-				// Does not exist for the current MC version
-			}
-
-		return null;
+			return new ItemStack(ReflectionUtil.lookupEnum(Material.class, "WOOL"), amount, color.getDye().getWoolData());
 	}
 
 	/*
@@ -2385,7 +2386,6 @@ public enum CompMaterial {
 	 * @return an optional that can be empty.
 	 * @since 5.1.0
 	 */
-
 	private static CompMaterial getIfPresent(String name) {
 		return NAMES.get(name);
 	}
@@ -2397,7 +2397,6 @@ public enum CompMaterial {
 	 * @see #matchDefinedCompMaterial(String, byte)
 	 * @since 1.0.0
 	 */
-
 	private static CompMaterial requestOldMaterial(String name, int data) {
 
 		for (final CompMaterial material : VALUES)
@@ -2487,7 +2486,7 @@ public enum CompMaterial {
 	 * @since 2.0.0
 	 */
 	public static CompMaterial fromItem(@NonNull ItemStack item) {
-		final String material = item.getType().name();
+		final String material = ReflectionUtil.getEnumName(item.getType());
 		final byte data = (byte) (Data.ISFLAT || item.getType().getMaxDurability() > 0 ? 0 : item.getDurability());
 
 		CompMaterial compmaterial = fromLegacy(material, data);
@@ -2516,8 +2515,8 @@ public enum CompMaterial {
 			return CompMaterial.valueOf(material.toString());
 
 		} catch (final Throwable t) {
-			final CompMaterial compmaterial = fromLegacy(material.name(), UNKNOWN_DATA_VALUE);
-			Valid.checkNotNull(compmaterial, "Unsupported material with no data value: " + material.name());
+			final CompMaterial compmaterial = fromLegacy(ReflectionUtil.getEnumName(material), UNKNOWN_DATA_VALUE);
+			Valid.checkNotNull(compmaterial, "Unsupported material with no data value: " + material);
 
 			return compmaterial;
 
@@ -2721,7 +2720,6 @@ public enum CompMaterial {
 	 * @since 8.0.0
 	 */
 	private boolean isPlural() {
-		// this.name().charAt(this.name().length() - 1) == 'S'
 		return this == CARROTS || this == POTATOES;
 	}
 
@@ -2791,7 +2789,7 @@ public enum CompMaterial {
 	 */
 	public ItemStack setType(ItemStack item) {
 		Objects.requireNonNull(item, "Cannot set material for null ItemStack");
-		final Material material = this.toMaterial();
+		final Material material = this.getMaterial();
 		Objects.requireNonNull(material, () -> "Unsupported material: " + this.name());
 
 		item.setType(material);
@@ -2829,7 +2827,7 @@ public enum CompMaterial {
 		if (this.data != 0 || this.version >= 13)
 			return -1;
 
-		final Material material = this.toMaterial();
+		final Material material = this.getMaterial();
 
 		if (material == null)
 			return -1;

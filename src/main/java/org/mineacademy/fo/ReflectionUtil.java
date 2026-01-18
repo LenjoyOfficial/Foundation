@@ -160,6 +160,7 @@ public final class ReflectionUtil {
 	/**
 	 * Return a constructor for the given class
 	 *
+	 * @param <T>
 	 * @param clazz
 	 * @param params
 	 * @return
@@ -190,6 +191,7 @@ public final class ReflectionUtil {
 	/**
 	 * Get the field content
 	 *
+	 * @param <T>
 	 * @param instance
 	 * @param field
 	 * @return
@@ -463,6 +465,13 @@ public final class ReflectionUtil {
 				return method;
 			}
 
+		for (final Method method : clazz.getDeclaredMethods())
+			if (method.getName().equals(methodName) && method.getParameterCount() == 0) {
+				method.setAccessible(true);
+
+				return method;
+			}
+
 		return null;
 	}
 
@@ -498,13 +507,16 @@ public final class ReflectionUtil {
 	 * Invoke a static method
 	 *
 	 * @param <T>
-	 * @param cl
+	 * @param clazz
 	 * @param methodName
 	 * @param params
 	 * @return
 	 */
-	public static <T> T invokeStatic(final Class<?> cl, final String methodName, final Object... params) {
-		return invokeStatic(getMethod(cl, methodName), params);
+	public static <T> T invokeStatic(@NonNull final Class<?> clazz, final String methodName, final Object... params) {
+		final Method method = getMethod(clazz, methodName);
+		Valid.checkNotNull(method, "Method " + clazz + "." + methodName + "(" + Common.join(params) + ") not found!");
+
+		return invokeStatic(method, params);
 	}
 
 	/**
@@ -580,6 +592,7 @@ public final class ReflectionUtil {
 	/**
 	 * Makes a new instance of a class
 	 *
+	 * @param <T>
 	 * @param clazz
 	 * @return
 	 */
@@ -605,6 +618,7 @@ public final class ReflectionUtil {
 	 * Makes a new instanceo of the given NMS class with arguments,
 	 * NB: Does not work on Minecraft 1.17+
 	 *
+	 * @param <T>
 	 * @param nmsPath
 	 * @param params
 	 * @return
@@ -616,6 +630,7 @@ public final class ReflectionUtil {
 	/**
 	 * Makes a new instance of a class with arguments.
 	 *
+	 * @param <T>
 	 * @param clazz
 	 * @param params
 	 * @return
@@ -734,6 +749,7 @@ public final class ReflectionUtil {
 	 *
 	 * NOTE: For Material class, use our dedicated CompMaterial instead of this method.
 	 *
+	 * @param <T>
 	 * @param enumClass
 	 * @param names
 	 * @return
@@ -761,13 +777,14 @@ public final class ReflectionUtil {
 	 * instead of throwing an error. This is to prevent default configs containing
 	 * this enum from crashing the plugin when loaded on legacy MC version.
 	 *
+	 * @param <E>
 	 * @param enumType
 	 * @param name
 	 *
 	 * @return the enum or error with exceptions, see above
 	 */
 	@Nullable
-	public static <E extends Enum<E>> E lookupEnum(final Class<E> enumType, final String name) {
+	public static <E> E lookupEnum(final Class<E> enumType, final String name) {
 		return lookupEnum(enumType, name, enumType.getSimpleName() + " value '" + name + "' is not found on Minecraft " + MinecraftVersion.getFullVersion() + "! Available: {available}");
 	}
 
@@ -782,13 +799,14 @@ public final class ReflectionUtil {
 	 * instead of throwing an error. This is to prevent default configs containing
 	 * this enum from crashing the plugin when loaded on legacy MC version.
 	 *
+	 * @param <E>
 	 * @param enumType
 	 * @param name
 	 * @param errMessage
 	 *
 	 * @return the enum or error with exceptions, see above
 	 */
-	public static <E extends Enum<E>> E lookupEnum(final Class<E> enumType, String name, final String errMessage) {
+	public static <E> E lookupEnum(final Class<E> enumType, String name, final String errMessage) {
 		Valid.checkNotNull(enumType, "Type missing for " + name);
 		Valid.checkNotNull(name, "Name missing for " + enumType);
 
@@ -807,9 +825,34 @@ public final class ReflectionUtil {
 						name = "SNOWY_TAIGA";
 
 			if (enumType == EntityType.class) {
-				if (MinecraftVersion.atLeast(V.v1_16))
+				if ((MinecraftVersion.equals(V.v1_20) && MinecraftVersion.getSubversion() >= 5) || MinecraftVersion.newerThan(V.v1_20)) {
+					if (rawName.equals("LIGHTNING"))
+						name = "LIGHTNING_BOLT";
+					else if (rawName.equals("PRIMED_TNT"))
+						name = "TNT";
+					else if (rawName.equals("FIREWORK"))
+						name = "FIREWORK_ROCKET";
+					else if (rawName.equals("ENDER_CRYSTAL"))
+						name = "END_CRYSTAL";
+
+				} else {
+					if (rawName.equals("LIGHTNING_BOLT"))
+						name = "LIGHTNING";
+					else if (rawName.equals("TNT"))
+						name = "PRIMED_TNT";
+					else if (rawName.equals("FIREWORK_ROCKET"))
+						name = "FIREWORK";
+					else if (rawName.equals("END_CRYSTAL"))
+						name = "ENDER_CRYSTAL";
+				}
+
+				if (MinecraftVersion.atLeast(V.v1_16)) {
 					if (rawName.equals("PIG_ZOMBIE"))
 						name = "ZOMBIFIED_PIGLIN";
+				} else {
+					if (rawName.equals("ZOMBIFIED_PIGLIN"))
+						name = "PIG_ZOMBIE";
+				}
 
 				if (MinecraftVersion.atLeast(V.v1_14))
 					if (rawName.equals("TIPPED_ARROW"))
@@ -901,18 +944,20 @@ public final class ReflectionUtil {
 	/**
 	 * Wrapper for Enum.valueOf without throwing an exception
 	 *
-	 * @param enumType
+	 * @param <E>
+	 * @param enumClass
 	 * @param name
 	 * @return the enum, or null if not exists
 	 */
-	public static <E extends Enum<E>> E lookupEnumSilent(final Class<E> enumType, final String name) {
+	@SuppressWarnings("rawtypes")
+	public static <E> E lookupEnumSilent(final Class<E> enumClass, final String name) {
 		try {
 
-			if (enumType == CompMaterial.class || enumType == Material.class) {
+			if (enumClass == CompMaterial.class || enumClass == Material.class) {
 				final CompMaterial material = CompMaterial.fromString(name);
 
 				if (material != null)
-					return enumType == CompMaterial.class ? (E) material : (E) material.getMaterial();
+					return enumClass == CompMaterial.class ? (E) material : (E) material.getMaterial();
 			}
 
 			// Since we obfuscate our plugins, enum names are changed.
@@ -921,7 +966,7 @@ public final class ReflectionUtil {
 			Method method = null;
 
 			try {
-				method = enumType.getDeclaredMethod("fromKey", String.class);
+				method = enumClass.getDeclaredMethod("fromKey", String.class);
 
 				if (Modifier.isPublic(method.getModifiers()) && Modifier.isStatic(method.getModifiers()))
 					hasKey = true;
@@ -930,9 +975,9 @@ public final class ReflectionUtil {
 			}
 
 			// Only invoke fromName from non-Bukkit API since this gives unexpected results
-			if (method == null && !enumType.getName().contains("org.bukkit"))
+			if (method == null && !enumClass.getName().contains("org.bukkit"))
 				try {
-					method = enumType.getDeclaredMethod("fromName", String.class);
+					method = enumClass.getDeclaredMethod("fromName", String.class);
 
 					if (Modifier.isPublic(method.getModifiers()) && Modifier.isStatic(method.getModifiers()))
 						hasKey = true;
@@ -940,11 +985,23 @@ public final class ReflectionUtil {
 				} catch (final Throwable t) {
 				}
 
+			if (method == null)
+				try {
+					method = enumClass.getDeclaredMethod("valueOf", String.class);
+
+					if (Modifier.isPublic(method.getModifiers()) && Modifier.isStatic(method.getModifiers()))
+						hasKey = true;
+
+				} catch (final NoSuchMethodException t) {
+				}
+
 			if (hasKey)
 				return (E) method.invoke(null, name);
 
-			// Resort to enum name
-			return Enum.valueOf(enumType, name);
+			if (enumClass.isEnum())
+				return (E) Enum.valueOf((Class<Enum>) enumClass, name);
+
+			return ReflectionUtil.invokeStatic(enumClass, "valueOf", name);
 
 		} catch (final IllegalArgumentException ex) {
 			return null;
@@ -952,6 +1009,27 @@ public final class ReflectionUtil {
 		} catch (final ReflectiveOperationException ex) {
 			return null;
 		}
+	}
+
+	/**
+	 * Get the enum's name, works for enum and interface classes.
+	 *
+	 * @param enumOrKeyed
+	 * @return
+	 */
+	public static String getEnumName(Object enumOrKeyed) {
+		return enumOrKeyed instanceof Enum ? ((Enum<?>) enumOrKeyed).name() : invoke("name", enumOrKeyed);
+	}
+
+	/**
+	 * Get the enum's constants, works for enum and interface classes.
+	 *
+	 * @param <T>
+	 * @param enumOrKeyed
+	 * @return
+	 */
+	public static <T> T[] getEnumValues(Class<T> enumOrKeyed) {
+		return enumOrKeyed.isEnum() ? enumOrKeyed.getEnumConstants() : invokeStatic(enumOrKeyed, "values");
 	}
 
 	/**

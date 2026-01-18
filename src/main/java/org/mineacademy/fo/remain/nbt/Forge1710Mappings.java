@@ -10,7 +10,7 @@ import java.util.Map;
  * @author EverNife
  *
  */
-final class Forge1710Mappings {
+class Forge1710Mappings {
 
 	private static Map<String, String> classMap = new HashMap<>();
 	private static Map<String, String> methodMap = new HashMap<>();
@@ -108,7 +108,7 @@ final class Forge1710Mappings {
 		return methodMap;
 	}
 
-	public static String toString(Object nbtTagCompound) {
+	public static String toString(final Object nbtTagCompound) {
 		if (crucible_toString == null)
 			throw new NbtApiException("Method not loaded! 'Forge1710Mappings.crucible_toString' ");
 		try {

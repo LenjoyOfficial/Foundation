@@ -61,6 +61,8 @@ import org.mineacademy.fo.remain.CompProperty;
 import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.remain.nbt.NBTItem;
 
+import com.google.common.collect.MultimapBuilder;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -867,9 +869,7 @@ public final class ItemCreator implements ConfigSerializable {
 			EntityType entity = null;
 
 			if (MinecraftVersion.olderThan(V.v1_13)) { // Try to find it if already exists
-				CompMonsterEgg.acceptUnsafeEggs = true;
 				final EntityType pre = CompMonsterEgg.getEntity(compiledItem);
-				CompMonsterEgg.acceptUnsafeEggs = false;
 
 				if (pre != null && pre != EntityType.UNKNOWN)
 					entity = pre;
@@ -906,7 +906,7 @@ public final class ItemCreator implements ConfigSerializable {
 		if (damage != -1) {
 
 			try {
-				ReflectionUtil.invoke("setDurability", compiledItem, (short) this.damage);
+				compiledItem.setDurability((short) this.damage);
 			} catch (final Throwable t) {
 			}
 
@@ -1005,6 +1005,14 @@ public final class ItemCreator implements ConfigSerializable {
 			for (final CompItemFlag f : CompItemFlag.values())
 				if (!this.flags.contains(f))
 					this.flags.add(f);
+
+		if (this.hideTags || this.flags.contains(CompItemFlag.HIDE_ATTRIBUTES))
+			try {
+				((ItemMeta) compiledMeta).setAttributeModifiers(MultimapBuilder.hashKeys().hashSetValues().build());
+
+			} catch (final Throwable t) {
+				// ignore
+			}
 
 		for (final CompItemFlag flag : this.flags)
 			try {

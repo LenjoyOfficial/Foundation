@@ -9,7 +9,6 @@ import org.mineacademy.fo.Common;
  * @author tr7zw
  *
  */
-
 enum ClassWrapper {
 	CRAFT_ITEMSTACK(PackageWrapper.CRAFTBUKKIT, "inventory.CraftItemStack", null, null),
 	CRAFT_METAITEM(PackageWrapper.CRAFTBUKKIT, "inventory.CraftMetaItem", null, null),
@@ -19,6 +18,7 @@ enum ClassWrapper {
 	CRAFT_PERSISTENTDATACONTAINER(PackageWrapper.CRAFTBUKKIT, "persistence.CraftPersistentDataContainer",
 			MinecraftVersion.MC1_14_R1, null),
 	NMS_NBTBASE(PackageWrapper.NMS, "NBTBase", null, null, "net.minecraft.nbt", "net.minecraft.nbt.Tag"),
+	NMS_TAGTYPE(PackageWrapper.NMS, "NBTTagType", MinecraftVersion.MC1_21_R4, null, "net.minecraft.nbt", "net.minecraft.nbt.TagType"),
 	NMS_NBTTAGSTRING(PackageWrapper.NMS, "NBTTagString", null, null, "net.minecraft.nbt",
 			"net.minecraft.nbt.StringTag"),
 	NMS_NBTTAGINT(PackageWrapper.NMS, "NBTTagInt", null, null, "net.minecraft.nbt", "net.minecraft.nbt.IntTag"),
@@ -80,45 +80,57 @@ enum ClassWrapper {
 			"net.minecraft.util.datafix.fixes", "net.minecraft.util.datafix.fixes.References"),
 	NMS_NBTOPS(PackageWrapper.NMS, "DynamicOpsNBT", MinecraftVersion.MC1_20_R4, null,
 			"net.minecraft.nbt", "net.minecraft.nbt.NbtOps"),
+	NMS_PROBLEM_REPORTER(PackageWrapper.NMS, "ProblemReporter", MinecraftVersion.MC1_21_R5, null,
+			"net.minecraft.util", "net.minecraft.util.ProblemReporter"),
+	NMS_TAG_VALUE_INPUT(PackageWrapper.NMS, "TagValueInput", MinecraftVersion.MC1_21_R5, null,
+			"net.minecraft.world.level.storage", "net.minecraft.world.level.storage.TagValueInput"),
+	NMS_VALUE_INPUT(PackageWrapper.NMS, "ValueInput", MinecraftVersion.MC1_21_R5, null,
+			"net.minecraft.world.level.storage", "net.minecraft.world.level.storage.ValueInput"),
+	NMS_TAG_VALUE_OUTPUT(PackageWrapper.NMS, "TagValueOutput", MinecraftVersion.MC1_21_R5, null,
+			"net.minecraft.world.level.storage", "net.minecraft.world.level.storage.TagValueOutput"),
+	NMS_VALUE_OUTPUT(PackageWrapper.NMS, "ValueOutput", MinecraftVersion.MC1_21_R5, null,
+			"net.minecraft.world.level.storage", "net.minecraft.world.level.storage.ValueOutput"),
+	NMS_DYNAMICOPS(PackageWrapper.NONE, "DynamicOps", MinecraftVersion.MC1_21_R5, null,
+			"com.mojang.serialization", "com.mojang.serialization.DynamicOps"),
 	GAMEPROFILE(PackageWrapper.NONE, "com.mojang.authlib.GameProfile", MinecraftVersion.MC1_8_R3, null);
 
 	private Class<?> clazz;
 	private boolean enabled = false;
 	private final String mojangName;
 
-	ClassWrapper(PackageWrapper packageId, String clazzName, MinecraftVersion from, MinecraftVersion to) {
+	ClassWrapper(final PackageWrapper packageId, final String clazzName, final MinecraftVersion from, final MinecraftVersion to) {
 		this(packageId, clazzName, from, to, null, null);
 	}
 
-	ClassWrapper(PackageWrapper packageId, String clazzName, MinecraftVersion from, MinecraftVersion to,
-			String mojangMap, String mojangName) {
+	ClassWrapper(final PackageWrapper packageId, String clazzName, final MinecraftVersion from, final MinecraftVersion to,
+			final String mojangMap, final String mojangName) {
 		this.mojangName = mojangName;
 		if ((from != null && MinecraftVersion.getVersion().getVersionId() < from.getVersionId()) || (to != null && MinecraftVersion.getVersion().getVersionId() > to.getVersionId()))
 			return;
-		enabled = true;
+		this.enabled = true;
 		try {
 			if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_18_R1) && mojangName != null)
 				// check for Mojmapped enviroment
 				try {
-					clazz = Class.forName(mojangName);
+					this.clazz = Class.forName(mojangName);
 					return;
 				} catch (final ClassNotFoundException ex) {
 					// ignored, not mojang mapped
 				}
 			if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_17_R1) && mojangMap != null)
-				clazz = Class.forName(mojangMap + "." + clazzName);
+				this.clazz = Class.forName(mojangMap + "." + clazzName);
 			else if (packageId == PackageWrapper.NONE)
-				clazz = Class.forName(clazzName);
+				this.clazz = Class.forName(clazzName);
 			else if (MinecraftVersion.isForgePresent() && MinecraftVersion.getVersion() == MinecraftVersion.MC1_7_R4
 					&& Forge1710Mappings.getClassMappings().get(this.name()) != null)
-				clazz = Class.forName(clazzName = Forge1710Mappings.getClassMappings().get(this.name()));
+				this.clazz = Class.forName(clazzName = Forge1710Mappings.getClassMappings().get(this.name()));
 			else if (packageId == PackageWrapper.CRAFTBUKKIT)
 				// this also works for un-remapped Paper 1.20+
-				clazz = Class.forName(Bukkit.getServer().getClass().getPackage().getName() + "." + clazzName);
+				this.clazz = Class.forName(Bukkit.getServer().getClass().getPackage().getName() + "." + clazzName);
 			else {
 				// fallback for old versions pre mojmap and in the nms package
 				final String version = MinecraftVersion.getVersion().getPackageName();
-				clazz = Class.forName(packageId.getUri() + "." + version + "." + clazzName);
+				this.clazz = Class.forName(packageId.getUri() + "." + version + "." + clazzName);
 			}
 		} catch (final Throwable ex) {
 			Common.error(ex, "[NBTAPI] Error while trying to resolve the class '" + clazzName + "'!");
@@ -129,21 +141,21 @@ enum ClassWrapper {
 	 * @return The wrapped class
 	 */
 	public Class<?> getClazz() {
-		return clazz;
+		return this.clazz;
 	}
 
 	/**
 	 * @return Is this class available in this Version
 	 */
 	public boolean isEnabled() {
-		return enabled;
+		return this.enabled;
 	}
 
 	/**
 	 * @return Package+Class name used by Mojang
 	 */
 	public String getMojangName() {
-		return mojangName;
+		return this.mojangName;
 	}
 
 }

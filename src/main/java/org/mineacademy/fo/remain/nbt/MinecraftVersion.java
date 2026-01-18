@@ -13,7 +13,6 @@ import org.bukkit.Bukkit;
  * @author tr7zw
  *
  */
-
 enum MinecraftVersion {
 	UNKNOWN(Integer.MAX_VALUE), // Use the newest known mappings
 	MC1_7_R4(174),
@@ -40,13 +39,18 @@ enum MinecraftVersion {
 	MC1_20_R2(1202, true),
 	MC1_20_R3(1203, true),
 	MC1_20_R4(1204, true),
-	MC1_21_R1(1211, true);
+	MC1_21_R1(1211, true),
+	MC1_21_R2(1212, true),
+	MC1_21_R3(1213, true),
+	MC1_21_R4(1214, true),
+	MC1_21_R5(1215, true);
 
 	private static MinecraftVersion version;
-	private static Boolean isForgePresent;
-	private static Boolean isFoliaPresent;
 
-	protected static final String VERSION = "2.13.1-SNAPSHOT";
+	private static Boolean isForgePresent;
+	private static Boolean isNeoForgePresent;
+	private static Boolean isFabricPresent;
+	private static Boolean isFoliaPresent;
 
 	private final int versionId;
 	private final boolean mojangMapping;
@@ -63,14 +67,20 @@ enum MinecraftVersion {
 			this.put("1.20.6", MC1_20_R4);
 			this.put("1.21", MC1_21_R1);
 			this.put("1.21.1", MC1_21_R1);
+			this.put("1.21.2", MC1_21_R2);
+			this.put("1.21.3", MC1_21_R2);
+			this.put("1.21.4", MC1_21_R3);
+			this.put("1.21.5", MC1_21_R4);
+			this.put("1.21.6", MC1_21_R5);
+			this.put("1.21.7", MC1_21_R5);
 		}
 	};
 
-	MinecraftVersion(int versionId) {
+	MinecraftVersion(final int versionId) {
 		this(versionId, false);
 	}
 
-	MinecraftVersion(int versionId, boolean mojangMapping) {
+	MinecraftVersion(final int versionId, final boolean mojangMapping) {
 		this.versionId = versionId;
 		this.mojangMapping = mojangMapping;
 	}
@@ -79,7 +89,7 @@ enum MinecraftVersion {
 	 * @return A simple comparable Integer, representing the version.
 	 */
 	public int getVersionId() {
-		return versionId;
+		return this.versionId;
 	}
 
 	/**
@@ -87,7 +97,7 @@ enum MinecraftVersion {
 	 *         internally
 	 */
 	public boolean isMojangMapping() {
-		return mojangMapping;
+		return this.mojangMapping;
 	}
 
 	/**
@@ -112,7 +122,7 @@ enum MinecraftVersion {
 	 * @param version The minimum version
 	 * @return
 	 */
-	public static boolean isAtLeastVersion(MinecraftVersion version) {
+	public static boolean isAtLeastVersion(final MinecraftVersion version) {
 		return getVersion().getVersionId() >= version.getVersionId();
 	}
 
@@ -122,7 +132,7 @@ enum MinecraftVersion {
 	 * @param version The minimum version
 	 * @return
 	 */
-	public static boolean isNewerThan(MinecraftVersion version) {
+	public static boolean isNewerThan(final MinecraftVersion version) {
 		return getVersion().getVersionId() > version.getVersionId();
 	}
 
@@ -135,17 +145,36 @@ enum MinecraftVersion {
 	public static MinecraftVersion getVersion() {
 		if (version != null)
 			return version;
+
 		try {
 			final String ver = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
 
 			version = MinecraftVersion.valueOf(ver.replace("v", "MC"));
 
 		} catch (final Exception ex) {
-			version = VERSION_TO_REVISION.getOrDefault(Bukkit.getServer().getBukkitVersion().split("-")[0],
-					MinecraftVersion.UNKNOWN);
+			version = VERSION_TO_REVISION.getOrDefault(Bukkit.getServer().getBukkitVersion().split("-")[0], MinecraftVersion.UNKNOWN);
 		}
 
 		return version;
+	}
+
+	/**
+	 * @return True, if Fabric is present
+	 */
+	public static boolean isFabricPresent() {
+		if (isFabricPresent != null)
+			return isFabricPresent;
+
+		try {
+			Class.forName("net.fabricmc.api.ModInitializer");
+
+			isFabricPresent = true;
+
+		} catch (final Exception ex) {
+			isFabricPresent = false;
+		}
+
+		return isFabricPresent;
 	}
 
 	/**
@@ -154,16 +183,37 @@ enum MinecraftVersion {
 	public static boolean isForgePresent() {
 		if (isForgePresent != null)
 			return isForgePresent;
+
 		try {
 			if (getVersion() == MinecraftVersion.MC1_7_R4)
 				Class.forName("cpw.mods.fml.common.Loader");
 			else
 				Class.forName("net.minecraftforge.fml.common.Loader");
+
 			isForgePresent = true;
+
 		} catch (final Exception ex) {
 			isForgePresent = false;
 		}
+
 		return isForgePresent;
+	}
+
+	/**
+	 * @return True, if NeoForge is present
+	 */
+	public static boolean isNeoForgePresent() {
+		if (isNeoForgePresent != null)
+			return isNeoForgePresent;
+
+		try {
+			Class.forName("net.neoforged.neoforge.common.NeoForge");
+			isNeoForgePresent = true;
+		} catch (final Exception ex) {
+			isNeoForgePresent = false;
+		}
+
+		return isNeoForgePresent;
 	}
 
 	/**
@@ -172,6 +222,7 @@ enum MinecraftVersion {
 	public static boolean isFoliaPresent() {
 		if (isFoliaPresent != null)
 			return isFoliaPresent;
+
 		try {
 			Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
 			isFoliaPresent = true;

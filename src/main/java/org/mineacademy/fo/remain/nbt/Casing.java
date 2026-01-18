@@ -27,13 +27,13 @@ public enum Casing {
 		return Character.toUpperCase(s.charAt(0)) + s.substring(1);
 	}), lowercase(String::toLowerCase), UPPERCASE(String::toUpperCase);
 
-	private UnaryOperator<String> convert;
+	private final UnaryOperator<String> convert;
 
-	Casing(UnaryOperator<String> function) {
+	Casing(final UnaryOperator<String> function) {
 		this.convert = function;
 	}
 
-	public String convertString(String str) {
-		return convert.apply(str);
+	public String convertString(final String str) {
+		return this.convert.apply(str);
 	}
 }

@@ -5,6 +5,7 @@ import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.bukkit.inventory.ItemStack;
 
@@ -15,7 +16,6 @@ import org.bukkit.inventory.ItemStack;
  * @author tr7zw
  *
  */
-
 enum ReflectionMethod {
 
 	COMPOUND_SET_FLOAT(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class, float.class },
@@ -52,7 +52,7 @@ enum ReflectionMethod {
 			MinecraftVersion.MC1_7_R4, new Since(MinecraftVersion.MC1_7_R4, "setBoolean"),
 			new Since(MinecraftVersion.MC1_18_R1, "putBoolean(java.lang.String,boolean)")),
 	COMPOUND_SET_UUID(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class, UUID.class },
-			MinecraftVersion.MC1_16_R1, new Since(MinecraftVersion.MC1_16_R1, "a"),
+			MinecraftVersion.MC1_16_R1, MinecraftVersion.MC1_21_R3, new Since(MinecraftVersion.MC1_16_R1, "a"),
 			new Since(MinecraftVersion.MC1_18_R1, "putUUID(java.lang.String,java.util.UUID)")),
 	COMPOUND_MERGE(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { ClassWrapper.NMS_NBTTAGCOMPOUND.getClazz() },
 			MinecraftVersion.MC1_8_R3, new Since(MinecraftVersion.MC1_8_R3, "a"),
@@ -63,12 +63,18 @@ enum ReflectionMethod {
 	COMPOUND_GET(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class }, MinecraftVersion.MC1_7_R4,
 			new Since(MinecraftVersion.MC1_7_R4, "get"),
 			new Since(MinecraftVersion.MC1_18_R1, "get(java.lang.String)")),
-	COMPOUND_GET_LIST(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class, int.class },
-			MinecraftVersion.MC1_7_R4, new Since(MinecraftVersion.MC1_7_R4, "getList"),
+	COMPOUND_GET_LIST_LEGACY(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class, int.class },
+			MinecraftVersion.MC1_7_R4, MinecraftVersion.MC1_21_R3, new Since(MinecraftVersion.MC1_7_R4, "getList"),
 			new Since(MinecraftVersion.MC1_18_R1, "getList(java.lang.String,int)")),
+	COMPOUND_GET_LIST(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class }, MinecraftVersion.MC1_21_R4,
+			new Since(MinecraftVersion.MC1_21_R4, "getList(java.lang.String)")),
 	// Only needed for 1.7.10 getType
-	COMPOUND_OWN_TYPE(ClassWrapper.NMS_NBTBASE, new Class[] {}, MinecraftVersion.MC1_7_R4, MinecraftVersion.MC1_7_R4,
+	COMPOUND_OWN_TYPE_LEGACY(ClassWrapper.NMS_NBTBASE, new Class[] {}, MinecraftVersion.MC1_7_R4, MinecraftVersion.MC1_7_R4,
 			new Since(MinecraftVersion.MC1_7_R4, "getTypeId")),
+	TAGTYPE_OWN_TYPE(ClassWrapper.NMS_NBTBASE, new Class[] {}, MinecraftVersion.MC1_21_R4,
+			new Since(MinecraftVersion.MC1_21_R4, "getType()")),
+	TAGTYPE_GET_NAME(ClassWrapper.NMS_TAGTYPE, new Class[] {}, MinecraftVersion.MC1_21_R4,
+			new Since(MinecraftVersion.MC1_21_R4, "getName()")),
 
 	COMPOUND_GET_FLOAT(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class }, MinecraftVersion.MC1_7_R4,
 			new Since(MinecraftVersion.MC1_7_R4, "getFloat"),
@@ -103,7 +109,7 @@ enum ReflectionMethod {
 	COMPOUND_GET_BOOLEAN(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class }, MinecraftVersion.MC1_7_R4,
 			new Since(MinecraftVersion.MC1_7_R4, "getBoolean"),
 			new Since(MinecraftVersion.MC1_18_R1, "getBoolean(java.lang.String)")),
-	COMPOUND_GET_UUID(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class }, MinecraftVersion.MC1_16_R1,
+	COMPOUND_GET_UUID(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class }, MinecraftVersion.MC1_16_R1, MinecraftVersion.MC1_21_R3,
 			new Since(MinecraftVersion.MC1_16_R1, "a"),
 			new Since(MinecraftVersion.MC1_18_R1, "getUUID(java.lang.String)")),
 	COMPOUND_GET_COMPOUND(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class }, MinecraftVersion.MC1_7_R4,
@@ -124,17 +130,17 @@ enum ReflectionMethod {
 	COMPOUND_HAS_KEY(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class }, MinecraftVersion.MC1_7_R4,
 			new Since(MinecraftVersion.MC1_7_R4, "hasKey"),
 			new Since(MinecraftVersion.MC1_18_R1, "contains(java.lang.String)")),
-	COMPOUND_GET_TYPE(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class }, MinecraftVersion.MC1_8_R3,
+	COMPOUND_GET_TYPE(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class }, MinecraftVersion.MC1_8_R3, MinecraftVersion.MC1_21_R4,
 			new Since(MinecraftVersion.MC1_8_R3, "b"), new Since(MinecraftVersion.MC1_9_R1, "d"),
 			new Since(MinecraftVersion.MC1_15_R1, "e"), new Since(MinecraftVersion.MC1_16_R1, "d"),
 			new Since(MinecraftVersion.MC1_18_R1, "getTagType(java.lang.String)")),
 	COMPOUND_GET_KEYS(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] {}, MinecraftVersion.MC1_7_R4,
 			new Since(MinecraftVersion.MC1_7_R4, "c"), new Since(MinecraftVersion.MC1_13_R1, "getKeys"),
-			new Since(MinecraftVersion.MC1_18_R1, "getAllKeys()")),
+			new Since(MinecraftVersion.MC1_18_R1, "getAllKeys()"), new Since(MinecraftVersion.MC1_21_R5, "keySet()")),
 	// FIXME ?!?
-	LISTCOMPOUND_GET_KEYS(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] {}, MinecraftVersion.MC1_7_R4,
-			new Since(MinecraftVersion.MC1_7_R4, "c"), new Since(MinecraftVersion.MC1_13_R1, "getKeys"),
-			new Since(MinecraftVersion.MC1_18_R1, "getAllKeys()")),
+	//    LISTCOMPOUND_GET_KEYS(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] {}, MinecraftVersion.MC1_7_R4,
+	//            new Since(MinecraftVersion.MC1_7_R4, "c"), new Since(MinecraftVersion.MC1_13_R1, "getKeys"),
+	//            new Since(MinecraftVersion.MC1_18_R1, "getAllKeys()")),
 	LIST_REMOVE_KEY(ClassWrapper.NMS_NBTTAGLIST, new Class[] { int.class }, MinecraftVersion.MC1_8_R3,
 			new Since(MinecraftVersion.MC1_8_R3, "a"), new Since(MinecraftVersion.MC1_9_R1, "remove"),
 			new Since(MinecraftVersion.MC1_18_R1, "remove(int)")),
@@ -217,11 +223,11 @@ enum ReflectionMethod {
 	CRAFT_ENTITY_GET_HANDLE(ClassWrapper.CRAFT_ENTITY, new Class[] {}, MinecraftVersion.MC1_7_R4,
 			new Since(MinecraftVersion.MC1_7_R4, "getHandle")),
 	NMS_ENTITY_SET_NBT(ClassWrapper.NMS_ENTITY, new Class[] { ClassWrapper.NMS_NBTTAGCOMPOUND.getClazz() },
-			MinecraftVersion.MC1_7_R4, new Since(MinecraftVersion.MC1_7_R4, "f"),
+			MinecraftVersion.MC1_7_R4, MinecraftVersion.MC1_21_R4, new Since(MinecraftVersion.MC1_7_R4, "f"),
 			new Since(MinecraftVersion.MC1_16_R1, "load"),
 			new Since(MinecraftVersion.MC1_18_R1, "load(net.minecraft.nbt.CompoundTag)")),
 	NMS_ENTITY_GET_NBT(ClassWrapper.NMS_ENTITY, new Class[] { ClassWrapper.NMS_NBTTAGCOMPOUND.getClazz() },
-			MinecraftVersion.MC1_7_R4, new Since(MinecraftVersion.MC1_7_R4, "e"),
+			MinecraftVersion.MC1_7_R4, MinecraftVersion.MC1_21_R4, new Since(MinecraftVersion.MC1_7_R4, "e"),
 			new Since(MinecraftVersion.MC1_12_R1, "save"),
 			new Since(MinecraftVersion.MC1_18_R1, "saveWithoutId(net.minecraft.nbt.CompoundTag)")),
 	NMS_ENTITY_GETSAVEID(ClassWrapper.NMS_ENTITY, new Class[] {}, MinecraftVersion.MC1_14_R1,
@@ -249,7 +255,7 @@ enum ReflectionMethod {
 
 	PARSE_NBT(ClassWrapper.NMS_MOJANGSONPARSER, new Class[] { String.class }, MinecraftVersion.MC1_7_R4,
 			new Since(MinecraftVersion.MC1_7_R4, "parse"),
-			new Since(MinecraftVersion.MC1_18_R1, "parseTag(java.lang.String)")),
+			new Since(MinecraftVersion.MC1_18_R1, "parseTag(java.lang.String)"), new Since(MinecraftVersion.MC1_21_R5, "parseCompoundFully(java.lang.String)")),
 	REGISTRY_KEYSET(ClassWrapper.NMS_REGISTRYSIMPLE, new Class[] {}, MinecraftVersion.MC1_11_R1,
 			MinecraftVersion.MC1_13_R1, new Since(MinecraftVersion.MC1_11_R1, "keySet")),
 	REGISTRY_GET(ClassWrapper.NMS_REGISTRYSIMPLE, new Class[] { Object.class }, MinecraftVersion.MC1_11_R1,
@@ -290,19 +296,40 @@ enum ReflectionMethod {
 	NMSITEM_SET(ClassWrapper.NMS_ITEMSTACK, new Class[] { ClassWrapper.NMS_DATACOMPONENTTYPE.getClazz(), Object.class }, MinecraftVersion.MC1_20_R4,
 			new Since(MinecraftVersion.MC1_20_R4, "set(net.minecraft.core.component.DataComponentType,java.lang.Object)")),
 	NMSITEM_SAVE_MODERN(ClassWrapper.NMS_ITEMSTACK, new Class[] { ClassWrapper.NMS_PROVIDER.getClazz() },
-			MinecraftVersion.MC1_20_R4, new Since(MinecraftVersion.MC1_20_R4, "save(net.minecraft.core.HolderLookup$Provider)")),
+			MinecraftVersion.MC1_20_R4, MinecraftVersion.MC1_21_R4, new Since(MinecraftVersion.MC1_20_R4, "save(net.minecraft.core.HolderLookup$Provider)")),
 	NMSITEM_LOAD(ClassWrapper.NMS_ITEMSTACK, new Class[] { ClassWrapper.NMS_PROVIDER.getClazz(), ClassWrapper.NMS_NBTTAGCOMPOUND.getClazz() },
-			MinecraftVersion.MC1_20_R4, new Since(MinecraftVersion.MC1_20_R4, "parseOptional(net.minecraft.core.HolderLookup$Provider,net.minecraft.nbt.CompoundTag)")),
+			MinecraftVersion.MC1_20_R4, MinecraftVersion.MC1_21_R3, new Since(MinecraftVersion.MC1_20_R4, "parseOptional(net.minecraft.core.HolderLookup$Provider,net.minecraft.nbt.CompoundTag)")),
+	NMSITEM_LOAD_MODERN(ClassWrapper.NMS_ITEMSTACK, new Class[] { ClassWrapper.NMS_PROVIDER.getClazz(), ClassWrapper.NMS_NBTBASE.getClazz() },
+			MinecraftVersion.MC1_21_R4, MinecraftVersion.MC1_21_R4, new Since(MinecraftVersion.MC1_20_R4, "parse(net.minecraft.core.HolderLookup$Provider,net.minecraft.nbt.Tag)")),
 	NMSSERVER_GETREGISTRYACCESS(ClassWrapper.NMS_SERVER, new Class[] {},
 			MinecraftVersion.MC1_20_R4, new Since(MinecraftVersion.MC1_20_R4, "registryAccess()")),
 	NMSSERVER_GETSERVER(ClassWrapper.CRAFT_SERVER, new Class[] {},
 			MinecraftVersion.MC1_20_R4, new Since(MinecraftVersion.MC1_20_R4, "getServer()")),
-	TILEENTITY_GET_NBT_1205(ClassWrapper.NMS_TILEENTITY, new Class[] { ClassWrapper.NMS_PROVIDER.getClazz() }, MinecraftVersion.MC1_20_R4,
+	TILEENTITY_GET_NBT_1205(ClassWrapper.NMS_TILEENTITY, new Class[] { ClassWrapper.NMS_PROVIDER.getClazz() }, MinecraftVersion.MC1_20_R4, MinecraftVersion.MC1_21_R4,
 			new Since(MinecraftVersion.MC1_20_R4, "saveWithId(net.minecraft.core.HolderLookup$Provider)")),
 	TILEENTITY_SET_NBT_1205(ClassWrapper.NMS_TILEENTITY, new Class[] { ClassWrapper.NMS_NBTTAGCOMPOUND.getClazz(), ClassWrapper.NMS_PROVIDER.getClazz() },
-			MinecraftVersion.MC1_20_R4, new Since(MinecraftVersion.MC1_20_R4, "loadWithComponents(net.minecraft.nbt.CompoundTag,net.minecraft.core.HolderLookup$Provider)")),
+			MinecraftVersion.MC1_20_R4, MinecraftVersion.MC1_21_R4, new Since(MinecraftVersion.MC1_20_R4, "loadWithComponents(net.minecraft.nbt.CompoundTag,net.minecraft.core.HolderLookup$Provider)")),
 	GET_DATAFIXER(ClassWrapper.NMS_DATAFIXERS, new Class[] {}, MinecraftVersion.MC1_20_R4,
 			new Since(MinecraftVersion.MC1_20_R4, "getDataFixer()")),
+	// 1.21.6 Stuff
+	GET_SERIALIZATION_CONTEXT(ClassWrapper.NMS_PROVIDER, new Class[] { ClassWrapper.NMS_DYNAMICOPS.getClazz() }, MinecraftVersion.MC1_21_R5,
+			new Since(MinecraftVersion.MC1_21_R5, "createSerializationContext(com.mojang.serialization.DynamicOps)")),
+	NMS_GET_TAG_VALUE_INPUT(ClassWrapper.NMS_TAG_VALUE_INPUT, new Class[] { ClassWrapper.NMS_PROBLEM_REPORTER.getClazz(), ClassWrapper.NMS_PROVIDER.getClazz(), ClassWrapper.NMS_NBTTAGCOMPOUND.getClazz() }, MinecraftVersion.MC1_21_R5,
+			new Since(MinecraftVersion.MC1_21_R5, "create(net.minecraft.util.ProblemReporter,net.minecraft.core.HolderLookup$Provider,net.minecraft.nbt.CompoundTag)")),
+	NMS_GET_TAG_VALUE_OUTPUT(ClassWrapper.NMS_TAG_VALUE_OUTPUT, new Class[] { ClassWrapper.NMS_PROBLEM_REPORTER.getClazz(), ClassWrapper.NMS_PROVIDER.getClazz() }, MinecraftVersion.MC1_21_R5,
+			new Since(MinecraftVersion.MC1_21_R5, "createWithContext(net.minecraft.util.ProblemReporter,net.minecraft.core.HolderLookup$Provider)")),
+	NMS_TAG_VALUE_OUTPUT_TO_TAG_COMPOUND(ClassWrapper.NMS_TAG_VALUE_OUTPUT, new Class[] {}, MinecraftVersion.MC1_21_R5,
+			new Since(MinecraftVersion.MC1_21_R5, "buildResult()")),
+	NMS_ENTITY_SET_NBT_1216(ClassWrapper.NMS_ENTITY, new Class[] { ClassWrapper.NMS_VALUE_INPUT.getClazz() }, MinecraftVersion.MC1_21_R5,
+			new Since(MinecraftVersion.MC1_21_R5, "load(net.minecraft.world.level.storage.ValueInput)")),
+	NMS_ENTITY_GET_NBT_1216(ClassWrapper.NMS_ENTITY, new Class[] { ClassWrapper.NMS_VALUE_OUTPUT.getClazz() }, MinecraftVersion.MC1_21_R5,
+			new Since(MinecraftVersion.MC1_21_R5, "saveWithoutId(net.minecraft.world.level.storage.ValueOutput)")),
+
+	TILEENTITY_GET_NBT_1216(ClassWrapper.NMS_TILEENTITY, new Class[] { ClassWrapper.NMS_VALUE_OUTPUT.getClazz() }, MinecraftVersion.MC1_21_R5,
+			new Since(MinecraftVersion.MC1_21_R5, "saveWithId(net.minecraft.world.level.storage.ValueOutput)")),
+	TILEENTITY_SET_NBT_1216(ClassWrapper.NMS_TILEENTITY, new Class[] { ClassWrapper.NMS_VALUE_INPUT.getClazz() },
+			MinecraftVersion.MC1_21_R5,
+			new Since(MinecraftVersion.MC1_21_R5, "loadWithComponents(net.minecraft.world.level.storage.ValueInput)")),
 			;
 
 	private MinecraftVersion removedAfter;
@@ -313,8 +340,8 @@ enum ReflectionMethod {
 	private String methodName = null;
 	private ClassWrapper parentClassWrapper;
 
-	ReflectionMethod(ClassWrapper targetClass, Class<?>[] args, MinecraftVersion addedSince,
-			MinecraftVersion removedAfter, Since... methodnames) {
+	ReflectionMethod(final ClassWrapper targetClass, final Class<?>[] args, final MinecraftVersion addedSince,
+			final MinecraftVersion removedAfter, final Since... methodnames) {
 		this.removedAfter = removedAfter;
 		this.parentClassWrapper = targetClass;
 		// Special Case for Modded 1.7.10
@@ -324,57 +351,53 @@ enum ReflectionMethod {
 		if (!specialCase && (!MinecraftVersion.isAtLeastVersion(addedSince)
 				|| (this.removedAfter != null && MinecraftVersion.isNewerThan(removedAfter))))
 			return;
-		compatible = true;
+		this.compatible = true;
 		final MinecraftVersion server = MinecraftVersion.getVersion();
 		Since target = methodnames[0];
 		for (final Since s : methodnames)
 			if (s.version.getVersionId() <= server.getVersionId()
 					&& target.version.getVersionId() < s.version.getVersionId())
 				target = s;
-		targetVersion = target;
-		String targetMethodName = targetVersion.name;
+		this.targetVersion = target;
+		String targetMethodName = this.targetVersion.name;
 		try {
 			if (MinecraftVersion.isForgePresent() && MinecraftVersion.getVersion() == MinecraftVersion.MC1_7_R4)
 				targetMethodName = Forge1710Mappings.getMethodMapping().getOrDefault(this.name(), targetMethodName);
-			else if (targetVersion.version.isMojangMapping()) {
+			else if (this.targetVersion.version.isMojangMapping()) {
 				try {
 					// check for mojang mapped method
-					final String name = targetVersion.name.split("\\(")[0];
-					method = targetClass.getClazz().getMethod(name, args);
-					method.setAccessible(true);
-					loaded = true;
-					methodName = name;
+					final String name = this.targetVersion.name.split("\\(")[0];
+					this.method = targetClass.getClazz().getMethod(name, args);
+					this.method.setAccessible(true);
+					this.loaded = true;
+					this.methodName = name;
 					return;
 				} catch (final NoSuchMethodException ignore) {
 					// not mojang mapped
 				}
 				targetMethodName = MojangToMapping.getMapping().getOrDefault(
-						targetClass.getMojangName() + "#" + targetVersion.name, "Unmapped" + targetVersion.name);
+						targetClass.getMojangName() + "#" + this.targetVersion.name, "Unmapped" + this.targetVersion.name);
 			}
-			method = targetClass.getClazz().getDeclaredMethod(targetMethodName, args);
-			method.setAccessible(true);
-			loaded = true;
-			methodName = targetVersion.name;
+			this.method = targetClass.getClazz().getDeclaredMethod(targetMethodName, args);
+			this.method.setAccessible(true);
+			this.loaded = true;
+			this.methodName = this.targetVersion.name;
 		} catch (NullPointerException | NoSuchMethodException | SecurityException ex) {
 			try {
-				if (targetVersion.version.isMojangMapping())
+				if (this.targetVersion.version.isMojangMapping())
 					targetMethodName = MojangToMapping.getMapping().getOrDefault(
-							targetClass.getMojangName() + "#" + targetVersion.name, "Unmapped" + targetVersion.name);
-				method = targetClass.getClazz().getMethod(targetMethodName, args);
-				method.setAccessible(true);
-				loaded = true;
-				methodName = targetVersion.name;
+							targetClass.getMojangName() + "#" + this.targetVersion.name, "Unmapped" + this.targetVersion.name);
+				this.method = targetClass.getClazz().getMethod(targetMethodName, args);
+				this.method.setAccessible(true);
+				this.loaded = true;
+				this.methodName = this.targetVersion.name;
 			} catch (NullPointerException | NoSuchMethodException | SecurityException ex2) {
-				System.out.println("NBTAPI] Unable to find the method '" + targetMethodName + "' in '"
-						+ (targetClass.getClazz() == null ? targetClass.getMojangName()
-								: targetClass.getClazz().getSimpleName())
-						+ "' Args: " + Arrays.toString(args) + " Enum: " + this); // NOSONAR This gets loaded
-																																																																					// before the logger is loaded
+				System.out.println("[NBTAPI] Unable to find the method '" + targetMethodName + "' in '" + (targetClass.getClazz() == null ? targetClass.getMojangName() : targetClass.getClazz().getSimpleName()) + "' Args: " + Arrays.toString(args) + " Enum: " + this);
 			}
 		}
 	}
 
-	ReflectionMethod(ClassWrapper targetClass, Class<?>[] args, MinecraftVersion addedSince, Since... methodnames) {
+	ReflectionMethod(final ClassWrapper targetClass, final Class<?>[] args, final MinecraftVersion addedSince, final Since... methodnames) {
 		this(targetClass, args, addedSince, null, methodnames);
 	}
 
@@ -385,14 +408,15 @@ enum ReflectionMethod {
 	 * @param args
 	 * @return Value returned by the method
 	 */
-	public Object run(Object target, Object... args) {
-		if (method == null)
+	public Object run(final Object target, final Object... args) {
+		if (this.method == null)
 			throw new NbtApiException("Method not loaded! '" + this + "'");
 		try {
-			return method.invoke(target, args);
+			return this.method.invoke(target, args);
 		} catch (final Exception ex) {
-			throw new NbtApiException("Error while calling the method '" + methodName + "', loaded: " + loaded
-					+ ", Enum: " + this + ", Passed Class: " + (target == null ? "null" : target.getClass()) + " Args: " + (args == null ? "null" : Arrays.toString(args)), ex);
+			throw new NbtApiException("Error while calling the method '" + this.methodName + "', loaded: " + this.loaded
+					+ ", Enum: " + this + ", Passed Class: " + (target == null ? "null" : target.getClass()) + " Args: " + (args == null ? "null" : Arrays.toString(args)) +
+					" Classes: " + (args == null ? "null" : Arrays.asList(args).stream().map(a -> a == null ? "NULL" : a.getClass().getName()).collect(Collectors.toList())), ex);
 		}
 	}
 
@@ -400,39 +424,39 @@ enum ReflectionMethod {
 	 * @return The MethodName, used in this Minecraft Version
 	 */
 	public String getMethodName() {
-		return methodName;
+		return this.methodName;
 	}
 
 	/**
 	 * @return Has this method been linked
 	 */
 	public boolean isLoaded() {
-		return loaded;
+		return this.loaded;
 	}
 
 	/**
 	 * @return Is this method available in this Minecraft Version
 	 */
 	public boolean isCompatible() {
-		return compatible;
+		return this.compatible;
 	}
 
 	public Since getSelectedVersionInfo() {
-		return targetVersion;
+		return this.targetVersion;
 	}
 
 	/**
 	 * @return Get Wrapper of the parent class
 	 */
 	public ClassWrapper getParentClassWrapper() {
-		return parentClassWrapper;
+		return this.parentClassWrapper;
 	}
 
 	public static class Since {
 		public final MinecraftVersion version;
 		public final String name;
 
-		public Since(MinecraftVersion version, String name) {
+		public Since(final MinecraftVersion version, final String name) {
 			this.version = version;
 			this.name = name;
 		}

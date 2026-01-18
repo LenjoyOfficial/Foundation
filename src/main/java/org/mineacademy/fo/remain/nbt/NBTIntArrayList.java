@@ -13,13 +13,13 @@ public class NBTIntArrayList extends NBTList<int[]> {
 
 	private final NBTContainer tmpContainer;
 
-	protected NBTIntArrayList(NBTCompound owner, String name, NBTType type, Object list) {
+	protected NBTIntArrayList(final NBTCompound owner, final String name, final NBTType type, final Object list) {
 		super(owner, name, type, list);
 		this.tmpContainer = new NBTContainer();
 	}
 
 	@Override
-	protected Object asTag(int[] object) {
+	protected Object asTag(final int[] object) {
 		try {
 			final Constructor<?> con = ClassWrapper.NMS_NBTTAGINTARRAY.getClazz().getDeclaredConstructor(int[].class);
 			con.setAccessible(true);
@@ -31,12 +31,12 @@ public class NBTIntArrayList extends NBTList<int[]> {
 	}
 
 	@Override
-	public int[] get(int index) {
+	public int[] get(final int index) {
 		try {
-			final Object obj = ReflectionMethod.LIST_GET.run(listObject, index);
-			ReflectionMethod.COMPOUND_SET.run(tmpContainer.getCompound(), "tmp", obj);
-			final int[] val = tmpContainer.getIntArray("tmp");
-			tmpContainer.removeKey("tmp");
+			final Object obj = ReflectionMethod.LIST_GET.run(this.listObject, index);
+			ReflectionMethod.COMPOUND_SET.run(this.tmpContainer.getCompound(), "tmp", obj);
+			final int[] val = this.tmpContainer.getIntArray("tmp");
+			this.tmpContainer.removeKey("tmp");
 			return val;
 		} catch (final NumberFormatException nf) {
 			return null;

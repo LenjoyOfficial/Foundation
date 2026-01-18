@@ -66,6 +66,8 @@ import org.mineacademy.fo.settings.ConfigSection;
 import org.mineacademy.fo.settings.SimpleLocalization;
 import org.mineacademy.fo.settings.SimpleSettings;
 
+import com.google.gson.Gson;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -81,6 +83,11 @@ public final class Common {
 	// ------------------------------------------------------------------------------------------------------------
 	// Constants
 	// ------------------------------------------------------------------------------------------------------------
+
+	/**
+	 * The default GSON instance.
+	 */
+	public static final Gson GSON = new Gson();
 
 	/**
 	 * Pattern used to match colors with & or {@link CompChatColor#COLOR_CHAR}
@@ -591,11 +598,11 @@ public final class Common {
 		if (message == null || message.isEmpty())
 			return "";
 
-		String result = CompChatColor.translateColorCodes(message)
+		String result = CompChatColor.translateColorCodes(message
 				.replace("{prefix}", message.startsWith(tellPrefix) ? "" : tellPrefix)
 				.replace("{server}", SimpleLocalization.SERVER_PREFIX)
 				.replace("{plugin_name}", SimplePlugin.getNamed())
-				.replace("{plugin_version}", SimplePlugin.getVersion());
+				.replace("{plugin_version}", SimplePlugin.getVersion()));
 
 		// Replace hex colors on 1.16+ or find the closest color for legacy versions
 		final Matcher match = HEX_COLOR_REGEX.matcher(result);
@@ -836,6 +843,7 @@ public final class Common {
 	 * Example:
 	 * "X bosses: Creeper, Zombie
 	 *
+	 * @param <T>
 	 * @param iterable
 	 * @param ofWhat
 	 * @return
@@ -2119,6 +2127,8 @@ public final class Common {
 	/**
 	 * Converts a list having one type object into another
 	 *
+	 * @param <OLD>
+	 * @param <NEW>
 	 * @param list      the old list
 	 * @param converter the converter;
 	 * @return the new list
@@ -2138,6 +2148,8 @@ public final class Common {
 	/**
 	 * Converts a set having one type object into another
 	 *
+	 * @param <OLD>
+	 * @param <NEW>
 	 * @param list      the old list
 	 * @param converter the converter;
 	 * @return the new list
@@ -2156,7 +2168,9 @@ public final class Common {
 
 	/**
 	 * Converts a list having one type object into another
-	 *
+	 * 
+	 * @param <OLD>
+	 * @param <NEW>
 	 * @param list      the old list
 	 * @param converter the converter
 	 * @return the new list
@@ -2360,6 +2374,7 @@ public final class Common {
 	 *
 	 * PSA: If values are strings, we return default if the value is empty or equals to "none"
 	 *
+	 * @param <T>
 	 * @param value the primary value
 	 * @param def   the default value
 	 * @return the value, or default it the value is null
@@ -2454,6 +2469,7 @@ public final class Common {
 	/**
 	 * Creates a new modifiable array list from array
 	 *
+	 * @param <T>
 	 * @param array
 	 * @return
 	 */
@@ -2464,6 +2480,7 @@ public final class Common {
 	/**
 	 * Converts {@link Iterable} to {@link List}
 	 *
+	 * @param <T>
 	 * @param it the iterable
 	 * @return the new list
 	 */

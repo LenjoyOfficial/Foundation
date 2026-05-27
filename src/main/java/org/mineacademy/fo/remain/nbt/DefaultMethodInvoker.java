@@ -23,14 +23,13 @@ class DefaultMethodInvoker {
 
 	/**
 	 * Using reflections to access reflections, since some are still on java 8.
-	 * @param srcInt
 	 *
 	 * @param target
 	 * @param method
 	 * @param args
 	 * @return
 	 */
-	public static Object invokeDefault(final Class<?> srcInt, final Object target, final Method method, final Object[] args) {
+	public static Object invokeDefault(Class<?> srcInt, Object target, Method method, Object[] args) {
 		if (invokeDefaultMethod != null)
 			try {
 				return invokeDefaultMethod.invoke(null, target, method, args);

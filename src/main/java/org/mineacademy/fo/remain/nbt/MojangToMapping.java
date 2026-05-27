@@ -1,5 +1,6 @@
 package org.mineacademy.fo.remain.nbt;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,9 +11,8 @@ import java.util.Map;
  * @author tr7zw
  *
  */
-class MojangToMapping {
+final class MojangToMapping {
 
-	@SuppressWarnings("serial")
 	private static Map<String, String> MC1_18R1 = new HashMap<String, String>() {
 
 		{
@@ -76,7 +76,6 @@ class MojangToMapping {
 
 	};
 
-	@SuppressWarnings("serial")
 	private static Map<String, String> MC1_18R2 = new HashMap<String, String>() {
 
 		{
@@ -86,7 +85,6 @@ class MojangToMapping {
 		}
 	};
 
-	@SuppressWarnings("serial")
 	private static Map<String, String> MC1_19R1 = new HashMap<String, String>() {
 
 		{
@@ -97,7 +95,6 @@ class MojangToMapping {
 
 	};
 
-	@SuppressWarnings("serial")
 	private static Map<String, String> MC1_19R2 = new HashMap<String, String>() {
 
 		{
@@ -108,7 +105,6 @@ class MojangToMapping {
 
 	};
 
-	@SuppressWarnings("serial")
 	private static Map<String, String> MC1_20R1 = new HashMap<String, String>() {
 
 		{
@@ -120,7 +116,6 @@ class MojangToMapping {
 
 	};
 
-	@SuppressWarnings("serial")
 	private static Map<String, String> MC1_20R2 = new HashMap<String, String>() {
 
 		{
@@ -131,7 +126,6 @@ class MojangToMapping {
 
 	};
 
-	@SuppressWarnings("serial")
 	private static Map<String, String> MC1_20R3 = new HashMap<String, String>() {
 
 		{
@@ -147,7 +141,6 @@ class MojangToMapping {
 
 	};
 
-	@SuppressWarnings("serial")
 	private static Map<String, String> MC1_20R4 = new HashMap<String, String>() {
 
 		{
@@ -172,7 +165,6 @@ class MojangToMapping {
 
 	};
 
-	@SuppressWarnings("serial")
 	private static Map<String, String> MC1_21R1 = new HashMap<String, String>() {
 
 		{
@@ -183,7 +175,6 @@ class MojangToMapping {
 
 	};
 
-	@SuppressWarnings("serial")
 	private static Map<String, String> MC1_21R2 = new HashMap<String, String>() {
 
 		{
@@ -197,7 +188,6 @@ class MojangToMapping {
 
 	};
 
-	@SuppressWarnings("serial")
 	private static Map<String, String> MC1_21R3 = new HashMap<String, String>() {
 
 		{
@@ -208,7 +198,6 @@ class MojangToMapping {
 
 	};
 
-	@SuppressWarnings("serial")
 	private static Map<String, String> MC1_21R4 = new HashMap<String, String>() {
 
 		{
@@ -235,11 +224,11 @@ class MojangToMapping {
 			this.put("net.minecraft.nbt.TagType#getName()", "a");
 			this.put("net.minecraft.nbt.CompoundTag#getList(java.lang.String)", "o");
 			this.put("net.minecraft.world.item.ItemStack#parse(net.minecraft.core.HolderLookup$Provider,net.minecraft.nbt.Tag)", "a");
+			this.put("net.minecraft.world.item.ItemStack#CODEC", "b");
 		}
 
 	};
 
-	@SuppressWarnings("serial")
 	private static Map<String, String> MC1_21R5 = new HashMap<String, String>() {
 
 		{
@@ -280,8 +269,45 @@ class MojangToMapping {
 
 	};
 
+	private static Map<String, String> MC1_21R6 = new HashMap<String, String>() {
+
+		{
+			this.putAll(MC1_21R5);
+
+			this.put("net.minecraft.server.MinecraftServer#registryAccess()", "bg");
+			this.put("net.minecraft.world.entity.Entity#load(net.minecraft.world.level.storage.ValueInput)", "d");
+			this.put("net.minecraft.world.entity.Entity#getEncodeId()", "bW");
+			this.put("net.minecraft.world.item.component.CustomData#copyTag()", "b");
+			this.put("net.minecraft.world.level.block.entity.BlockEntity#getBlockState()", "o");
+			this.put("net.minecraft.util.datafix.fixes.References#ITEM_STACK", "v");
+
+		}
+
+	};
+
+	private static Map<String, String> MC1_21R7 = new HashMap<String, String>() {
+
+		{
+			this.putAll(MC1_21R6);
+
+			this.put("net.minecraft.nbt.NbtAccounter#unlimitedHeap()", "c");
+			this.put("net.minecraft.server.MinecraftServer#registryAccess()", "bc");
+			this.put("net.minecraft.world.entity.Entity#getEncodeId()", "ca");
+			this.put("net.minecraft.util.datafix.fixes.References#ITEM_STACK", "x");
+
+		}
+
+	};
+
 	public static Map<String, String> getMapping() {
+		if (MinecraftVersion.getVersion() != MinecraftVersion.UNKNOWN && MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC26_1))
+			return Collections.EMPTY_MAP;
+
 		switch (MinecraftVersion.getVersion()) {
+			case MC1_21_R7:
+				return MC1_21R7;
+			case MC1_21_R6:
+				return MC1_21R6;
 			case MC1_21_R5:
 				return MC1_21R5;
 			case MC1_21_R4:
@@ -311,7 +337,7 @@ class MojangToMapping {
 			case MC1_18_R1:
 				return MC1_18R1;
 			case UNKNOWN:
-				return MC1_20R2; // assume it's a future version, so try the latest known mappings
+				return MC1_21R7; // assume it's a future version, so try the latest known mappings
 			default:
 				// this should never happen, unless a version is forgotten here(like 1.19R3 which uses the 1.19R2 mappings)
 				throw new NbtApiException("No fitting mapping found for version " + MinecraftVersion.getVersion() + ". This is a bug!");

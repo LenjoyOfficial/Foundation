@@ -6,8 +6,6 @@ import java.io.InputStream;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
 import org.bukkit.inventory.ItemStack;
@@ -19,7 +17,6 @@ import org.mineacademy.fo.Common;
  * @author tr7zw
  *
  */
-
 public class NBT {
 
 	private NBT() {
@@ -39,18 +36,25 @@ public class NBT {
 	public static boolean preloadApi() {
 		try {
 			// boiled down version of the plugin selfcheck without tests
-			if (MinecraftVersion.getVersion() == MinecraftVersion.UNKNOWN)
+			if (MinecraftVersion.getVersion() == MinecraftVersion.UNKNOWN) {
+				NbtApiException.confirmedBroken = true;
 				return false;
+			}
 			for (final ClassWrapper c : ClassWrapper.values())
-				if (c.isEnabled() && c.getClazz() == null)
+				if (c.isEnabled() && c.getClazz() == null) {
+					NbtApiException.confirmedBroken = true;
 					return false;
+				}
 			for (final ReflectionMethod method : ReflectionMethod.values())
-				if (method.isCompatible() && !method.isLoaded())
+				if (method.isCompatible() && !method.isLoaded()) {
+					NbtApiException.confirmedBroken = true;
 					return false;
-
+				}
+			// not settings NbtApiException.confirmedBroken = false, as no actual tests were done.
+			// This just means the version was found, and all reflections seem to work.
 			return true;
-
 		} catch (final Exception ex) {
+			NbtApiException.confirmedBroken = true;
 			Common.error(ex, "[NBTAPI] Error during the selfcheck!");
 
 			return false;
@@ -65,7 +69,7 @@ public class NBT {
 	 * @param item
 	 * @return
 	 */
-	public static ReadableNBT readNbt(final ItemStack item) {
+	public static ReadableNBT readNbt(ItemStack item) {
 		return new NBTItem(item.clone(), false, true, false);
 	}
 
@@ -79,7 +83,7 @@ public class NBT {
 	 *               T.
 	 * @return The function is being returned.
 	 */
-	public static <T> T get(final ItemStack item, final Function<ReadableItemNBT, T> getter) {
+	public static <T> T get(ItemStack item, Function<ReadableItemNBT, T> getter) {
 		final NBTItem nbt = new NBTItem(item, false, true, false);
 		final T ret = getter.apply(nbt);
 		if (ret instanceof ReadableNBT || ret instanceof ReadableNBTList<?>)
@@ -93,9 +97,8 @@ public class NBT {
 	 * Consumer on the NBT of the item
 	 *
 	 * @param item The itemstack you want to get the NBT from
-	 * @param getter
 	 */
-	public static void get(final ItemStack item, final Consumer<ReadableItemNBT> getter) {
+	public static void get(ItemStack item, Consumer<ReadableItemNBT> getter) {
 		final NBTItem nbt = new NBTItem(item, false, true, false);
 		getter.accept(nbt);
 		nbt.setClosed();
@@ -109,7 +112,7 @@ public class NBT {
 	 * @param getter A function that takes a ReadableNBT and returns a value.
 	 * @return The NBTEntity class is being returned.
 	 */
-	public static <T> T get(final Entity entity, final Function<ReadableNBT, T> getter) {
+	public static <T> T get(Entity entity, Function<ReadableNBT, T> getter) {
 		final NBTEntity nbt = new NBTEntity(entity, true);
 		final T ret = getter.apply(nbt);
 		if (ret instanceof ReadableNBT || ret instanceof ReadableNBTList<?>)
@@ -123,9 +126,8 @@ public class NBT {
 	 * Consumer on the NBT of the Entity
 	 *
 	 * @param entity The entity to get the NBT from
-	 * @param getter
 	 */
-	public static void get(final Entity entity, final Consumer<ReadableNBT> getter) {
+	public static void get(Entity entity, Consumer<ReadableNBT> getter) {
 		final NBTEntity nbt = new NBTEntity(entity, true);
 		getter.accept(nbt);
 		nbt.setClosed();
@@ -141,7 +143,7 @@ public class NBT {
 	 *                   type T.
 	 * @return The return type is the same as the type of the getter function.
 	 */
-	public static <T> T get(final BlockState blockState, final Function<ReadableNBT, T> getter) {
+	public static <T> T get(BlockState blockState, Function<ReadableNBT, T> getter) {
 		final NBTTileEntity nbt = new NBTTileEntity(blockState, true);
 		final T ret = getter.apply(nbt);
 		if (ret instanceof ReadableNBT || ret instanceof ReadableNBTList<?>)
@@ -155,9 +157,8 @@ public class NBT {
 	 * Consumer on the NBT of the BlockEntity
 	 *
 	 * @param blockState The block state of the block you want to get the NBT from.
-	 * @param getter
 	 */
-	public static void get(final BlockState blockState, final Consumer<ReadableNBT> getter) {
+	public static void get(BlockState blockState, Consumer<ReadableNBT> getter) {
 		final NBTTileEntity nbt = new NBTTileEntity(blockState, true);
 		getter.accept(nbt);
 		nbt.setClosed();
@@ -173,7 +174,7 @@ public class NBT {
 	 *               T.
 	 * @return The return type is T, which is a generic type.
 	 */
-	public static <T> T getPersistentData(final Entity entity, final Function<ReadableNBT, T> getter) {
+	public static <T> T getPersistentData(Entity entity, Function<ReadableNBT, T> getter) {
 		final T ret = getter.apply(new NBTEntity(entity).getPersistentDataContainer());
 		if (ret instanceof ReadableNBT || ret instanceof ReadableNBTList<?>)
 			throw new NbtApiException("Tried returning part of the NBT to outside of the NBT scope!");
@@ -190,7 +191,7 @@ public class NBT {
 	 *                   type T.
 	 * @return The value of the NBT tag.
 	 */
-	public static <T> T getPersistentData(final BlockState blockState, final Function<ReadableNBT, T> getter) {
+	public static <T> T getPersistentData(BlockState blockState, Function<ReadableNBT, T> getter) {
 		final T ret = getter.apply(new NBTTileEntity(blockState).getPersistentDataContainer());
 		if (ret instanceof ReadableNBT || ret instanceof ReadableNBTList<?>)
 			throw new NbtApiException("Tried returning part of the NBT to outside of the NBT scope!");
@@ -205,7 +206,7 @@ public class NBT {
 	 * @param function The function that will be applied to the item.
 	 * @return The return value of the function.
 	 */
-	public static <T> T modify(final ItemStack item, final Function<ReadWriteItemNBT, T> function) {
+	public static <T> T modify(ItemStack item, Function<ReadWriteItemNBT, T> function) {
 		final NBTItem nbti = new NBTItem(item, false, false, true);
 		final T val = function.apply(nbti);
 		nbti.finalizeChanges();
@@ -222,7 +223,7 @@ public class NBT {
 	 * @param item     The item you want to modify
 	 * @param consumer The consumer that will be used to modify the NBT.
 	 */
-	public static void modify(final ItemStack item, final Consumer<ReadWriteItemNBT> consumer) {
+	public static void modify(ItemStack item, Consumer<ReadWriteItemNBT> consumer) {
 		final NBTItem nbti = new NBTItem(item, false, false, true);
 		consumer.accept(nbti);
 		nbti.finalizeChanges();
@@ -237,7 +238,7 @@ public class NBT {
 	 * @param function The function that will be called.
 	 * @return The return type is the same as the return type of the function.
 	 */
-	public static <T> T modify(final Entity entity, final Function<ReadWriteNBT, T> function) {
+	public static <T> T modify(Entity entity, Function<ReadWriteNBT, T> function) {
 		final NBTEntity nbtEnt = new NBTEntity(entity);
 		final NBTContainer cont = new NBTContainer(nbtEnt.getCompound());
 		final T ret = function.apply(cont);
@@ -256,7 +257,7 @@ public class NBT {
 	 * @param item     The item you want to modify the components of
 	 * @param consumer The consumer that will be used to modify the components.
 	 */
-	public static void modifyComponents(final ItemStack item, final Consumer<ReadWriteNBT> consumer) {
+	public static void modifyComponents(ItemStack item, Consumer<ReadWriteNBT> consumer) {
 		if (!MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_20_R4))
 			throw new NbtApiException("This method only works for 1.20.5+!");
 		final ReadWriteNBT nbti = NBT.itemStackToNBT(item);
@@ -274,7 +275,7 @@ public class NBT {
 	 * @param function The consumer that will be used to modify the components.
 	 * @return The return type is the same as the return type of the function.
 	 */
-	public static <T> T modifyComponents(final ItemStack item, final Function<ReadWriteNBT, T> function) {
+	public static <T> T modifyComponents(ItemStack item, Function<ReadWriteNBT, T> function) {
 		if (!MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_20_R4))
 			throw new NbtApiException("This method only works for 1.20.5+!");
 		final ReadWriteNBT nbti = NBT.itemStackToNBT(item);
@@ -292,7 +293,7 @@ public class NBT {
 	 * @param item     The item you want to read the components of
 	 * @param consumer The consumer that will be used to read the components.
 	 */
-	public static void getComponents(final ItemStack item, final Consumer<ReadableNBT> consumer) {
+	public static void getComponents(ItemStack item, Consumer<ReadableNBT> consumer) {
 		if (!MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_20_R4))
 			throw new NbtApiException("This method only works for 1.20.5+!");
 		final ReadWriteNBT nbti = NBT.itemStackToNBT(item);
@@ -308,7 +309,7 @@ public class NBT {
 	 * @param function The consumer that will be used to read the components.
 	 * @return The return type is the same as the return type of the function.
 	 */
-	public static <T> T getComponents(final ItemStack item, final Function<ReadableNBT, T> function) {
+	public static <T> T getComponents(ItemStack item, Function<ReadableNBT, T> function) {
 		if (!MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_20_R4))
 			throw new NbtApiException("This method only works for 1.20.5+!");
 		final ReadWriteNBT nbti = NBT.itemStackToNBT(item);
@@ -322,7 +323,7 @@ public class NBT {
 	 * @param entity   The entity to modify
 	 * @param consumer The consumer that will be called with the NBTEntity.
 	 */
-	public static void modify(final Entity entity, final Consumer<ReadWriteNBT> consumer) {
+	public static void modify(Entity entity, Consumer<ReadWriteNBT> consumer) {
 		final NBTEntity nbtEnt = new NBTEntity(entity);
 		final NBTContainer cont = new NBTContainer(nbtEnt.getCompound());
 		consumer.accept(cont);
@@ -339,7 +340,7 @@ public class NBT {
 	 * @param function The function that will be called.
 	 * @return The return type is the same as the return type of the function.
 	 */
-	public static <T> T modifyPersistentData(final Entity entity, final Function<ReadWriteNBT, T> function) {
+	public static <T> T modifyPersistentData(Entity entity, Function<ReadWriteNBT, T> function) {
 		final T ret = function.apply(new NBTEntity(entity).getPersistentDataContainer());
 		if (ret instanceof ReadableNBT || ret instanceof ReadableNBTList<?>)
 			throw new NbtApiException("Tried returning part of the NBT to outside of the NBT scope!");
@@ -353,7 +354,7 @@ public class NBT {
 	 * @param entity   The entity to modify
 	 * @param consumer The consumer that will be used to modify the persistent data.
 	 */
-	public static void modifyPersistentData(final Entity entity, final Consumer<ReadWriteNBT> consumer) {
+	public static void modifyPersistentData(Entity entity, Consumer<ReadWriteNBT> consumer) {
 		consumer.accept(new NBTEntity(entity).getPersistentDataContainer());
 	}
 
@@ -365,7 +366,7 @@ public class NBT {
 	 * @param function   The function that will be called.
 	 * @return The return type is the same as the return type of the function.
 	 */
-	public static <T> T modify(final BlockState blockState, final Function<ReadWriteNBT, T> function) {
+	public static <T> T modify(BlockState blockState, Function<ReadWriteNBT, T> function) {
 		final NBTTileEntity blockEnt = new NBTTileEntity(blockState);
 		final NBTContainer cont = new NBTContainer(blockEnt.getCompound());
 		final T ret = function.apply(cont);
@@ -385,7 +386,7 @@ public class NBT {
 	 * @param consumer   A Consumer&lt;ReadWriteNBT&gt;. This is a function that
 	 *                   takes a ReadWriteNBT and does something with it.
 	 */
-	public static void modify(final BlockState blockState, final Consumer<ReadWriteNBT> consumer) {
+	public static void modify(BlockState blockState, Consumer<ReadWriteNBT> consumer) {
 		final NBTTileEntity blockEnt = new NBTTileEntity(blockState);
 		final NBTContainer cont = new NBTContainer(blockEnt.getCompound());
 		consumer.accept(cont);
@@ -402,7 +403,7 @@ public class NBT {
 	 * @param function   The function that will be called to modify the NBT data.
 	 * @return The return type is the same as the return type of the function.
 	 */
-	public static <T> T modifyPersistentData(final BlockState blockState, final Function<ReadWriteNBT, T> function) {
+	public static <T> T modifyPersistentData(BlockState blockState, Function<ReadWriteNBT, T> function) {
 		final T ret = function.apply(new NBTTileEntity(blockState).getPersistentDataContainer());
 		if (ret instanceof ReadableNBT || ret instanceof ReadableNBTList<?>)
 			throw new NbtApiException("Tried returning part of the NBT to outside of the NBT scope!");
@@ -417,7 +418,7 @@ public class NBT {
 	 * @param consumer   A Consumer&lt;ReadWriteNBT&gt;. This is a function that
 	 *                   takes a ReadWriteNBT and does something with it.
 	 */
-	public static void modifyPersistentData(final BlockState blockState, final Consumer<ReadWriteNBT> consumer) {
+	public static void modifyPersistentData(BlockState blockState, Consumer<ReadWriteNBT> consumer) {
 		consumer.accept(new NBTTileEntity(blockState).getPersistentDataContainer());
 	}
 
@@ -427,7 +428,7 @@ public class NBT {
 	 * @param itemStack The item stack you want to convert to NBT.
 	 * @return A ReadWriteNBT object.
 	 */
-	public static ReadWriteNBT itemStackToNBT(final ItemStack itemStack) {
+	public static ReadWriteNBT itemStackToNBT(ItemStack itemStack) {
 		return NBTItem.convertItemtoNBT(itemStack);
 	}
 
@@ -437,8 +438,7 @@ public class NBT {
 	 * @param compound The NBT tag to convert to an ItemStack
 	 * @return An ItemStack
 	 */
-	@Nullable
-	public static ItemStack itemStackFromNBT(final ReadableNBT compound) {
+	public static ItemStack itemStackFromNBT(ReadableNBT compound) {
 		return NBTItem.convertNBTtoItem((NBTCompound) compound);
 	}
 
@@ -448,7 +448,7 @@ public class NBT {
 	 * @param itemStacks The ItemStack[] you want to convert to NBT
 	 * @return An NBTItem object.
 	 */
-	public static ReadWriteNBT itemStackArrayToNBT(final ItemStack[] itemStacks) {
+	public static ReadWriteNBT itemStackArrayToNBT(ItemStack[] itemStacks) {
 		return NBTItem.convertItemArraytoNBT(itemStacks);
 	}
 
@@ -458,8 +458,7 @@ public class NBT {
 	 * @param compound The NBT tag to convert to an ItemStack array.
 	 * @return An array of ItemStacks.
 	 */
-	@Nullable
-	public static ItemStack[] itemStackArrayFromNBT(final ReadableNBT compound) {
+	public static ItemStack[] itemStackArrayFromNBT(ReadableNBT compound) {
 		return NBTItem.convertNBTtoItemArray((NBTCompound) compound);
 	}
 
@@ -478,7 +477,7 @@ public class NBT {
 	 * @param nbtString The NBT string to parse.
 	 * @return A new ReadWriteNBT object.
 	 */
-	public static ReadWriteNBT parseNBT(final String nbtString) {
+	public static ReadWriteNBT parseNBT(String nbtString) {
 		return new NBTContainer(nbtString);
 	}
 
@@ -488,7 +487,7 @@ public class NBT {
 	 * @param stream The NBT stream to read.
 	 * @return A new ReadWriteNBT object.
 	 */
-	public static ReadWriteNBT readNBT(final InputStream stream) {
+	public static ReadWriteNBT readNBT(InputStream stream) {
 		return new NBTContainer(stream);
 	}
 
@@ -499,7 +498,7 @@ public class NBT {
 	 * @param nmsNbtTag Needs to be a valid net.minecraft.nbt.CompoundTag
 	 * @return A new ReadWriteNBT object.
 	 */
-	public static ReadWriteNBT wrapNMSTag(final Object nmsNbtTag) {
+	public static ReadWriteNBT wrapNMSTag(Object nmsNbtTag) {
 		return new NBTContainer(nmsNbtTag);
 	}
 
@@ -508,10 +507,9 @@ public class NBT {
 	 * exists, the data will be loaded, otherwise a new file gets created.
 	 *
 	 * @param file
-	 * @return
 	 * @throws IOException
 	 */
-	public static NBTFileHandle getFileHandle(final File file) throws IOException {
+	public static NBTFileHandle getFileHandle(File file) throws IOException {
 		return new NBTFile(file);
 	}
 
@@ -524,7 +522,7 @@ public class NBT {
 	 * @return ReadWriteNBT of the files data
 	 * @throws IOException exception
 	 */
-	public static ReadWriteNBT readFile(final File file) throws IOException {
+	public static ReadWriteNBT readFile(File file) throws IOException {
 		return NBTFile.readFrom(file);
 	}
 
@@ -537,7 +535,7 @@ public class NBT {
 	 * @param nbt  NBT data
 	 * @throws IOException exception
 	 */
-	public static void writeFile(final File file, final ReadWriteNBT nbt) throws IOException {
+	public static void writeFile(File file, ReadWriteNBT nbt) throws IOException {
 		NBTFile.saveTo(file, (NBTCompound) nbt);
 	}
 
@@ -549,7 +547,7 @@ public class NBT {
 	 * @param wrapper
 	 * @return
 	 */
-	public static <T extends NBTProxy> T readNbt(final ItemStack item, final Class<T> wrapper) {
+	public static <T extends NBTProxy> T readNbt(ItemStack item, Class<T> wrapper) {
 		return new ProxyBuilder<>(new NBTItem(item, false, true, false), wrapper).readOnly().build();
 	}
 
@@ -561,7 +559,7 @@ public class NBT {
 	 * @param wrapper
 	 * @return
 	 */
-	public static <T extends NBTProxy> T readNbt(final Entity entity, final Class<T> wrapper) {
+	public static <T extends NBTProxy> T readNbt(Entity entity, Class<T> wrapper) {
 		return new ProxyBuilder<>(new NBTEntity(entity, true), wrapper).readOnly().build();
 	}
 
@@ -573,7 +571,7 @@ public class NBT {
 	 * @param wrapper
 	 * @return
 	 */
-	public static <T extends NBTProxy> T readNbt(final BlockState blockState, final Class<T> wrapper) {
+	public static <T extends NBTProxy> T readNbt(BlockState blockState, Class<T> wrapper) {
 		return new ProxyBuilder<>(new NBTTileEntity(blockState, true), wrapper).readOnly().build();
 	}
 
@@ -586,7 +584,7 @@ public class NBT {
 	 * @param function The function that will be applied to the item.
 	 * @return The return value of the function.
 	 */
-	public static <T, X extends NBTProxy> T modify(final ItemStack item, final Class<X> wrapper, final Function<X, T> function) {
+	public static <T, X extends NBTProxy> T modify(ItemStack item, Class<X> wrapper, Function<X, T> function) {
 		final NBTItem nbti = new NBTItem(item, false, false, true);
 		final T val = function.apply(new ProxyBuilder<>(nbti, wrapper).build());
 		nbti.finalizeChanges();
@@ -603,7 +601,7 @@ public class NBT {
 	 * @param wrapper  The target Proxy class
 	 * @param consumer The consumer that will be used to modify the NBT.
 	 */
-	public static <X extends NBTProxy> void modify(final ItemStack item, final Class<X> wrapper, final Consumer<X> consumer) {
+	public static <X extends NBTProxy> void modify(ItemStack item, Class<X> wrapper, Consumer<X> consumer) {
 		final NBTItem nbti = new NBTItem(item, false, false, true);
 		consumer.accept(new ProxyBuilder<>(nbti, wrapper).build());
 		nbti.finalizeChanges();
@@ -617,7 +615,7 @@ public class NBT {
 	 * @param wrapper  The target Proxy class
 	 * @param consumer The consumer that will be called with the proxy.
 	 */
-	public static <X extends NBTProxy> void modify(final Entity entity, final Class<X> wrapper, final Consumer<X> consumer) {
+	public static <X extends NBTProxy> void modify(Entity entity, Class<X> wrapper, Consumer<X> consumer) {
 		final NBTEntity nbtEnt = new NBTEntity(entity);
 		final NBTContainer cont = new NBTContainer(nbtEnt.getCompound());
 		consumer.accept(new ProxyBuilder<>(cont, wrapper).build());
@@ -633,7 +631,7 @@ public class NBT {
 	 * @param function The Function that will be called with the proxy.
 	 * @return The return value of the function.
 	 */
-	public static <T, X extends NBTProxy> T modify(final Entity entity, final Class<X> wrapper, final Function<X, T> function) {
+	public static <T, X extends NBTProxy> T modify(Entity entity, Class<X> wrapper, Function<X, T> function) {
 		final NBTEntity nbtEnt = new NBTEntity(entity);
 		final NBTContainer cont = new NBTContainer(nbtEnt.getCompound());
 		final T val = function.apply(new ProxyBuilder<>(cont, wrapper).build());
@@ -649,7 +647,7 @@ public class NBT {
 	 * @param wrapper    The target Proxy class
 	 * @param consumer   The Consumer that will be called.
 	 */
-	public static <X extends NBTProxy> void modify(final BlockState blockState, final Class<X> wrapper, final Consumer<X> consumer) {
+	public static <X extends NBTProxy> void modify(BlockState blockState, Class<X> wrapper, Consumer<X> consumer) {
 		final NBTTileEntity blockEnt = new NBTTileEntity(blockState);
 		final NBTContainer cont = new NBTContainer(blockEnt.getCompound());
 		consumer.accept(new ProxyBuilder<>(cont, wrapper).build());
@@ -665,7 +663,7 @@ public class NBT {
 	 * @param function   The function that will be called.
 	 * @return The return value of the function.
 	 */
-	public static <T, X extends NBTProxy> T modify(final BlockState blockState, final Class<X> wrapper, final Function<X, T> function) {
+	public static <T, X extends NBTProxy> T modify(BlockState blockState, Class<X> wrapper, Function<X, T> function) {
 		final NBTTileEntity blockEnt = new NBTTileEntity(blockState);
 		final NBTContainer cont = new NBTContainer(blockEnt.getCompound());
 		final T val = function.apply(new ProxyBuilder<>(cont, wrapper).build());

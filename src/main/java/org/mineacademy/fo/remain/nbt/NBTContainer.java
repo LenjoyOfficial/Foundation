@@ -49,7 +49,7 @@ public class NBTContainer extends NBTCompound {
 	 * @deprecated Use NBT.readNBT
 	 */
 	@Deprecated
-	public NBTContainer(final InputStream inputsteam) {
+	public NBTContainer(InputStream inputsteam) {
 		super(null, null);
 		this.nbt = NBTReflectionUtil.readNBT(inputsteam);
 	}
@@ -62,7 +62,7 @@ public class NBTContainer extends NBTCompound {
 	 * @deprecated Use NBT.parseNBT
 	 */
 	@Deprecated
-	public NBTContainer(final String nbtString) {
+	public NBTContainer(String nbtString) {
 		super(null, null);
 		if (nbtString == null)
 			throw new NullPointerException("The String can't be null!");
@@ -79,7 +79,7 @@ public class NBTContainer extends NBTCompound {
 	}
 
 	@Override
-	public void setCompound(final Object tag) {
+	public void setCompound(Object tag) {
 		this.nbt = tag;
 	}
 
@@ -98,7 +98,7 @@ public class NBTContainer extends NBTCompound {
 		return this.readOnly;
 	}
 
-	protected NBTContainer setReadOnly(final boolean readOnly) {
+	protected NBTContainer setReadOnly(boolean readOnly) {
 		this.readOnly = true;
 		return this;
 	}

@@ -30,19 +30,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.mineacademy.fo.Common;
+import org.mineacademy.fo.CommonCore;
 import org.mineacademy.fo.ItemUtil;
 import org.mineacademy.fo.MinecraftVersion;
 import org.mineacademy.fo.MinecraftVersion.V;
 import org.mineacademy.fo.ReflectionUtil;
-import org.mineacademy.fo.Valid;
+import org.mineacademy.fo.ValidCore;
 
 import lombok.Getter;
 import lombok.NonNull;
@@ -306,7 +304,7 @@ public enum CompMaterial {
 	CAVE_SPIDER_SPAWN_EGG(59, "MONSTER_EGG"),
 	CAVE_VINES,
 	CAVE_VINES_PLANT,
-	CHAIN,
+	IRON_CHAIN("CHAIN"),
 	CHAINMAIL_BOOTS,
 	CHAINMAIL_CHESTPLATE,
 	CHAINMAIL_HELMET,
@@ -660,6 +658,7 @@ public enum CompMaterial {
 	GOLDEN_AXE("GOLD_AXE"),
 	GOLDEN_BOOTS("GOLD_BOOTS"),
 	GOLDEN_CARROT,
+	GOLDEN_DANDELION,
 	GOLDEN_CHESTPLATE("GOLD_CHESTPLATE"),
 	GOLDEN_HELMET("GOLD_HELMET"),
 	GOLDEN_HOE("GOLD_HOE"),
@@ -1156,6 +1155,7 @@ public enum CompMaterial {
 	POTTED_CRIMSON_FUNGUS,
 	POTTED_CRIMSON_ROOTS,
 	POTTED_DANDELION("FLOWER_POT"),
+	POTTED_GOLDEN_DANDELION,
 	POTTED_DARK_OAK_SAPLING(5, "FLOWER_POT"),
 	POTTED_DEAD_BUSH("FLOWER_POT"),
 	POTTED_FERN(2, "FLOWER_POT"),
@@ -1757,9 +1757,101 @@ public enum CompMaterial {
 	DRIED_GHAST,
 
 	// 1.21.7 new names:
-	MUSIC_DISC_LAVA_CHICKEN
+	MUSIC_DISC_LAVA_CHICKEN,
 
-	;
+	// 1.21.9 new names:
+	ACACIA_SHELF,
+	BAMBOO_SHELF,
+	BIRCH_SHELF,
+	CHERRY_SHELF,
+	CRIMSON_SHELF,
+	DARK_OAK_SHELF,
+	JUNGLE_SHELF,
+	MANGROVE_SHELF,
+	OAK_SHELF,
+	PALE_OAK_SHELF,
+	SPRUCE_SHELF,
+	WARPED_SHELF,
+	COPPER_TORCH,
+	COPPER_BARS,
+	EXPOSED_COPPER_BARS,
+	WEATHERED_COPPER_BARS,
+	OXIDIZED_COPPER_BARS,
+	WAXED_COPPER_BARS,
+	WAXED_EXPOSED_COPPER_BARS,
+	WAXED_WEATHERED_COPPER_BARS,
+	WAXED_OXIDIZED_COPPER_BARS,
+	COPPER_CHAIN,
+	EXPOSED_COPPER_CHAIN,
+	WEATHERED_COPPER_CHAIN,
+	OXIDIZED_COPPER_CHAIN,
+	WAXED_COPPER_CHAIN,
+	WAXED_EXPOSED_COPPER_CHAIN,
+	WAXED_WEATHERED_COPPER_CHAIN,
+	WAXED_OXIDIZED_COPPER_CHAIN,
+	EXPOSED_LIGHTNING_ROD,
+	WEATHERED_LIGHTNING_ROD,
+	OXIDIZED_LIGHTNING_ROD,
+	WAXED_LIGHTNING_ROD,
+	WAXED_EXPOSED_LIGHTNING_ROD,
+	WAXED_WEATHERED_LIGHTNING_ROD,
+	WAXED_OXIDIZED_LIGHTNING_ROD,
+	COPPER_SWORD,
+	COPPER_SHOVEL,
+	COPPER_PICKAXE,
+	COPPER_AXE,
+	COPPER_HOE,
+	COPPER_HELMET,
+	COPPER_CHESTPLATE,
+	COPPER_LEGGINGS,
+	COPPER_BOOTS,
+	COPPER_GOLEM_SPAWN_EGG,
+	COPPER_HORSE_ARMOR,
+	COPPER_NUGGET,
+	COPPER_LANTERN,
+	EXPOSED_COPPER_LANTERN,
+	WEATHERED_COPPER_LANTERN,
+	OXIDIZED_COPPER_LANTERN,
+	WAXED_COPPER_LANTERN,
+	WAXED_EXPOSED_COPPER_LANTERN,
+	WAXED_WEATHERED_COPPER_LANTERN,
+	WAXED_OXIDIZED_COPPER_LANTERN,
+	COPPER_CHEST,
+	EXPOSED_COPPER_CHEST,
+	WEATHERED_COPPER_CHEST,
+	OXIDIZED_COPPER_CHEST,
+	WAXED_COPPER_CHEST,
+	WAXED_EXPOSED_COPPER_CHEST,
+	WAXED_WEATHERED_COPPER_CHEST,
+	WAXED_OXIDIZED_COPPER_CHEST,
+	COPPER_GOLEM_STATUE,
+	EXPOSED_COPPER_GOLEM_STATUE,
+	WEATHERED_COPPER_GOLEM_STATUE,
+	OXIDIZED_COPPER_GOLEM_STATUE,
+	WAXED_COPPER_GOLEM_STATUE,
+	WAXED_EXPOSED_COPPER_GOLEM_STATUE,
+	WAXED_WEATHERED_COPPER_GOLEM_STATUE,
+	WAXED_OXIDIZED_COPPER_GOLEM_STATUE,
+	COPPER_WALL_TORCH,
+
+	// Up to Minecraft 1.21.11
+	CAMEL_HUSK_SPAWN_EGG,
+	COPPER_NAUTILUS_ARMOR,
+	COPPER_SPEAR,
+	DIAMOND_NAUTILUS_ARMOR,
+	DIAMOND_SPEAR,
+	GOLDEN_NAUTILUS_ARMOR,
+	GOLDEN_SPEAR,
+	IRON_NAUTILUS_ARMOR,
+	IRON_SPEAR,
+	NAUTILUS_SPAWN_EGG,
+	NETHERITE_HORSE_ARMOR,
+	NETHERITE_NAUTILUS_ARMOR,
+	NETHERITE_SPEAR,
+	PARCHED_SPAWN_EGG,
+	STONE_SPEAR,
+	WOODEN_SPEAR,
+	ZOMBIE_NAUTILUS_SPAWN_EGG;
 
 	/**
 	 * Cached array of {@link CompMaterial#values()} to avoid allocating memory for
@@ -1846,7 +1938,7 @@ public enum CompMaterial {
 	 * @see #getMaterialVersion()
 	 * @since 7.0.0
 	 */
-	private final byte version;
+	private final int version;
 
 	/**
 	 * A list of material names that was being used for older verions.
@@ -1864,9 +1956,9 @@ public enum CompMaterial {
 	@Getter
 	private final Material material;
 
-	CompMaterial(int data, int version, String... legacy) {
+	CompMaterial(final int data, final int version, final String... legacy) {
 		this.data = (byte) data;
-		this.version = (byte) version;
+		this.version = version;
 		this.legacy = legacy;
 
 		Material mat = null;
@@ -1879,14 +1971,14 @@ public enum CompMaterial {
 					break;
 			}
 
-		this.material = Common.getOrDefault(mat, Material.STONE);
+		this.material = CommonCore.getOrDefault(mat, Material.STONE);
 	}
 
-	CompMaterial(int data, String... legacy) {
+	CompMaterial(final int data, final String... legacy) {
 		this(data, 0, legacy);
 	}
 
-	CompMaterial(int version) {
+	CompMaterial(final int version) {
 		this(0, version);
 	}
 
@@ -1894,7 +1986,7 @@ public enum CompMaterial {
 		this(0, 0);
 	}
 
-	CompMaterial(String... legacy) {
+	CompMaterial(final String... legacy) {
 		this(0, 0, legacy);
 	}
 
@@ -1939,7 +2031,7 @@ public enum CompMaterial {
 	 * @param amount
 	 */
 
-	public ItemStack toItem(int amount) {
+	public ItemStack toItem(final int amount) {
 		final Material material = this.getMaterial();
 
 		if (material == null)
@@ -2021,7 +2113,7 @@ public enum CompMaterial {
 	 * @param block
 	 * @return
 	 */
-	public final boolean equals(Block block) {
+	public final boolean equals(final Block block) {
 		return block.getData() == this.getData() && block.getType() == this.material;
 	}
 
@@ -2032,7 +2124,7 @@ public enum CompMaterial {
 	 * @return
 	 */
 	public static boolean isDamageable(final CompMaterial type) {
-		Valid.checkNotNull(type);
+		ValidCore.checkNotNull(type);
 
 		try {
 			if (MinecraftVersion.atLeast(V.v1_13))
@@ -2078,7 +2170,7 @@ public enum CompMaterial {
 	 * @param item
 	 * @return
 	 */
-	public static boolean isAir(@Nullable ItemStack item) {
+	public static boolean isAir(final ItemStack item) {
 		return item == null || isAir(item.getType());
 	}
 
@@ -2099,6 +2191,15 @@ public enum CompMaterial {
 	 */
 	public static boolean isAir(final String materialName) {
 		return materialName == null || "AIR".equals(materialName) || "CAVE_AIR".equals(materialName) || "VOID_AIR".equals(materialName) || "LEGACY_AIR".equals(materialName);
+	}
+
+	/**
+	 * Returns if the given material is air
+	 * @param material
+	 * @return
+	 */
+	public static boolean isAir(final CompMaterial material) {
+		return material == null || material == AIR || material == CAVE_AIR || material == VOID_AIR;
 	}
 
 	/**
@@ -2329,6 +2430,51 @@ public enum CompMaterial {
 		return name.contains("TRAP_DOOR") || name.contains("TRAPDOOR");
 	}
 
+	/**
+	 * Returns true if the given material is a helmet or can function as a helmet.
+	 *
+	 * @param mat
+	 * @return
+	 */
+	public static boolean isHelmet(final Material mat) {
+		final String name = mat.toString();
+		return name.endsWith("_HELMET") ||
+				isSkull(mat) ||
+				nameEquals(mat, MinecraftVersion.atLeast(V.v1_13) ? "CARVED_PUMPKIN" : "PUMPKIN");
+
+	}
+
+	/**
+	 * Returns true if the given material is a chestplate or can function as a chestplate.
+	 *
+	 * @param mat
+	 * @return
+	 */
+	public static boolean isChestplate(final Material mat) {
+		final String name = mat.toString();
+		return name.endsWith("_CHESTPLATE") || nameEquals(mat, "ELYTRA");
+	}
+
+	/**
+	 * Returns true if the given material is a leggings or can function as a leggings.
+	 *
+	 * @param mat
+	 * @return
+	 */
+	public static boolean isLeggings(final Material mat) {
+		return mat.toString().endsWith("_LEGGINGS");
+	}
+
+	/**
+	 * Returns true if the given material is a boots or can function as a boots.
+	 *
+	 * @param mat
+	 * @return
+	 */
+	public static boolean isBoots(final Material mat) {
+		return mat.toString().endsWith("_BOOTS");
+	}
+
 	// Utility method for evaluating matches.
 	private static boolean nameContains(final Material mat, final String... names) {
 		final String matName = mat.toString();
@@ -2354,12 +2500,40 @@ public enum CompMaterial {
 	/**
 	 * Create a wool from the given data type and amount.
 	 *
+	 * @deprecated Use {@link #makeWoolItem(CompColor, int)} instead.
+	 *
 	 * @param color
 	 * @param amount
 	 * @return
 	 */
+	@Deprecated
 	public static ItemStack makeWool(final byte color, final int amount) {
-		return makeWool(CompColor.fromWoolData(color), amount);
+		return makeWoolItem(color, amount);
+	}
+
+	/**
+	 * Create a wool from dye of certain amount.
+	 *
+	 * @deprecated Use {@link #makeWoolItem(CompColor, int)} instead.
+	 *
+	 * @param color
+	 * @param amount
+	 * @return
+	 */
+	@Deprecated
+	public static ItemStack makeWool(final CompColor color, final int amount) {
+		return makeWoolItem(color, amount);
+	}
+
+	/**
+	 * Create a wool from the given data type and amount.
+	 *
+	 * @param color
+	 * @param amount
+	 * @return
+	 */
+	public static ItemStack makeWoolItem(final byte color, final int amount) {
+		return makeWoolItem(CompColor.fromWoolData(color), amount);
 	}
 
 	/**
@@ -2369,7 +2543,7 @@ public enum CompMaterial {
 	 * @param amount
 	 * @return
 	 */
-	public static ItemStack makeWool(final CompColor color, final int amount) {
+	public static ItemStack makeWoolItem(final CompColor color, final int amount) {
 		if (MinecraftVersion.atLeast(V.v1_13))
 			return new ItemStack(ReflectionUtil.lookupEnum(Material.class, color.getDye() + "_WOOL"), amount);
 
@@ -2386,7 +2560,7 @@ public enum CompMaterial {
 	 * @return an optional that can be empty.
 	 * @since 5.1.0
 	 */
-	private static CompMaterial getIfPresent(String name) {
+	private static CompMaterial getIfPresent(final String name) {
 		return NAMES.get(name);
 	}
 
@@ -2397,7 +2571,7 @@ public enum CompMaterial {
 	 * @see #matchDefinedCompMaterial(String, byte)
 	 * @since 1.0.0
 	 */
-	private static CompMaterial requestOldMaterial(String name, int data) {
+	private static CompMaterial requestOldMaterial(final String name, final int data) {
 
 		for (final CompMaterial material : VALUES)
 			// Not using material.name().equals(name) check is intended.
@@ -2445,7 +2619,7 @@ public enum CompMaterial {
 	 * @see #matchCompMaterial(String)
 	 * @since 3.0.0
 	 */
-	private static CompMaterial matchWithData(String name) {
+	private static CompMaterial matchWithData(final String name) {
 		final int index = name.indexOf(':');
 
 		if (index != -1) {
@@ -2485,7 +2659,7 @@ public enum CompMaterial {
 	 * @see #fromMaterial(Material)
 	 * @since 2.0.0
 	 */
-	public static CompMaterial fromItem(@NonNull ItemStack item) {
+	public static CompMaterial fromItem(@NonNull final ItemStack item) {
 		final String material = ReflectionUtil.getEnumName(item.getType());
 		final byte data = (byte) (Data.ISFLAT || item.getType().getMaxDurability() > 0 ? 0 : item.getDurability());
 
@@ -2498,7 +2672,7 @@ public enum CompMaterial {
 		if (compmaterial == null)
 			compmaterial = fromString(material);
 
-		Valid.checkNotNull(compmaterial, "Could not convert item to CompMaterial. Item: " + item);
+		ValidCore.checkNotNull(compmaterial, "Could not convert item to CompMaterial. Material: " + material + ", data: " + data);
 
 		return compmaterial;
 	}
@@ -2509,14 +2683,14 @@ public enum CompMaterial {
 	 * @param material
 	 * @return
 	 */
-	public static CompMaterial fromMaterial(@NonNull Material material) {
+	public static CompMaterial fromMaterial(@NonNull final Material material) {
 
 		try {
 			return CompMaterial.valueOf(material.toString());
 
 		} catch (final Throwable t) {
 			final CompMaterial compmaterial = fromLegacy(ReflectionUtil.getEnumName(material), UNKNOWN_DATA_VALUE);
-			Valid.checkNotNull(compmaterial, "Unsupported material with no data value: " + material);
+			ValidCore.checkNotNull(compmaterial, "Unsupported material with no data value: " + material);
 
 			return compmaterial;
 
@@ -2533,7 +2707,7 @@ public enum CompMaterial {
 	public static CompMaterial fromStringStrict(final String key) {
 		final CompMaterial material = fromString(key);
 
-		Valid.checkNotNull(material, "Invalid material '" + key + "'! For valid names, see: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html (Note that names change across MC versions!)");
+		ValidCore.checkNotNull(material, "Invalid material '" + key + "'! For valid names, see: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html (Note that names change across MC versions!)");
 		return material;
 	}
 
@@ -2545,7 +2719,7 @@ public enum CompMaterial {
 	 * @param data
 	 * @return
 	 */
-	public static CompMaterial fromLegacy(String name, int data) {
+	public static CompMaterial fromLegacy(String name, final int data) {
 
 		// try to resolve common pitfalls and emulate the material enum writing style
 		name = name.replace(" ", "_").toUpperCase();
@@ -2589,7 +2763,7 @@ public enum CompMaterial {
 	 * @return true if there's a duplicated material for this material, otherwise false.
 	 * @since 2.0.0
 	 */
-	private static boolean isDuplicated(String name) {
+	private static boolean isDuplicated(final String name) {
 		// Don't use matchCompMaterial() since this method is being called from matchCompMaterial() itself and will cause a StackOverflowError.
 		return DUPLICATED.contains(name);
 	}
@@ -2605,7 +2779,7 @@ public enum CompMaterial {
 	 * @see #fromItem(ItemStack)
 	 * @since 2.0.0
 	 */
-	public static CompMaterial fromId(int id, byte data) {
+	public static CompMaterial fromId(final int id, final byte data) {
 		if (id < 0 || id > MAX_ID || data < 0)
 			return null;
 
@@ -2627,7 +2801,7 @@ public enum CompMaterial {
 	 * @return an enum name.
 	 * @since 2.0.0
 	 */
-	protected static String format(String name) {
+	protected static String format(final String name) {
 		final int len = name.length();
 		final char[] chs = new char[len];
 		int count = 0;
@@ -2666,7 +2840,7 @@ public enum CompMaterial {
 	 * @return true of the version is equal or higher than the current version.
 	 * @since 2.0.0
 	 */
-	private static boolean supports(int version) {
+	private static boolean supports(final int version) {
 		return Data.VERSION >= version;
 	}
 
@@ -2750,7 +2924,7 @@ public enum CompMaterial {
 	 * @return true if one of the given material names is similar to the base material.
 	 * @since 3.1.1
 	 */
-	public boolean isOneOf(Collection<String> materials) {
+	public boolean isOneOf(final Collection<String> materials) {
 		if (materials == null || materials.isEmpty())
 			return false;
 		final String name = this.name();
@@ -2787,7 +2961,7 @@ public enum CompMaterial {
 	 * @see #toItem()
 	 * @since 3.0.0
 	 */
-	public ItemStack setType(ItemStack item) {
+	public ItemStack setType(final ItemStack item) {
 		Objects.requireNonNull(item, "Cannot set material for null ItemStack");
 		final Material material = this.getMaterial();
 		Objects.requireNonNull(material, () -> "Unsupported material: " + this.name());
@@ -2808,7 +2982,7 @@ public enum CompMaterial {
 	 * @return true if it's one of the legacy names, otherwise false.
 	 * @since 2.0.0
 	 */
-	private boolean anyMatchLegacy(String name) {
+	private boolean anyMatchLegacy(final String name) {
 		for (int i = this.legacy.length - 1; i >= 0; i--)
 			if (name.equals(this.legacy[i]))
 				return true;
@@ -2846,7 +3020,7 @@ public enum CompMaterial {
 	 * @return
 	 * @see ItemUtil#isSimilar(ItemStack, ItemStack)
 	 */
-	public boolean isSimilar(ItemStack item) {
+	public boolean isSimilar(final ItemStack item) {
 		return ItemUtil.isSimilar(this.toItem(), item);
 	}
 
@@ -2896,18 +3070,17 @@ public enum CompMaterial {
 	 * @since 9.0.0
 	 */
 	private static final class Data {
-		/**
-		 * The current version of the server in the a form of a major version.
-		 * If the static initialization for this fails, you know something's wrong with the server software.
-		 *
-		 * @since 1.0.0
-		 */
-		private static final int VERSION = Integer.parseInt(getMajorVersion(Bukkit.getVersion()).substring(2));
-		/**
-		 * Cached result if the server version is after the v1.13 flattening update.
-		 *
-		 * @since 3.0.0
-		 */
+		private static final int VERSION;
+
+		static {
+			final String ver = getMajorVersion(Bukkit.getVersion());
+			final String[] parts = ver.split("\\.");
+			final int major = Integer.parseInt(parts[0]);
+			final int minor = Integer.parseInt(parts[1]);
+
+			VERSION = major == 1 ? minor : major * 100 + minor;
+		}
+
 		private static final boolean ISFLAT = supports(13);
 	}
 }

@@ -11,10 +11,10 @@ package org.mineacademy.fo.remain.nbt;
  */
 public class NBTListCompound extends NBTCompound {
 
-	private final NBTList<?> owner;
+	private NBTList<?> owner;
 	private Object compound;
 
-	protected NBTListCompound(final NBTList<?> parent, final Object obj) {
+	protected NBTListCompound(NBTList<?> parent, Object obj) {
 		super(null, null);
 		this.owner = parent;
 		this.compound = obj;
@@ -42,7 +42,7 @@ public class NBTListCompound extends NBTCompound {
 	}
 
 	@Override
-	protected void setCompound(final Object compound) {
+	protected void setCompound(Object compound) {
 		if (this.isClosed())
 			throw new NbtApiException("Tried using closed NBT data!");
 		if (this.isReadOnly())

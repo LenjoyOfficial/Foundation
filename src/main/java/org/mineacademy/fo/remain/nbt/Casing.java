@@ -13,8 +13,7 @@ public enum Casing {
 		result.append(Character.toLowerCase(s.charAt(0)));
 		// Iterate through the rest of the string
 		for (int i = 1; i < s.length(); i++) {
-			final char currentChar = s.charAt(i);
-			// Convert uppercase letters to lowercase and add underscore
+			final char currentChar = s.charAt(i);// Convert uppercase letters to lowercase and add underscore
 			if (Character.isUpperCase(currentChar))
 				result.append('_').append(Character.toLowerCase(currentChar));
 			else
@@ -27,13 +26,13 @@ public enum Casing {
 		return Character.toUpperCase(s.charAt(0)) + s.substring(1);
 	}), lowercase(String::toLowerCase), UPPERCASE(String::toUpperCase);
 
-	private final UnaryOperator<String> convert;
+	private UnaryOperator<String> convert;
 
-	Casing(final UnaryOperator<String> function) {
+	Casing(UnaryOperator<String> function) {
 		this.convert = function;
 	}
 
-	public String convertString(final String str) {
+	public String convertString(String str) {
 		return this.convert.apply(str);
 	}
 }

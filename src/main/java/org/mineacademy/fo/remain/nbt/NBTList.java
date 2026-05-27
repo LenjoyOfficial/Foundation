@@ -18,12 +18,12 @@ import java.util.function.Predicate;
  */
 public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 
-	private final String listName;
-	private final NBTCompound parent;
-	private final NBTType type;
+	private String listName;
+	private NBTCompound parent;
+	private NBTType type;
 	protected Object listObject;
 
-	protected NBTList(final NBTCompound owner, final String name, final NBTType type, final Object list) {
+	protected NBTList(NBTCompound owner, String name, NBTType type, Object list) {
 		this.parent = owner;
 		this.listName = name;
 		this.type = type;
@@ -62,7 +62,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	protected abstract Object asTag(T object);
 
 	@Override
-	public boolean add(final T element) {
+	public boolean add(T element) {
 		this.validateClosed();
 		this.validateWritable();
 		try {
@@ -81,7 +81,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public void add(final int index, final T element) {
+	public void add(int index, T element) {
 		this.validateClosed();
 		this.validateWritable();
 		try {
@@ -99,7 +99,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public T set(final int index, final T element) {
+	public T set(int index, T element) {
 		this.validateClosed();
 		this.validateWritable();
 		try {
@@ -116,7 +116,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public T remove(final int i) {
+	public T remove(int i) {
 		this.validateClosed();
 		this.validateWritable();
 		try {
@@ -165,7 +165,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public boolean contains(final Object o) {
+	public boolean contains(Object o) {
 		this.validateClosed();
 		try {
 			this.parent.getReadLock().lock();
@@ -179,7 +179,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public int indexOf(final Object o) {
+	public int indexOf(Object o) {
 		this.validateClosed();
 		try {
 			this.parent.getReadLock().lock();
@@ -193,7 +193,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public boolean addAll(final Collection<? extends T> c) {
+	public boolean addAll(Collection<? extends T> c) {
 		this.validateClosed();
 		try {
 			this.parent.getWriteLock().lock();
@@ -207,7 +207,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public boolean addAll(int index, final Collection<? extends T> c) {
+	public boolean addAll(int index, Collection<? extends T> c) {
 		this.validateClosed();
 		try {
 			this.parent.getWriteLock().lock();
@@ -221,7 +221,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public boolean containsAll(final Collection<?> c) {
+	public boolean containsAll(Collection<?> c) {
 		this.validateClosed();
 		try {
 			this.parent.getReadLock().lock();
@@ -235,7 +235,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public int lastIndexOf(final Object o) {
+	public int lastIndexOf(Object o) {
 		this.validateClosed();
 		try {
 			this.parent.getReadLock().lock();
@@ -250,7 +250,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public boolean removeAll(final Collection<?> c) {
+	public boolean removeAll(Collection<?> c) {
 		this.validateClosed();
 		try {
 			this.parent.getWriteLock().lock();
@@ -264,7 +264,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public boolean retainAll(final Collection<?> c) {
+	public boolean retainAll(Collection<?> c) {
 		this.validateClosed();
 		try {
 			this.parent.getWriteLock().lock();
@@ -280,7 +280,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public boolean remove(final Object o) {
+	public boolean remove(Object o) {
 		this.validateClosed();
 		try {
 			this.parent.getWriteLock().lock();
@@ -326,14 +326,14 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public ListIterator<T> listIterator(final int startIndex) {
+	public ListIterator<T> listIterator(int startIndex) {
 		final NBTList<T> list = this;
 		return new ListIterator<T>() {
 
 			int index = startIndex - 1;
 
 			@Override
-			public void add(final T e) {
+			public void add(T e) {
 				list.add(this.index, e);
 			}
 
@@ -378,7 +378,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 			}
 
 			@Override
-			public void set(final T e) {
+			public void set(T e) {
 				list.set(this.index, e);
 			}
 		};
@@ -399,7 +399,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public <E> E[] toArray(final E[] a) {
+	public <E> E[] toArray(E[] a) {
 		this.validateClosed();
 		try {
 			this.parent.getReadLock().lock();
@@ -420,7 +420,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public List<T> subList(final int fromIndex, final int toIndex) {
+	public List<T> subList(int fromIndex, int toIndex) {
 		this.validateClosed();
 		try {
 			this.parent.getReadLock().lock();
@@ -434,7 +434,7 @@ public abstract class NBTList<T> implements List<T>, ReadWriteNBTList<T> {
 	}
 
 	@Override
-	public boolean removeIf(final Predicate<? super T> filter) {
+	public boolean removeIf(Predicate<? super T> filter) {
 		return List.super.removeIf(filter);
 	}
 

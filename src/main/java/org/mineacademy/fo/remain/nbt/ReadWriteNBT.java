@@ -2,8 +2,6 @@ package org.mineacademy.fo.remain.nbt;
 
 import java.util.UUID;
 
-import javax.annotation.Nullable;
-
 import org.bukkit.inventory.ItemStack;
 
 public interface ReadWriteNBT extends ReadableNBT {
@@ -148,7 +146,6 @@ public interface ReadWriteNBT extends ReadableNBT {
 	 * @return The Compound instance or null
 	 */
 	@Override
-	@Nullable
 	ReadWriteNBT getCompound(String name);
 
 	/**
@@ -206,7 +203,6 @@ public interface ReadWriteNBT extends ReadableNBT {
 	ReadWriteNBTCompoundList getCompoundList(String name);
 
 	@Override
-	@Nullable
 	ReadWriteNBT resolveCompound(String key);
 
 	/**

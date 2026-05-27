@@ -77,8 +77,8 @@ import lombok.RequiredArgsConstructor;
 /**
  * Our main utility class hosting a large variety of different convenience functions
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
-public final class Common {
+@NoArgsConstructor(access = AccessLevel.PACKAGE)
+public class Common {
 
 	// ------------------------------------------------------------------------------------------------------------
 	// Constants

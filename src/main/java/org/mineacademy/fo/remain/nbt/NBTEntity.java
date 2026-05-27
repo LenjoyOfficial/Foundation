@@ -2,6 +2,9 @@ package org.mineacademy.fo.remain.nbt;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
+import org.mineacademy.fo.MinecraftVersion;
+import org.mineacademy.fo.MinecraftVersion.V;
+import org.mineacademy.fo.Valid;
 
 /**
  * NBT class to access vanilla tags from Entities. Entities don't support custom
@@ -22,7 +25,7 @@ public class NBTEntity extends NBTCompound {
 	 * @param entity   Any valid Bukkit Entity
 	 * @param readonly Readonly makes a copy at init, only reading from that copy
 	 */
-	protected NBTEntity(final Entity entity, final boolean readonly) {
+	protected NBTEntity(Entity entity, boolean readonly) {
 		super(null, null);
 		if (entity == null)
 			throw new NullPointerException("Entity can't be null!");
@@ -40,7 +43,7 @@ public class NBTEntity extends NBTCompound {
 	 * @param entity Any valid Bukkit Entity
 	 */
 	@Deprecated
-	public NBTEntity(final Entity entity) {
+	public NBTEntity(Entity entity) {
 		super(null, null);
 		if (entity == null)
 			throw new NullPointerException("Entity can't be null!");
@@ -75,7 +78,7 @@ public class NBTEntity extends NBTCompound {
 	}
 
 	@Override
-	protected void setCompound(final Object compound) {
+	protected void setCompound(Object compound) {
 		if (this.readonly)
 			throw new NbtApiException("Tried setting data in read only mode!");
 		if (!Bukkit.isPrimaryThread())
@@ -90,7 +93,8 @@ public class NBTEntity extends NBTCompound {
 	 * @return NBTCompound containing the data of the PersistentDataAPI
 	 */
 	public NBTCompound getPersistentDataContainer() {
-		CheckUtil.assertAvailable(MinecraftVersion.MC1_14_R1);
+		Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_14), "PersistentDataContainer is only available for 1.14+!");
+
 		return new NBTPersistentDataContainer(this.ent.getPersistentDataContainer());
 	}
 

@@ -8,7 +8,7 @@ package org.mineacademy.fo.remain.nbt;
  */
 public class NBTCompoundList extends NBTList<ReadWriteNBT> implements ReadWriteNBTCompoundList {
 
-	protected NBTCompoundList(final NBTCompound owner, final String name, final NBTType type, final Object list) {
+	protected NBTCompoundList(NBTCompound owner, String name, NBTType type, Object list) {
 		super(owner, name, type, list);
 	}
 
@@ -29,7 +29,7 @@ public class NBTCompoundList extends NBTList<ReadWriteNBT> implements ReadWriteN
 	 * @param comp
 	 * @return
 	 */
-	public NBTCompound addCompound(final NBTCompound comp) {
+	public NBTCompound addCompound(NBTCompound comp) {
 		if (this.getParent().isReadOnly())
 			throw new NbtApiException("Tried setting data in read only mode!");
 		try {
@@ -49,7 +49,7 @@ public class NBTCompoundList extends NBTList<ReadWriteNBT> implements ReadWriteN
 	}
 
 	@Override
-	public ReadWriteNBT addCompound(final ReadableNBT comp) {
+	public ReadWriteNBT addCompound(ReadableNBT comp) {
 		if (comp instanceof NBTCompound)
 			return this.addCompound((NBTCompound) comp);
 		return null;
@@ -65,12 +65,12 @@ public class NBTCompoundList extends NBTList<ReadWriteNBT> implements ReadWriteN
 	 */
 	@Override
 	@Deprecated
-	public boolean add(final ReadWriteNBT empty) {
+	public boolean add(ReadWriteNBT empty) {
 		return this.addCompound(empty) != null;
 	}
 
 	@Override
-	public void add(final int index, final ReadWriteNBT element) {
+	public void add(int index, ReadWriteNBT element) {
 		if (element != null)
 			throw new NbtApiException("You need to pass null! ListCompounds from other lists won't work.");
 		if (this.getParent().isReadOnly())
@@ -88,7 +88,7 @@ public class NBTCompoundList extends NBTList<ReadWriteNBT> implements ReadWriteN
 	}
 
 	@Override
-	public NBTListCompound get(final int index) {
+	public NBTListCompound get(int index) {
 		try {
 			final Object compound = ReflectionMethod.LIST_GET_COMPOUND.run(this.listObject, index);
 			return new NBTListCompound(this, compound);
@@ -98,12 +98,12 @@ public class NBTCompoundList extends NBTList<ReadWriteNBT> implements ReadWriteN
 	}
 
 	@Override
-	public NBTListCompound set(final int index, final ReadWriteNBT element) {
+	public NBTListCompound set(int index, ReadWriteNBT element) {
 		throw new NbtApiException("This method doesn't work in the ListCompound context.");
 	}
 
 	@Override
-	protected Object asTag(final ReadWriteNBT object) {
+	protected Object asTag(ReadWriteNBT object) {
 		return null;
 	}
 

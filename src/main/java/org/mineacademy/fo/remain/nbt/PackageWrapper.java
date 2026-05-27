@@ -6,6 +6,7 @@ package org.mineacademy.fo.remain.nbt;
  * @author tr7zw
  *
  */
+
 enum PackageWrapper {
 	NMS(new String(new byte[] { 'n', 'e', 't', '.', 'm', 'i', 'n', 'e', 'c', 'r', 'a', 'f', 't', '.', 's', 'e', 'r',
 			'v', 'e', 'r' })),
@@ -15,7 +16,7 @@ enum PackageWrapper {
 
 	private final String uri;
 
-	PackageWrapper(final String uri) {
+	PackageWrapper(String uri) {
 		this.uri = uri;
 	}
 

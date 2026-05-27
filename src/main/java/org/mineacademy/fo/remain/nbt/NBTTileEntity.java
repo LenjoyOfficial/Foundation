@@ -2,6 +2,7 @@ package org.mineacademy.fo.remain.nbt;
 
 import org.bukkit.Bukkit;
 import org.bukkit.block.BlockState;
+import org.mineacademy.fo.Valid;
 
 /**
  * NBT class to access vanilla tags from TileEntities. TileEntities don't
@@ -23,9 +24,9 @@ public class NBTTileEntity extends NBTCompound {
 	 * @param tile     BlockState from any TileEntity
 	 * @param readonly Readonly makes a copy at init, only reading from that copy
 	 */
-	protected NBTTileEntity(final BlockState tile, final boolean readonly) {
+	protected NBTTileEntity(BlockState tile, boolean readonly) {
 		super(null, null);
-		if (tile == null || (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_8_R3) && !tile.isPlaced()))
+		if (tile == null || MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_8_R3) && !tile.isPlaced())
 			throw new NullPointerException("Tile can't be null/not placed!");
 		this.tile = tile;
 		this.readonly = readonly;
@@ -41,9 +42,9 @@ public class NBTTileEntity extends NBTCompound {
 	 * @param tile BlockState from any TileEntity
 	 */
 	@Deprecated
-	public NBTTileEntity(final BlockState tile) {
+	public NBTTileEntity(BlockState tile) {
 		super(null, null);
-		if (tile == null || (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_8_R3) && !tile.isPlaced()))
+		if (tile == null || MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_8_R3) && !tile.isPlaced())
 			throw new NullPointerException("Tile can't be null/not placed!");
 		this.readonly = false;
 		this.compound = null;
@@ -76,7 +77,7 @@ public class NBTTileEntity extends NBTCompound {
 	}
 
 	@Override
-	protected void setCompound(final Object compound) {
+	protected void setCompound(Object compound) {
 		if (this.readonly)
 			throw new NbtApiException("Tried setting data in read only mode!");
 		if (!Bukkit.isPrimaryThread())
@@ -91,7 +92,8 @@ public class NBTTileEntity extends NBTCompound {
 	 * @return NBTCompound containing the data of the PersistentDataAPI
 	 */
 	public NBTCompound getPersistentDataContainer() {
-		CheckUtil.assertAvailable(MinecraftVersion.MC1_14_R1);
+		Valid.checkBoolean(MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_14_R1), "PersistentDataContainer is only available for 1.14+!");
+
 		if (this.hasTag("PublicBukkitValues"))
 			return this.getCompound("PublicBukkitValues");
 		else {

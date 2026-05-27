@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.bukkit.inventory.ItemStack;
+import org.mineacademy.fo.Common;
 
 /**
  * This class caches method reflections, keeps track of method name changes
@@ -16,6 +17,7 @@ import org.bukkit.inventory.ItemStack;
  * @author tr7zw
  *
  */
+
 enum ReflectionMethod {
 
 	COMPOUND_SET_FLOAT(ClassWrapper.NMS_NBTTAGCOMPOUND, new Class[] { String.class, float.class },
@@ -340,16 +342,16 @@ enum ReflectionMethod {
 	private String methodName = null;
 	private ClassWrapper parentClassWrapper;
 
-	ReflectionMethod(final ClassWrapper targetClass, final Class<?>[] args, final MinecraftVersion addedSince,
-			final MinecraftVersion removedAfter, final Since... methodnames) {
+	ReflectionMethod(ClassWrapper targetClass, Class<?>[] args, MinecraftVersion addedSince,
+			MinecraftVersion removedAfter, Since... methodnames) {
 		this.removedAfter = removedAfter;
 		this.parentClassWrapper = targetClass;
 		// Special Case for Modded 1.7.10
-		final boolean specialCase = (MinecraftVersion.isForgePresent() && this.name().equals("COMPOUND_MERGE")
-				&& MinecraftVersion.getVersion() == MinecraftVersion.MC1_7_R4); // COMPOUND_MERGE is only present on
+		final boolean specialCase = MinecraftVersion.isForgePresent() && this.name().equals("COMPOUND_MERGE")
+				&& MinecraftVersion.getVersion() == MinecraftVersion.MC1_7_R4; // COMPOUND_MERGE is only present on
 																																														// Crucible, not on vanilla 1.7.10
 		if (!specialCase && (!MinecraftVersion.isAtLeastVersion(addedSince)
-				|| (this.removedAfter != null && MinecraftVersion.isNewerThan(removedAfter))))
+				|| this.removedAfter != null && MinecraftVersion.isNewerThan(removedAfter)))
 			return;
 		this.compatible = true;
 		final MinecraftVersion server = MinecraftVersion.getVersion();
@@ -392,12 +394,12 @@ enum ReflectionMethod {
 				this.loaded = true;
 				this.methodName = this.targetVersion.name;
 			} catch (NullPointerException | NoSuchMethodException | SecurityException ex2) {
-				System.out.println("[NBTAPI] Unable to find the method '" + targetMethodName + "' in '" + (targetClass.getClazz() == null ? targetClass.getMojangName() : targetClass.getClazz().getSimpleName()) + "' Args: " + Arrays.toString(args) + " Enum: " + this);
+				Common.error(ex2, "[NBTAPI] Unable to find the method '" + targetMethodName + "' in '" + (targetClass.getClazz() == null ? targetClass.getMojangName() : targetClass.getClazz().getSimpleName()) + "' Args: " + Arrays.toString(args) + " Enum: " + this); // NOSONAR This gets loaded before the logger is loaded
 			}
 		}
 	}
 
-	ReflectionMethod(final ClassWrapper targetClass, final Class<?>[] args, final MinecraftVersion addedSince, final Since... methodnames) {
+	ReflectionMethod(ClassWrapper targetClass, Class<?>[] args, MinecraftVersion addedSince, Since... methodnames) {
 		this(targetClass, args, addedSince, null, methodnames);
 	}
 
@@ -408,7 +410,7 @@ enum ReflectionMethod {
 	 * @param args
 	 * @return Value returned by the method
 	 */
-	public Object run(final Object target, final Object... args) {
+	public Object run(Object target, Object... args) {
 		if (this.method == null)
 			throw new NbtApiException("Method not loaded! '" + this + "'");
 		try {
@@ -456,7 +458,7 @@ enum ReflectionMethod {
 		public final MinecraftVersion version;
 		public final String name;
 
-		public Since(final MinecraftVersion version, final String name) {
+		public Since(MinecraftVersion version, String name) {
 			this.version = version;
 			this.name = name;
 		}

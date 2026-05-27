@@ -121,6 +121,16 @@ public final class Remain {
 	 */
 	private final static Gson gson = new Gson();
 
+	/**
+	 * The full package name for NMS.
+	 */
+	private static final String NMS = "net.minecraft.server";
+
+	/**
+	 * The package name for Craftbukkit.
+	 */
+	private static final String CRAFTBUKKIT = "org.bukkit.craftbukkit";
+
 	// ----------------------------------------------------------------------------------------------------
 	// Methods below
 	// ----------------------------------------------------------------------------------------------------
@@ -280,6 +290,15 @@ public final class Remain {
 	@Getter
 	private static boolean enchantRegistryUnfrozen = false;
 
+	/**
+	 * The safeguard NMS prefix used in Bukkit 1.4 to 1.20.4.
+	 *
+	 * @deprecated internal use only and no longer needed on Minecraft 1.20.5 and greater
+	 */
+	@Deprecated
+	@Getter
+	private static String nmsVersion = "";
+
 	// Singleton
 	private Remain() {
 	}
@@ -288,6 +307,14 @@ public final class Remain {
 	 * Initialize all fields and methods automatically when we set the plugin
 	 */
 	static {
+		// Initialize safeguard prefix first
+		{
+			final String packageName = Bukkit.getServer() == null ? "" : Bukkit.getServer().getClass().getPackage().getName();
+			final String curr = packageName.substring(packageName.lastIndexOf('.') + 1);
+
+			nmsVersion = !"craftbukkit".equals(curr) && !"".equals(packageName) ? curr : "";
+		}
+
 		final boolean atLeast1_4 = MinecraftVersion.atLeast(V.v1_4);
 
 		try {
@@ -418,11 +445,19 @@ public final class Remain {
 
 			getHandle = getOBCClass("entity.CraftPlayer").getMethod("getHandle");
 
-			fieldPlayerConnection = getNMSClass("EntityPlayer", "net.minecraft.server.level.EntityPlayer")
-					.getField(MinecraftVersion.atLeast(V.v1_20) ? "c" : MinecraftVersion.atLeast(V.v1_17) ? "b" : atLeast1_4 ? "playerConnection" : "netServerHandler");
+			if (MinecraftVersion.atLeast(V.v1_21))
+				fieldPlayerConnection = ReflectionUtil.lookupClass("net.minecraft.server.level.ServerPlayer")
+						.getField("connection");
+			else
+				fieldPlayerConnection = getNMSClass("EntityPlayer", "net.minecraft.server.level.EntityPlayer")
+						.getField(MinecraftVersion.atLeast(V.v1_20) ? "c" : MinecraftVersion.atLeast(V.v1_17) ? "b" : atLeast1_4 ? "playerConnection" : "netServerHandler");
 
-			sendPacket = getNMSClass(atLeast1_4 ? "PlayerConnection" : "NetServerHandler", MinecraftVersion.atLeast(V.v1_20) ? "net.minecraft.server.network.ServerCommonPacketListenerImpl" : "net.minecraft.server.network.PlayerConnection")
-					.getMethod(MinecraftVersion.atLeast(V.v1_20) ? "b" : MinecraftVersion.atLeast(V.v1_18) ? "a" : "sendPacket", getNMSClass("Packet", "net.minecraft.network.protocol.Packet"));
+			if (MinecraftVersion.atLeast(V.v1_21))
+				sendPacket = ReflectionUtil.lookupClass("net.minecraft.server.network.ServerCommonPacketListenerImpl")
+						.getMethod("send", ReflectionUtil.lookupClass("net.minecraft.network.protocol.Packet"));
+			else
+				sendPacket = getNMSClass(atLeast1_4 ? "PlayerConnection" : "NetServerHandler", "net.minecraft.server.network.PlayerConnection")
+						.getMethod(MinecraftVersion.atLeast(V.v1_18) ? "a" : "sendPacket", getNMSClass("Packet", "net.minecraft.network.protocol.Packet"));
 
 			if (MinecraftVersion.olderThan(V.v1_12))
 				try {
@@ -433,13 +468,7 @@ public final class Remain {
 				}
 
 		} catch (final Throwable t) {
-			if (isUsingMojangMappings) {
-				Bukkit.getLogger().warning("Mojang mappings detected, failing NMS gracefully. Continuing loading but please note that, this is unsupported and only intended for testing.");
-
-				t.printStackTrace();
-			}
-
-			else if (!isThermos && MinecraftVersion.atLeast(V.v1_7)) {
+			if (!isThermos && !isUsingMojangMappings && MinecraftVersion.atLeast(V.v1_7)) {
 				Bukkit.getLogger().warning("Unable to setup reflection. Plugin will partially function.");
 				Bukkit.getLogger().warning("Ignore this if using Cauldron. Otherwise report the errors below to the developers of " + SimplePlugin.getNamed() + ".");
 
@@ -551,6 +580,24 @@ public final class Remain {
 		} catch (final ReflectiveOperationException ex) {
 			throw new ReflectionException(ex, "Error getting player connection for player " + player.getName());
 		}
+	}
+
+	/**
+	 * Returns the World#isEnabled() method which takes an entity type
+	 *
+	 * @return
+	 */
+	public static Method getIsEnabledFeatureWorldMethod() {
+		final boolean hasFeatureClass = ReflectionUtil.isClassAvailable("io.papermc.paper.world.flag.FeatureDependant") && ReflectionUtil.isClassAvailable("io.papermc.paper.world.flag.FeatureFlagSetHolder");
+
+		if (hasFeatureClass) {
+			final Class<?> featureFlagSetHolderClass = ReflectionUtil.lookupClass("io.papermc.paper.world.flag.FeatureFlagSetHolder");
+			final Class<?> featureDependent = ReflectionUtil.lookupClass("io.papermc.paper.world.flag.FeatureDependant");
+
+			return ReflectionUtil.getMethod(featureFlagSetHolderClass, "isEnabled", featureDependent);
+		}
+
+		return null;
 	}
 
 	// ----------------------------------------------------------------------------------------------------
@@ -1303,6 +1350,23 @@ public final class Remain {
 	}
 
 	/**
+	 * Return the biome at the given location
+	 *
+	 * @param block
+	 * @return
+	 */
+	public static Biome getBiome(final Block block) {
+		try {
+			final Method getBiome = ReflectionUtil.getMethod(Block.class, "getBiome");
+
+			return ReflectionUtil.invoke(getBiome, block);
+
+		} catch (final NoSuchMethodError err) {
+			return getBiome(block.getLocation());
+		}
+	}
+
+	/**
 	 * Creates new plugin command from given label
 	 *
 	 * @param label
@@ -1573,6 +1637,82 @@ public final class Remain {
 				}
 			}
 		});
+	}
+
+	// ----------------------------------------------------------------------------------------------------
+	// NMS-related
+	// ----------------------------------------------------------------------------------------------------
+
+	/**
+	 * Find a class automatically for older MC version (such as type EntityPlayer for oldName
+	 * and we automatically find the proper NMS import) or if MC 1.17+ is used then type
+	 * the full class path such as net.minecraft.server.level.EntityPlayer and we use that instead.
+	 *
+	 * @param oldName
+	 * @param fullName1_17
+	 * @return
+	 */
+	public static Class<?> getNMSClass(final String oldName, final String fullName1_17) {
+		return MinecraftVersion.atLeast(V.v1_17) ? ReflectionUtil.lookupClass(fullName1_17) : getNMSClass(oldName);
+	}
+
+	/**
+	 * Find a class in net.minecraft.server package, adding the version
+	 * automatically (or empty on 1.20.5+).
+	 *
+	 * @deprecated Minecraft 1.17+ has a different path name,
+	 *             use {@link #getNMSClass(String, String)} instead
+	 *
+	 * @param name
+	 * @return
+	 */
+	@Deprecated
+	public static Class<?> getNMSClass(final String name) {
+		String safeguardPrefix = Remain.getNmsVersion();
+
+		if (!safeguardPrefix.isEmpty())
+			safeguardPrefix += ".";
+
+		return ReflectionUtil.lookupClass(NMS + "." + safeguardPrefix + name);
+	}
+
+	/**
+	 * Find a class in org.bukkit.craftbukkit package, adding the version
+	 * automatically (or empty on 1.20.5+).
+	 *
+	 * @param name
+	 * @return
+	 */
+	public static Class<?> getOBCClass(final String name) {
+		String version = Remain.getNmsVersion();
+
+		if (!version.isEmpty())
+			version += ".";
+
+		return ReflectionUtil.lookupClass(CRAFTBUKKIT + "." + version + name);
+	}
+
+	/**
+	 * Return a constructor for the given NMS class name (such as EntityZombie).
+	 *
+	 * @param nmsClassPath
+	 * @param params
+	 * @return
+	 */
+	public static Constructor<?> getConstructorNMS(final String nmsClassPath, final Class<?>... params) {
+		return ReflectionUtil.getConstructor(getNMSClass(nmsClassPath), params);
+	}
+
+	/**
+	 * Makes a new instance of the given NMS class with arguments.
+	 *
+	 * @param <T>
+	 * @param nmsPath
+	 * @param params
+	 * @return
+	 */
+	public static <T> T instantiateNMS(final String nmsPath, final Object... params) {
+		return (T) ReflectionUtil.instantiate(getNMSClass(nmsPath), params);
 	}
 
 	/**
@@ -2217,7 +2357,7 @@ public final class Remain {
 	 */
 	public static boolean isInvisible(Entity entity) {
 		if (entity instanceof LivingEntity && MinecraftVersion.atLeast(V.v1_16))
-			return ((LivingEntity) entity).isInvisible();
+			return entity.isInvisible();
 
 		else if (MinecraftVersion.atLeast(V.v1_4)) {
 			final Object nmsEntity = getHandleEntity(entity);

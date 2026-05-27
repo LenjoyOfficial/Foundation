@@ -11,7 +11,7 @@ Make Minecraft plugins faster, save boilerplate code to focus on putting your id
 
 Some features include:
 
-- Folia, Bukkit/Spigot/Paper support (1.2.5 - 1.21.x) - automatic version wrappers (i.e. call one method to send title/animation packets on all Minecraft versions)
+- Folia, Bukkit/Spigot/Paper support (1.8.8 - 26.1) - automatic version wrappers (i.e. call one method to send title/animation packets on all Minecraft versions)
 - GUI menu APIs
 - Advanced commands without using plugin.yml
 - Auto-updating configuration with comments support
@@ -116,17 +116,9 @@ For more information, including how to use Foundation with other tools than Mave
 
 # Compatibility
 
-We aim to provide broad compatibility layer enabling the below Minecraft versions to work:
+We aim to provide broad compatibility layer enabling Minecraft versions starting 1.8.8 to the latest one to work.
 
-- 1.2.5 (from 2012) - Limited, see mineacademy.org/oldmcsupport for setup instructions.
-- 1.3.2, 1.4.7, 1.5.2, 1.6.4 - Many APIs are missing due to lack of features/access.
-- 1.7.10
-- 1.8.8
-- 1.9.x, 1.10.x, 1.11.x, 1.12.x
-- 1.13.x, 1.14.x, 1.15.x, 1.16.x, 1.17.x, 1.18.x, 1.19.x, 1.20.x, 1.21.x
-- We continously update for newer versions but sometimes forget to update it here, but it does not mean that the library is incompatible!
-
-Foundation works on Bukkit, Spigot, Paper and as of recently also Folia (see the Wiki).
+Foundation works on Spigot, Paper, Folia and most forks.
 
 # Licencing Information
 
@@ -148,3 +140,9 @@ No guarantee - this software is provided AS IS, without any guarantee on its
 functionality. We made our best efforts to make Foundation an enterprise-level
 solution for anyone looking to accelerate his coding however we are not
 taking any responsibility for the success or failure you achieve using it.
+
+---
+
+<i>Dave Thomas, founder of OTI, godfather of the Eclipse strategy:</i>
+
+<i>Clean code can be read, and enhanced by a developer other than its original author. It has unit and acceptance tests. It has meaningful names. It provides one way rather than many ways for doing one thing. It has minimal dependencies, which are explicitly defined, and provides a clear and minimal API. Code should be literate since depending on the language, not all necessary information can be expressed clearly in code alone.</i>

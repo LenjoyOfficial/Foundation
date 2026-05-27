@@ -1,6 +1,5 @@
 package org.mineacademy.fo;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -19,7 +18,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+import javax.annotation.Nullable;
+
 import org.bukkit.ChatColor;
+import org.bukkit.Keyed;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
@@ -92,7 +94,7 @@ public final class ReflectionUtil {
 	 * @param fullName1_17
 	 * @return
 	 */
-	public static Class<?> getNMSClass(String oldName, String fullName1_17) {
+	public static Class<?> getNMSClass(final String oldName, final String fullName1_17) {
 		return MinecraftVersion.atLeast(V.v1_17) ? lookupClass(fullName1_17) : getNMSClass(oldName);
 	}
 
@@ -342,13 +344,13 @@ public final class ReflectionUtil {
 		int i = 0;
 
 		try {
-			for (Field field : instance.getClass().getDeclaredFields())
+			for (final Field field : instance.getClass().getDeclaredFields())
 				if (type.isAssignableFrom(field.getType()) && i++ == index) {
 					field.setAccessible(true);
 					field.set(instance, value);
 				}
 
-		} catch (ReflectiveOperationException e) {
+		} catch (final ReflectiveOperationException e) {
 			e.printStackTrace();
 		}
 	}
@@ -370,13 +372,13 @@ public final class ReflectionUtil {
 		int i = 0;
 
 		try {
-			for (Field field : instance.getClass().getDeclaredFields())
+			for (final Field field : instance.getClass().getDeclaredFields())
 				if ((CHAT_COMPONENT_CLASS.isAssignableFrom(field.getType()) || field.getType() == String.class) && i++ == index) {
 					field.setAccessible(true);
 					field.set(instance, Remain.toIChatBaseComponent(Remain.toJson(value)));
 				}
 
-		} catch (Throwable t) {
+		} catch (final Throwable t) {
 			Common.throwError(t, "Couldn't set component for object " + instance + ": " + value);
 		}
 	}
@@ -483,7 +485,7 @@ public final class ReflectionUtil {
 	 * @param args
 	 * @return
 	 */
-	public static Method getDeclaredMethod(Class<?> clazz, final String methodName, Class<?>... args) {
+	public static Method getDeclaredMethod(Class<?> clazz, final String methodName, final Class<?>... args) {
 		final Class<?> originalClass = clazz;
 
 		while (!clazz.equals(Object.class))
@@ -754,7 +756,7 @@ public final class ReflectionUtil {
 	 * @param names
 	 * @return
 	 */
-	public static <T extends Enum<T>> T lookupLegacyEnum(final Class<T> enumClass, String... names) {
+	public static <T extends Enum<T>> T lookupLegacyEnum(final Class<T> enumClass, final String... names) {
 
 		for (final String name : names) {
 			final T foundEnum = lookupEnumSilent(enumClass, name);
@@ -1033,6 +1035,44 @@ public final class ReflectionUtil {
 	}
 
 	/**
+	 * Looks up a value of the given type by its name, works for both enums and Keyed types. Returns null if not found.
+	 *
+	 * @param type
+	 * @param name
+	 * @return
+	 * @param <T>
+	 */
+	public static <T> T lookupKeyedOrEnum(final Class<T> type, final String name) {
+		Valid.checkNotNull(type, "Type missing for " + name);
+		Valid.checkNotNull(name, "Name missing for " + type);
+
+		if (MinecraftVersion.atLeast(V.v1_12)) {
+			Valid.checkBoolean(Enum.class.isAssignableFrom(type) || Keyed.class.isAssignableFrom(type), "Class " + type + " is neither an Enum nor Keyed type");
+
+			if (Enum.class.isAssignableFrom(type)) {
+				return (T) lookupEnumSilent(type.asSubclass(Enum.class), name);
+
+			} else {
+				final Method method = getMethod(type, "valueOf");
+
+				if (method != null) {
+					try {
+						return (T) method.invoke(null, name);
+
+					} catch (final Throwable t) {
+					}
+				}
+
+				return null;
+			}
+
+		} else {
+			Valid.checkBoolean(Enum.class.isAssignableFrom(type), "Class " + type + " is not an Enum");
+			return (T)  lookupEnumSilent(type.asSubclass(Enum.class), name);
+		}
+	}
+
+	/**
 	 * Gets the caller stack trace methods if you call this method Useful for
 	 * debugging
 	 *
@@ -1087,7 +1127,7 @@ public final class ReflectionUtil {
 	 * @return
 	 */
 	@SneakyThrows
-	public static <T> TreeSet<Class<T>> getClasses(@NonNull Plugin plugin, Class<T> extendingClass) {
+	public static <T> TreeSet<Class<T>> getClasses(@NonNull final Plugin plugin, final Class<T> extendingClass) {
 		Valid.checkNotNull(plugin, "Plugin is null!");
 		Valid.checkBoolean(JavaPlugin.class.isAssignableFrom(plugin.getClass()), "Plugin must be a JavaPlugin");
 
@@ -1150,7 +1190,7 @@ public final class ReflectionUtil {
 	 *
 	 * @author Apache Commons ClassUtils
 	 */
-	public static Class<?> wrapperToPrimitive(Class<?> cls) {
+	public static Class<?> wrapperToPrimitive(final Class<?> cls) {
 		return wrapperPrimitiveMap.get(cls);
 	}
 

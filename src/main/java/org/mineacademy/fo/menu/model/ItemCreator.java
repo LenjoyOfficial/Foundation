@@ -1,6 +1,5 @@
 package org.mineacademy.fo.menu.model;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -9,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
+
+import javax.annotation.Nullable;
 
 import net.md_5.bungee.api.chat.BaseComponent;
 import org.apache.commons.lang3.StringUtils;
@@ -1237,7 +1238,7 @@ public final class ItemCreator implements ConfigSerializable {
 
 		// Unbreakable
 		if (unbreakable)
-			map.put("Unbreakable", unbreakable);
+			map.put("Unbreakable", true);
 
 		return map;
 	}
@@ -1585,7 +1586,7 @@ public final class ItemCreator implements ConfigSerializable {
 		if (map.containsKey("Patterns"))
 			for (final SerializedMap patternMap : map.getMapList("Patterns")) {
 				try {
-					final PatternType patternType = ReflectionUtil.lookupEnumSilent(PatternType.class, patternMap.getString("Type"));
+					final PatternType patternType = ReflectionUtil.lookupKeyedOrEnum(PatternType.class, patternMap.getString("Type"));
 					final CompColor color = CompColor.fromName(patternMap.getString("Color"));
 
 					builder.patterns(new Pattern(color.getDye(), patternType));

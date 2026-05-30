@@ -756,16 +756,54 @@ public final class ReflectionUtil {
 	 * @param names
 	 * @return
 	 */
-	public static <T extends Enum<T>> T lookupLegacyEnum(final Class<T> enumClass, final String... names) {
+	public static <T> T lookupLegacyEnum(final Class<T> enumClass, final String... names) {
 
 		for (final String name : names) {
-			final T foundEnum = lookupEnumSilent(enumClass, name);
+			try {
+				final T foundEnum = lookupKeyedOrEnum(enumClass, name);
+				if (foundEnum != null)
+					return foundEnum;
 
-			if (foundEnum != null)
-				return foundEnum;
+			} catch (final Exception ignored) {
+			}
 		}
 
 		return null;
+	}
+
+	/**
+	 * Looks up a value of the given type by its name, works for both enums and Keyed types.
+	 * Throws an error if not found, or if the class is not an Enum nor Keyed
+	 *
+	 * @param type
+	 * @param name
+	 * @return
+	 * @param <T>
+	 */
+	public static <T> T lookupKeyedOrEnum(final Class<T> type, final String name) {
+		Valid.checkNotNull(type, "Type missing for " + name);
+		Valid.checkNotNull(name, "Name missing for " + type);
+
+		if (MinecraftVersion.atLeast(V.v1_12)) {
+			Valid.checkBoolean(Enum.class.isAssignableFrom(type) || Keyed.class.isAssignableFrom(type), "Class " + type + " is neither an Enum nor Keyed type");
+
+			if (Enum.class.isAssignableFrom(type)) {
+				return (T) lookupEnum(type.asSubclass(Enum.class), name);
+
+			} else {
+				final Method method = getMethod(type, "valueOf");
+
+				if (method != null) {
+					return (T) getStaticFieldContent(type, name);
+				}
+
+				return null;
+			}
+
+		} else {
+			Valid.checkBoolean(Enum.class.isAssignableFrom(type), "Class " + type + " is not an Enum");
+			return (T) lookupEnum(type.asSubclass(Enum.class), name);
+		}
 	}
 
 	/**
@@ -1019,7 +1057,7 @@ public final class ReflectionUtil {
 	 * @param enumOrKeyed
 	 * @return
 	 */
-	public static String getEnumName(Object enumOrKeyed) {
+	public static String getEnumName(final Object enumOrKeyed) {
 		return enumOrKeyed instanceof Enum ? ((Enum<?>) enumOrKeyed).name() : invoke("name", enumOrKeyed);
 	}
 
@@ -1030,46 +1068,8 @@ public final class ReflectionUtil {
 	 * @param enumOrKeyed
 	 * @return
 	 */
-	public static <T> T[] getEnumValues(Class<T> enumOrKeyed) {
+	public static <T> T[] getEnumValues(final Class<T> enumOrKeyed) {
 		return enumOrKeyed.isEnum() ? enumOrKeyed.getEnumConstants() : invokeStatic(enumOrKeyed, "values");
-	}
-
-	/**
-	 * Looks up a value of the given type by its name, works for both enums and Keyed types. Returns null if not found.
-	 *
-	 * @param type
-	 * @param name
-	 * @return
-	 * @param <T>
-	 */
-	public static <T> T lookupKeyedOrEnum(final Class<T> type, final String name) {
-		Valid.checkNotNull(type, "Type missing for " + name);
-		Valid.checkNotNull(name, "Name missing for " + type);
-
-		if (MinecraftVersion.atLeast(V.v1_12)) {
-			Valid.checkBoolean(Enum.class.isAssignableFrom(type) || Keyed.class.isAssignableFrom(type), "Class " + type + " is neither an Enum nor Keyed type");
-
-			if (Enum.class.isAssignableFrom(type)) {
-				return (T) lookupEnumSilent(type.asSubclass(Enum.class), name);
-
-			} else {
-				final Method method = getMethod(type, "valueOf");
-
-				if (method != null) {
-					try {
-						return (T) method.invoke(null, name);
-
-					} catch (final Throwable t) {
-					}
-				}
-
-				return null;
-			}
-
-		} else {
-			Valid.checkBoolean(Enum.class.isAssignableFrom(type), "Class " + type + " is not an Enum");
-			return (T)  lookupEnumSilent(type.asSubclass(Enum.class), name);
-		}
 	}
 
 	/**

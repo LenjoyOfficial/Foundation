@@ -165,6 +165,8 @@ public final class Remain {
 	 */
 	private static Method sendPacket;
 
+	private static Method fromJSONToNMSComponentmethod;
+
 	// ----------------------------------------------------------------------------------------------------
 	// Flags below
 	// ----------------------------------------------------------------------------------------------------
@@ -466,6 +468,48 @@ public final class Remain {
 				} catch (final Throwable t) {
 					// Unavailable
 				}
+
+			if (MinecraftVersion.olderThan(V.v1_17)) {
+				final Class<?> chatSerializer = Remain.getNMSClass("IChatBaseComponent$ChatSerializer");
+
+				fromJSONToNMSComponentmethod = ReflectionUtil.getMethod(chatSerializer, "a", String.class);
+
+			} else
+				try {
+					final Class<?> chatSerializer = Class.forName("net.minecraft.network.chat.IChatBaseComponent$ChatSerializer");
+
+					fromJSONToNMSComponentmethod = chatSerializer.getMethod("a", String.class);
+
+				} catch (final ClassNotFoundException | NoSuchMethodException e) {
+					try {
+						final Class<?> chatSerializer = Class.forName("net.minecraft.network.chat.Component$Serializer");
+
+						fromJSONToNMSComponentmethod = chatSerializer.getMethod("fromJson", String.class);
+
+					} catch (final Exception e1) {
+						try {
+							final Class<?> chatSerializer = Class.forName("org.bukkit.craftbukkit." + getNmsVersion() + ".util.CraftChatMessage");
+
+							fromJSONToNMSComponentmethod = chatSerializer.getMethod("fromJSON", String.class);
+
+						} catch (final Exception e2) {
+							try {
+								final Class<?> craftChatMessage = Class.forName("org.bukkit.craftbukkit.util.CraftChatMessage");
+
+								fromJSONToNMSComponentmethod = craftChatMessage.getMethod("fromJSON", String.class);
+
+							} catch (final ReflectiveOperationException ex) {
+								Common.error(ex,
+										"Failed to find CraftChatMessage.fromJSON() or ",
+										"Component$Serializer or ",
+										"IChatBaseComponent$ChatSerializer class. ",
+										"Alert Foundation authors to update!");
+							}
+						}
+					}
+				}
+
+			Bukkit.getLogger().info(fromJSONToNMSComponentmethod + "");
 
 		} catch (final Throwable t) {
 			if (!isThermos && !isUsingMojangMappings && MinecraftVersion.atLeast(V.v1_7)) {
@@ -2266,13 +2310,11 @@ public final class Remain {
 	 * @param json
 	 * @return
 	 */
-	public static Object toIChatBaseComponent(String json) {
+	public static Object toIChatBaseComponent(final String json) {
 		Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_7), "Serializing chat components requires Minecraft 1.7.10 and greater");
+		Valid.checkNotNull(fromJSONToNMSComponentmethod, "Cannot convert JSON to NMS Component - missing methods to do so (see earlier log). Json: " + json);
 
-		final Class<?> chatSerializer = getNMSClass((MinecraftVersion.equals(V.v1_7) ? "" : "IChatBaseComponent$") + "ChatSerializer", "net.minecraft.network.chat.IChatBaseComponent$ChatSerializer");
-		final Method a = getMethod(chatSerializer, "a", String.class);
-
-		return invoke(a, null, json);
+		return ReflectionUtil.invokeStatic(fromJSONToNMSComponentmethod, json);
 	}
 
 	/**

@@ -351,9 +351,9 @@ public enum CompParticle {
 	 *
 	 * @return
 	 */
-	public Particle getParticle() {
+	/*public Particle getParticle() {
 		return (Particle) this.bukkitEnumParticle;
-	}
+	}*/
 
 	/**
 	 * Spawns this particle with the given color, only works for {@link #REDSTONE}, {@link #SPELL_MOB} and {@link #SPELL_MOB_AMBIENT}
@@ -369,6 +369,9 @@ public enum CompParticle {
 		if (atLeast1_13 && this == REDSTONE)
 			location.getWorld().spawnParticle((Particle) this.bukkitEnumParticle, location, 1, 0, 0, 0, 0, new DustOptions(color, particleSize));
 
+		else if ((this == SPELL_MOB || this == SPELL_MOB_AMBIENT) && (MinecraftVersion.atLeast(V.v1_21) || (MinecraftVersion.equals(V.v1_20) && MinecraftVersion.getSubversion() >= 5)))
+			location.getWorld().spawnParticle((Particle) this.bukkitEnumParticle, location, 1, 0, 0, 0, 0, color);
+
 		else {
 			final float red = color.getRed() == 0 ? Float.MIN_VALUE : color.getRed() / 255F;
 			final float green = color.getGreen() / 255F;
@@ -379,7 +382,7 @@ public enum CompParticle {
 	}
 
 	/**
-	 * Spawns this particle with the given color, only works for {@link #REDSTONE}
+	 * Spawns this particle with the given color, only works for {@link #REDSTONE}, {@link #SPELL_MOB} and {@link #SPELL_MOB_AMBIENT}
 	 * The particle size requires MC 1.13+
 	 *
 	 * @param player
@@ -388,10 +391,13 @@ public enum CompParticle {
 	 * @param particleSize
 	 */
 	public void spawn(final Player player, final Location location, final Color color, final float particleSize) {
-		ValidCore.checkBoolean(this == REDSTONE, "Can only send colors for REDSTONE particle, not: " + this);
+		ValidCore.checkBoolean(this == REDSTONE || this == SPELL_MOB || this == SPELL_MOB_AMBIENT, "Can only send colors for REDSTONE particle, not: " + this);
 
-		if (atLeast1_13)
+		if (atLeast1_13 && this == REDSTONE)
 			player.spawnParticle((Particle) this.bukkitEnumParticle, location, 1, 0, 0, 0, 0, new DustOptions(color, particleSize));
+
+		else if ((this == SPELL_MOB || this == SPELL_MOB_AMBIENT) && (MinecraftVersion.atLeast(V.v1_21) || (MinecraftVersion.equals(V.v1_20) && MinecraftVersion.getSubversion() >= 5)))
+			player.spawnParticle((Particle) this.bukkitEnumParticle, location, 1, 0, 0, 0, 0, color);
 
 		else {
 			final float red = color.getRed() == 0 ? Float.MIN_VALUE : color.getRed() / 255F;

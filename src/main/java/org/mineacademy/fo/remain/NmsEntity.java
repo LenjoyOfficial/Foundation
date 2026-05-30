@@ -111,7 +111,7 @@ public final class NmsEntity {
 	 */
 	public Entity getBukkitEntity() {
 		try {
-			return (Entity) NmsAccessor.getBukkitEntity.invoke(this.nmsEntity);
+			return (Entity) (MinecraftVersion.atLeast(V.v1_20) ? this.nmsEntity : NmsAccessor.getBukkitEntity.invoke(this.nmsEntity));
 
 		} catch (final ReflectiveOperationException e) {
 			throw new FoException(e, "Error getting bukkit entity from " + this.nmsEntity);

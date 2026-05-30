@@ -1,12 +1,16 @@
 package org.mineacademy.fo.menu.model;
 
+import java.lang.reflect.Method;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.Common;
+import org.mineacademy.fo.ReflectionUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.remain.CompMaterial;
 
@@ -221,6 +225,9 @@ public final class InventoryDrawer {
 		return new InventoryDrawer(size, title, closeInventoryOnDisplay);
 	}
 
+	private static final Method GET_TYPE_METHOD = ReflectionUtil.getMethod(InventoryView.class, "getType");
+	private static final Method GET_TOP_INVENTORY_METHOD = ReflectionUtil.getMethod(InventoryView.class, "getTopInventory");
+
 	/**
 	 * Make a new inventory drawer for the player's open inventory
 	 *
@@ -228,8 +235,9 @@ public final class InventoryDrawer {
 	 * @return the inventory drawer
 	 */
 	public static InventoryDrawer of(Player player) {
-		Valid.checkBoolean(player.getOpenInventory().getType() != InventoryType.CRAFTING, "New InventoryDrawer from non-existing inventory!");
+		final InventoryView open = player.getOpenInventory();
+		Valid.checkBoolean(ReflectionUtil.invoke(GET_TYPE_METHOD, open) != InventoryType.CRAFTING, "New InventoryDrawer from non-existing inventory!");
 
-		return new InventoryDrawer(player.getOpenInventory().getTopInventory());
+		return new InventoryDrawer(ReflectionUtil.invoke(GET_TOP_INVENTORY_METHOD, open));
 	}
 }

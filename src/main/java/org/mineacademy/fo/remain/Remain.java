@@ -2351,10 +2351,10 @@ public final class Remain {
 	 */
 	public static void setCustomName(final Entity entity, @Nullable final String name, final boolean visible) {
 		try {
-			entity.setCustomNameVisible(visible);
-
 			if (name != null)
 				entity.setCustomName(Common.colorize(name));
+
+			entity.setCustomNameVisible(visible);
 
 		} catch (final NoSuchMethodError er) {
 			Valid.checkBoolean(MinecraftVersion.atLeast(V.v1_7), "setCustomName requires Minecraft 1.7.10+");

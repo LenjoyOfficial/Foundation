@@ -1,7 +1,5 @@
 package org.mineacademy.fo.model;
 
-import static org.mineacademy.fo.ReflectionUtil.*;
-
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -25,6 +23,8 @@ import org.mineacademy.fo.remain.Remain;
 
 import lombok.Getter;
 import lombok.Setter;
+
+import static org.mineacademy.fo.ReflectionUtil.*;
 
 /**
  * Represents a displayable scoreboard for the players. It is working with packets, so you get absolutely no lag
@@ -90,7 +90,7 @@ public class PacketScoreboard {
 		DISPLAY_SLOT_SIDEBAR = atLeast1_20 ? lookupEnumSilent(lookupClass("net.minecraft.world.scores.DisplaySlot").asSubclass(Enum.class), "SIDEBAR") : null;
 
 		final Class<Object> numberFormat = atLeast1_20 ? lookupClass("net.minecraft.network.chat.numbers.NumberFormat") : null;
-		SCORE_PACKET_CONSTRUCTOR = atLeast1_20 ? getConstructor(SCORE_PACKET, String.class, String.class, int.class, CHAT_COMPONENT_CLASS, numberFormat) : null;
+		SCORE_PACKET_CONSTRUCTOR = atLeast1_20 ? getConstructor(SCORE_PACKET, String.class, String.class, int.class, Optional.class, Optional.class) : null;
 		RESET_SCORE_PACKET = atLeast1_20 ? getConstructor("net.minecraft.network.protocol.game.ClientboundResetScorePacket", String.class, String.class) : null;
 
 		// 1.13 moved ScoreAction to ScoreboardServer from the packet class
@@ -492,6 +492,9 @@ public class PacketScoreboard {
 					setDeclaredField(packet, RENDERTYPE_ENUM, 0, RENDERTYPE_INTEGER);
 			}
 
+			if (MinecraftVersion.atLeast(V.v1_20))
+				setDeclaredField(packet, Optional.class, 0, Optional.empty());
+
 			Remain.sendPacket(viewer, packet);
 
 			// If creating the objective, send a display packet to show the scoreboard to the player
@@ -522,7 +525,7 @@ public class PacketScoreboard {
 					return;
 				}
 
-				Remain.sendPacket(viewer, instantiate(SCORE_PACKET_CONSTRUCTOR, CHAT_COLORS[index], objectiveID, size - 1 - index, null, null));
+				Remain.sendPacket(viewer, instantiate(SCORE_PACKET_CONSTRUCTOR, CHAT_COLORS[index], objectiveID, size - 1 - index, Optional.empty(), Optional.empty()));
 				return;
 			}
 

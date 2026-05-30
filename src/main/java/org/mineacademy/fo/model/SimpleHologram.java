@@ -37,12 +37,20 @@ public abstract class SimpleHologram {
 
 	static {
 		final Class<?> nmsEntity = ReflectionUtil.getNMSClass("EntityLiving", "net.minecraft.world.entity.Entity");
+		final Class<?> packetClass = ReflectionUtil.getNMSClass("PacketPlayOutSpawnEntityLiving",
+				"net.minecraft.network.protocol.game.PacketPlayOutSpawnEntity" + (MinecraftVersion.atLeast(MinecraftVersion.V.v1_19) ? "" : "Living"));
+		Constructor<?> packetConstructor;
 
-		SPAWN_ENTITY_LIVING_PACKET = ReflectionUtil.getConstructor(
-				ReflectionUtil.getNMSClass("PacketPlayOutSpawnEntityLiving",
-						"net.minecraft.network.protocol.game.PacketPlayOutSpawnEntity" + (MinecraftVersion.atLeast(MinecraftVersion.V.v1_19) ? "" : "Living")),
-				nmsEntity);
+		try {
+			packetConstructor = packetClass.getDeclaredConstructor(nmsEntity);
+			packetConstructor.setAccessible(true);
 
+		} catch (final Exception e) {
+			final Class<?> serverEntity = ReflectionUtil.lookupClass("net.minecraft.server.level.ServerEntity");
+			packetConstructor = ReflectionUtil.getConstructor(packetClass, nmsEntity, serverEntity);
+		}
+
+		SPAWN_ENTITY_LIVING_PACKET = packetConstructor;
 		DESTROY_ENTITIES_PACKET = ReflectionUtil.getConstructor(
 				ReflectionUtil.getNMSClass("PacketPlayOutEntityDestroy", "net.minecraft.network.protocol.game.PacketPlayOutEntityDestroy"),
 				int[].class);
@@ -108,7 +116,7 @@ public abstract class SimpleHologram {
 	/*
 	 * Constructs a new item and registers it
 	 */
-	protected SimpleHologram(Location spawnLocation) {
+	protected SimpleHologram(final Location spawnLocation) {
 		this.lastTeleportLocation = spawnLocation.clone();
 
 		registeredItems.add(this);
@@ -176,7 +184,7 @@ public abstract class SimpleHologram {
 	/*
 	 * Set a lore for this armor stand
 	 */
-	private void drawLore(Location location) {
+	private void drawLore(final Location location) {
 		if (this.loreLines.isEmpty())
 			return;
 
@@ -270,7 +278,7 @@ public abstract class SimpleHologram {
 	 * @param lore
 	 * @return
 	 */
-	public final SimpleHologram setLore(String... lore) {
+	public final SimpleHologram setLore(final String... lore) {
 		this.loreLines.clear();
 		this.loreLines.addAll(Arrays.asList(lore));
 
@@ -290,7 +298,7 @@ public abstract class SimpleHologram {
 	 * @param line
 	 * @return
 	 */
-	public final SimpleHologram setLine(int index, String line) {
+	public final SimpleHologram setLine(final int index, final String line) {
 		Valid.checkBoolean(index >= 0 && index < this.loreLines.size(), "Index " + index + " is out of range for " + this);
 		final ArmorStand stand = this.loreEntities.get(index);
 
@@ -304,7 +312,7 @@ public abstract class SimpleHologram {
 	 *
 	 * @param particle
 	 */
-	public final void addParticleEffect(CompParticle particle) {
+	public final void addParticleEffect(final CompParticle particle) {
 		this.addParticleEffect(particle, null);
 	}
 
@@ -314,7 +322,7 @@ public abstract class SimpleHologram {
 	 * @param particle
 	 * @param data
 	 */
-	public final void addParticleEffect(CompParticle particle, CompMaterial data) {
+	public final void addParticleEffect(final CompParticle particle, final CompMaterial data) {
 		this.particles.add(new Tuple<>(particle, data));
 	}
 
@@ -323,7 +331,7 @@ public abstract class SimpleHologram {
 	 *
 	 * @param player
 	 */
-	public final void showTo(Player player) {
+	public final void showTo(final Player player) {
 		this.checkSpawned("showTo");
 
 		if (!isHiddenFrom(player))
@@ -343,7 +351,7 @@ public abstract class SimpleHologram {
 	 *
 	 * @param player
 	 */
-	public final void hideFrom(Player player) {
+	public final void hideFrom(final Player player) {
 		this.checkSpawned("hideFrom");
 
 		if (isHiddenFrom(player))
@@ -368,7 +376,7 @@ public abstract class SimpleHologram {
 	 * @param player
 	 * @return true if the player can NOT see this hologram
 	 */
-	public final boolean isHiddenFrom(Player player) {
+	public final boolean isHiddenFrom(final Player player) {
 		return hiddenFromPlayers.contains(player.getUniqueId());
 	}
 
@@ -397,7 +405,7 @@ public abstract class SimpleHologram {
 	 *
 	 * @param location
 	 */
-	public final void teleport(Location location) {
+	public final void teleport(final Location location) {
 		if (this.pendingTeleport != null)
 			return;
 
@@ -428,7 +436,7 @@ public abstract class SimpleHologram {
 	/*
 	 * A helper method to check if this entity is spawned
 	 */
-	private void checkSpawned(String method) {
+	private void checkSpawned(final String method) {
 		Valid.checkBoolean(this.isSpawned(), this + " is not spawned, cannot call " + method + "!");
 	}
 

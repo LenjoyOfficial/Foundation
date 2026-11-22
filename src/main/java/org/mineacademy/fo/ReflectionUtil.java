@@ -791,7 +791,7 @@ public final class ReflectionUtil {
 				return (T) lookupEnum(type.asSubclass(Enum.class), name);
 
 			} else {
-				final Method method = getMethod(type, "valueOf");
+				final Method method = getMethod(type, "valueOf", String.class);
 
 				if (method != null) {
 					return (T) getStaticFieldContent(type, name);

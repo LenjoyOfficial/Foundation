@@ -509,8 +509,6 @@ public final class Remain {
 					}
 				}
 
-			Bukkit.getLogger().info(fromJSONToNMSComponentmethod + "");
-
 		} catch (final Throwable t) {
 			if (!isThermos && !isUsingMojangMappings && MinecraftVersion.atLeast(V.v1_7)) {
 				Bukkit.getLogger().warning("Unable to setup reflection. Plugin will partially function.");
@@ -3087,16 +3085,48 @@ public final class Remain {
 	 * @param world    world to set game rule in
 	 * @param gameRule game rule
 	 * @param value    value to set (true/false)
+	 * @deprecated use {@link #setGameRule(World, CompGameRule, Object)}
 	 */
-	@SuppressWarnings("rawtypes")
+	@Deprecated
+	@SuppressWarnings({ "rawtypes", "deprecation" })
 	public static void setGameRule(final World world, final String gameRule, final boolean value) {
+		final CompGameRule compRule = CompGameRule.fromKey(gameRule);
+
+		if (compRule != null) {
+			setGameRule(world, compRule, value);
+			return;
+		}
+
 		try {
-			if (MinecraftVersion.newerThan(V.v1_13)) {
+			if (MinecraftVersion.atLeast(V.v1_13)) {
 				final GameRule rule = GameRule.getByName(gameRule);
 
 				world.setGameRule(rule, value);
 			} else
 				world.setGameRuleValue(gameRule, "" + value);
+
+		} catch (final Throwable t) {
+			Common.error(t, "Game rule " + gameRule + " not found.");
+		}
+	}
+
+	/**
+	 * Sets a game rule
+	 *
+	 * @param world    world to set game rule in
+	 * @param gameRule game rule
+	 * @param value    value to set (boolean or integer)
+	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public static void setGameRule(final World world, final CompGameRule gameRule, final Object value) {
+		try {
+			if (MinecraftVersion.atLeast(V.v1_13)) {
+				final GameRule rule = gameRule.getGameRule();
+
+				if (rule != null)
+					world.setGameRule(rule, value);
+			} else
+				world.setGameRuleValue(gameRule.getLegacyKey() != null ? gameRule.getLegacyKey() : gameRule.getKey(), String.valueOf(value));
 
 		} catch (final Throwable t) {
 			Common.error(t, "Game rule " + gameRule + " not found.");

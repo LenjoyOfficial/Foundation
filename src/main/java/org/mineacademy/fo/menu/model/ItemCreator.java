@@ -1509,10 +1509,22 @@ public final class ItemCreator implements ConfigSerializable {
 			else
 				try {
 					final String rawType = mainEffect.getString("Type");
+					final PotionEffectType effect = SerializeUtil.deserialize(SerializeUtil.Mode.YAML, PotionEffectType.class, rawType);
 					PotionType type = ReflectionUtil.lookupEnumSilent(PotionType.class, rawType);
 
-					if (type == null)
-						type = PotionType.getByEffect(SerializeUtil.deserialize(PotionEffectType.class, rawType));
+					if (type == null) {
+						if (MinecraftVersion.atLeast(V.v1_20))
+							for (PotionType value : PotionType.values()) {
+								final String name = value.name();
+
+								if (!name.startsWith("STRONG_") && !name.startsWith("LONG_") && effect.equals(value.getEffectType())) {
+									type = value;
+									break;
+								}
+							}
+						else
+							type = PotionType.getByEffect(effect);
+					}
 
 					builder.potionData(new SimplePotionData(type, material == CompMaterial.SPLASH_POTION, extended, upgraded));
 
@@ -1531,7 +1543,7 @@ public final class ItemCreator implements ConfigSerializable {
 				final int amplifier = effect.getInteger("Amplifier");
 
 				try {
-					final PotionEffectType potion = SerializeUtil.deserialize(PotionEffectType.class, effectType);
+					final PotionEffectType potion = SerializeUtil.deserialize(SerializeUtil.Mode.YAML, PotionEffectType.class, effectType);
 
 					builder.potionEffects(new PotionEffect(potion, durationTicks, amplifier));
 
@@ -1549,7 +1561,7 @@ public final class ItemCreator implements ConfigSerializable {
 				final int level = storedEnchantments.getInteger(enchantType);
 
 				try {
-					final Enchantment enchantment = SerializeUtil.deserialize(Enchantment.class, enchantType);
+					final Enchantment enchantment = SerializeUtil.deserialize(SerializeUtil.Mode.YAML, Enchantment.class, enchantType);
 
 					builder.enchant(enchantment, level);
 

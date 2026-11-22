@@ -1,6 +1,7 @@
 package org.mineacademy.fo.remain;
 
 import java.lang.reflect.Method;
+import java.util.function.Consumer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -176,11 +177,15 @@ final class NmsAccessor {
 			if (MinecraftVersion.newerThan(V.v1_10)) {
 				hasEntityConsumer = true;
 
-				try {
-					addEntity = ReflectionUtil.getMethod(ofcWorld, "addEntity", nmsEntity, SpawnReason.class, Class.forName("org.bukkit.util.Consumer"));
+				addEntity = ReflectionUtil.getMethod(ofcWorld, "addEntity", nmsEntity, SpawnReason.class, Class.forName("org.bukkit.util.Consumer"));
 
-				} catch (final ReflectionException ex) {
+				if (addEntity == null) {
 					addEntity = ReflectionUtil.getMethod(ofcWorld, "addEntity", nmsEntity, SpawnReason.class, Class.forName("org.bukkit.util.Consumer"), boolean.class);
+					hasRandomizeData = true;
+				}
+
+				if (addEntity == null) {
+					addEntity = ReflectionUtil.getMethod(ofcWorld, "addEntity", nmsEntity, SpawnReason.class, Consumer.class, boolean.class);
 					hasRandomizeData = true;
 				}
 

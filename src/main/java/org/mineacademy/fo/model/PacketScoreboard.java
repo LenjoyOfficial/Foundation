@@ -58,15 +58,20 @@ public class PacketScoreboard {
 	// 1.17 team packet
 	private static Class<?> TEAM_PARAMETERS;
 
+	private static Class<? extends Enum> TEAM_VISIBILITY_ENUM;
+	private static Object TEAM_VISIBILITY_ALWAYS;
+	private static Class<? extends Enum> TEAM_COLLISION_ENUM;
+	private static Object TEAM_COLLISION_ALWAYS;
+
 	// Chat format
 	private static Class<? extends Enum> CHAT_FORMAT_ENUM;
 	private static Object CHAT_FORMAT_RESET;
 
 	// Score
-	private static final Class<? extends Enum> SCORE_ACTION_ENUM;
+	private static Class<? extends Enum> SCORE_ACTION_ENUM;
 
-	private static final Object SCORE_ACTION_CHANGE;
-	private static final Object SCORE_ACTION_REMOVE;
+	private static Object SCORE_ACTION_CHANGE;
+	private static Object SCORE_ACTION_REMOVE;
 
 	// Render type
 	private static final Class<? extends Enum> RENDERTYPE_ENUM;
@@ -93,13 +98,17 @@ public class PacketScoreboard {
 		SCORE_PACKET_CONSTRUCTOR = atLeast1_20 ? getConstructor(SCORE_PACKET, String.class, String.class, int.class, Optional.class, Optional.class) : null;
 		RESET_SCORE_PACKET = atLeast1_20 ? getConstructor("net.minecraft.network.protocol.game.ClientboundResetScorePacket", String.class, String.class) : null;
 
-		// 1.13 moved ScoreAction to ScoreboardServer from the packet class
-		SCORE_ACTION_ENUM = MinecraftVersion.atLeast(MinecraftVersion.V.v1_13) ?
-				getNMSClass("ScoreboardServer$Action", "net.minecraft.server.ScoreboardServer$Action").asSubclass(Enum.class) :
-				SCORE_PACKET.getDeclaredClasses()[0].asSubclass(Enum.class);
+		// 1.13 moved ScoreAction to ScoreboardServer from the packet class, 1.20 removed it
+		try {
+			SCORE_ACTION_ENUM = MinecraftVersion.atLeast(V.v1_13) ?
+					getNMSClass("ScoreboardServer$Action", "net.minecraft.server.ScoreboardServer$Action").asSubclass(Enum.class) :
+					SCORE_PACKET.getDeclaredClasses()[0].asSubclass(Enum.class);
 
-		SCORE_ACTION_CHANGE = lookupEnumSilent(SCORE_ACTION_ENUM, "CHANGE");
-		SCORE_ACTION_REMOVE = lookupEnumSilent(SCORE_ACTION_ENUM, "REMOVE");
+			SCORE_ACTION_CHANGE = lookupEnumSilent(SCORE_ACTION_ENUM, "CHANGE");
+			SCORE_ACTION_REMOVE = lookupEnumSilent(SCORE_ACTION_ENUM, "REMOVE");
+
+		} catch (ReflectionException ignored) {
+		}
 
 		TEAM_PACKET = getNMSClass("PacketPlayOutScoreboardTeam", "net.minecraft.network.protocol.game.PacketPlayOutScoreboardTeam");
 
@@ -108,6 +117,11 @@ public class PacketScoreboard {
 
 			CHAT_FORMAT_ENUM = getNMSClass("EnumChatFormat", "net.minecraft.EnumChatFormat").asSubclass(Enum.class);
 			CHAT_FORMAT_RESET = lookupEnumSilent(CHAT_FORMAT_ENUM, "RESET");
+
+			TEAM_VISIBILITY_ENUM = getNMSClass("Visibility", "net.minecraft.world.scores.Team$Visibility").asSubclass(Enum.class);
+			TEAM_VISIBILITY_ALWAYS = lookupEnumSilent(TEAM_VISIBILITY_ENUM, "ALWAYS");
+			TEAM_COLLISION_ENUM = getNMSClass("CollisionRule", "net.minecraft.world.scores.Team$CollisionRule").asSubclass(Enum.class);
+			TEAM_COLLISION_ALWAYS = lookupEnumSilent(TEAM_COLLISION_ENUM, "ALWAYS");
 		}
 
 		RENDERTYPE_ENUM = getNMSClass("IScoreboardCriteria$EnumScoreboardHealthDisplay",
@@ -599,9 +613,15 @@ public class PacketScoreboard {
 					setChatComponentField(parameters, 0, "");
 					setChatComponentField(parameters, 1, prefix);
 					setChatComponentField(parameters, 2, suffix);
-					setDeclaredField(parameters, String.class, 0, "always");
-					setDeclaredField(parameters, String.class, 1, "always");
 					setDeclaredField(parameters, CHAT_FORMAT_ENUM, 0, CHAT_FORMAT_RESET);
+
+					if ((MinecraftVersion.equals(V.v1_21) && MinecraftVersion.getSubversion() >= 8) || MinecraftVersion.atLeast(V.v26_1)) {
+						setDeclaredField(parameters, TEAM_VISIBILITY_ENUM, 0, TEAM_VISIBILITY_ALWAYS);
+						setDeclaredField(parameters, TEAM_COLLISION_ENUM, 0, TEAM_COLLISION_ALWAYS);
+					} else {
+						setDeclaredField(parameters, String.class, 0, "always");
+						setDeclaredField(parameters, String.class, 1, "always");
+					}
 
 					setDeclaredField(packet, Optional.class, 0, Optional.of(parameters));
 
